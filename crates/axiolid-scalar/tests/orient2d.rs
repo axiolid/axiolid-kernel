@@ -1,0 +1,359 @@
+//! The predicate is only worth building if it beats naive f64 on the cases
+//! that break naive f64. These tests are chosen to fail against a plain
+//! determinant implementation.
+
+use axiolid_core::Point2;
+use axiolid_kernel::{Certified, Precision, Sign};
+use axiolid_scalar::{orient2d, orient2d_filter};
+
+fn p(x: f64, y: f64) -> Point2 {
+    Point2::new(x, y)
+}
+
+fn sign_of(result: Certified) -> Sign {
+    match result {
+        Certified::Certain { sign, .. } => sign,
+        other => panic!("orient2d must always certify, got {other:?}"),
+    }
+}
+
+#[test]
+fn obvious_orientations_are_correct() {
+    let (a, b) = (p(0.0, 0.0), p(1.0, 0.0));
+    assert_eq!(sign_of(orient2d(a, b, p(0.0, 1.0))), Sign::Positive);
+    assert_eq!(sign_of(orient2d(a, b, p(0.0, -1.0))), Sign::Negative);
+    assert_eq!(sign_of(orient2d(a, b, p(2.0, 0.0))), Sign::Zero);
+}
+
+/// Exactly collinear points must return Zero, not a tolerance-sized guess.
+/// A tolerance-based predicate cannot distinguish "on the line" from "nearly
+/// on the line", which is how sliver triangles and non-manifold edges appear.
+#[test]
+fn exact_collinearity_is_reported_as_zero() {
+    let a = p(0.0, 0.0);
+    let b = p(1.0, 1.0);
+    for step in 1..50 {
+        let t = f64::from(step);
+        assert_eq!(
+            sign_of(orient2d(a, b, p(t, t))),
+            Sign::Zero,
+            "points on y = x are collinear at t = {t}"
+        );
+    }
+}
+
+/// The case that motivates the whole cascade.
+///
+/// These are not hand-waved "nearly degenerate" inputs: each triple was found
+/// by search and cross-checked against an exact rational determinant. In every
+/// one the naive f64 determinant evaluates to exactly 0.0 -- reporting
+/// "collinear" -- while the true determinant is a definite non-zero sign.
+///
+/// A predicate that reports collinear here fuses distinct vertices, drops
+/// triangles, and produces non-manifold output. This is the bug the exact path
+/// exists to prevent, so the test asserts against the naive result directly.
+#[test]
+fn the_exact_path_beats_naive_f64_where_naive_f64_is_wrong() {
+    // (a, b, c, true sign as computed by exact rational arithmetic)
+    let cases = [
+        (
+            p(-0.8362899784084603, -0.3995017629087494),
+            p(-0.00976728088948886, -0.3130486200832534),
+            p(1.3309231823978052, -0.17281423274545576),
+            Sign::Negative,
+        ),
+        (
+            p(0.9603496949851642, -0.7638684434900758),
+            p(-0.1637543564295456, 0.5142818591304987),
+            p(-1.1529224600475325, 1.6390047078657146),
+            Sign::Negative,
+        ),
+        (
+            p(-0.9918127932298721, -0.16210699774934412),
+            p(-0.26149285421054924, 0.1326824474127839),
+            p(1.8438331624214392, 0.9824851916206433),
+            Sign::Positive,
+        ),
+    ];
+
+    for (a, b, c, truth) in cases {
+        let naive = (a.x - c.x) * (b.y - c.y) - (a.y - c.y) * (b.x - c.x);
+        assert_eq!(
+            naive, 0.0,
+            "precondition: naive f64 must claim collinear for {a:?} {b:?} {c:?}"
+        );
+        assert_eq!(
+            sign_of(orient2d(a, b, c)),
+            truth,
+            "exact arithmetic must overrule the naive determinant"
+        );
+        // The filter must admit it cannot decide, rather than trusting a zero.
+        assert!(matches!(
+            orient2d_filter(a, b, c),
+            Certified::Uncertain { .. }
+        ));
+    }
+}
+
+/// Antisymmetry: swapping two points must flip the sign, for every input.
+/// A predicate that violates this produces contradictory topology depending on
+/// vertex order, which is unfixable downstream.
+#[test]
+fn the_predicate_is_antisymmetric_including_near_degenerate_inputs() {
+    let mut state = 0x9E37_79B9_7F4A_7C15_u64;
+    let mut next = || {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        f64::from(((state >> 40) as u32) as i32) / 8.0
+    };
+
+    for _ in 0..500 {
+        let a = p(next(), next());
+        let b = p(next(), next());
+        // Place c on the line AB, then nudge it by a sub-ulp amount so the
+        // filter is forced into its uncertain band.
+        let c = p(a.x + (b.x - a.x) * 3.0, a.y + (b.y - a.y) * 3.0);
+
+        let forward = sign_of(orient2d(a, b, c));
+        let swapped = sign_of(orient2d(b, a, c));
+        assert_eq!(
+            forward,
+            swapped.flip(),
+            "orient2d({a:?}, {b:?}, {c:?}) must be antisymmetric"
+        );
+    }
+}
+
+/// The filter must be honest about not knowing, and the full predicate must
+/// still produce a proven answer in exactly those cases.
+#[test]
+fn the_filter_defers_where_the_full_predicate_still_decides() {
+    let a = p(0.0, 0.0);
+    let b = p(1.0, 1.0);
+    // Collinear: the determinant is exactly zero, so it can never exceed its
+    // own error bound and the filter must report Uncertain.
+    let c = p(3.0, 3.0);
+
+    assert!(
+        matches!(orient2d_filter(a, b, c), Certified::Uncertain { .. }),
+        "a zero determinant cannot be certified by a filter"
+    );
+    // The cascade still resolves it, and says so with Exact precision.
+    assert!(matches!(
+        orient2d(a, b, c),
+        Certified::Certain {
+            sign: Sign::Zero,
+            precision: Precision::Exact
+        }
+    ));
+}
+
+/// Well-separated inputs must be settled by the cheap path, or the cascade is
+/// pointless: the exact path would run every time.
+#[test]
+fn the_filter_settles_ordinary_inputs_without_escalating() {
+    let (a, b) = (p(0.0, 0.0), p(1.0, 0.0));
+    assert!(matches!(
+        orient2d_filter(a, b, p(0.0, 1.0)),
+        Certified::Certain {
+            sign: Sign::Positive,
+            precision: Precision::F64
+        }
+    ));
+}
+
+/// Differential gate: the certified predicate must agree with an independent
+/// exact oracle on every input, including the near-degenerate band.
+///
+/// The oracle is i128 integer arithmetic over small integer coordinates. For
+/// such inputs the determinant is exactly representable in i128, so the oracle
+/// is correct by construction and shares no code with the crate under test.
+/// Coordinates are scaled to force the f64 filter into its uncertain band.
+#[test]
+fn certified_signs_agree_with_an_independent_exact_oracle() {
+    fn oracle(a: (i64, i64), b: (i64, i64), c: (i64, i64)) -> Sign {
+        let d = (i128::from(a.0) - i128::from(c.0)) * (i128::from(b.1) - i128::from(c.1))
+            - (i128::from(a.1) - i128::from(c.1)) * (i128::from(b.0) - i128::from(c.0));
+        match d.cmp(&0) {
+            core::cmp::Ordering::Greater => Sign::Positive,
+            core::cmp::Ordering::Less => Sign::Negative,
+            core::cmp::Ordering::Equal => Sign::Zero,
+        }
+    }
+
+    let mut state = 0xDEAD_BEEF_CAFE_1234_u64;
+    let mut next = |range: i64| {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        (state >> 33) as i64 % range - range / 2
+    };
+
+    let mut escalations = 0_u32;
+    let total = 20_000;
+
+    for _ in 0..total {
+        // Small coordinate range => many exactly-collinear and near-collinear
+        // triples, which is precisely where a filter-only predicate fails.
+        let a = (next(64), next(64));
+        let b = (next(64), next(64));
+        let c = (next(64), next(64));
+
+        let fa = p(a.0 as f64, a.1 as f64);
+        let fb = p(b.0 as f64, b.1 as f64);
+        let fc = p(c.0 as f64, c.1 as f64);
+
+        assert_eq!(
+            sign_of(orient2d(fa, fb, fc)),
+            oracle(a, b, c),
+            "disagreement on a={a:?} b={b:?} c={c:?}"
+        );
+
+        if matches!(orient2d_filter(fa, fb, fc), Certified::Uncertain { .. }) {
+            escalations += 1;
+        }
+    }
+
+    // The exact path must actually be reached, or this test proves nothing
+    // about it. Degenerate triples are common at this coordinate scale.
+    assert!(
+        escalations > 0,
+        "no input escalated; the differential test never exercised exact arithmetic"
+    );
+}
+
+/// Differential gate for the *correction* terms, which the integer-coordinate
+/// test above cannot reach.
+///
+/// When all coordinates share a magnitude, `a.x - c.x` is exact and every error
+/// term in the expansion is zero -- so that test still passes if the correction
+/// terms are deleted. Real BIM data is not like that: a national-grid origin and
+/// a millimetre detail differ by ~10 orders of magnitude, the subtraction
+/// rounds, and the discarded bits decide the sign.
+///
+/// Every coordinate here is an exact dyadic rational (`mantissa * 2^exponent`)
+/// with a wide exponent spread. The oracle converts each f64 to an exact
+/// `Fraction`-style integer pair and evaluates the determinant in i128 with a
+/// common denominator, so it shares no code with the implementation.
+#[test]
+fn certified_signs_survive_mixed_magnitude_coordinates() {
+    /// Exact value of a dyadic f64 as `mantissa * 2^exponent`, mantissa in i128.
+    fn decompose(value: f64) -> (i128, i32) {
+        if value == 0.0 {
+            return (0, 0);
+        }
+        let bits = value.to_bits();
+        let raw_exponent = ((bits >> 52) & 0x7FF) as i32;
+        let fraction = bits & 0x000F_FFFF_FFFF_FFFF;
+        let (mantissa, exponent) = if raw_exponent == 0 {
+            (fraction, -1074)
+        } else {
+            (fraction | 0x0010_0000_0000_0000, raw_exponent - 1075)
+        };
+        let mut signed = if value < 0.0 {
+            -(mantissa as i128)
+        } else {
+            mantissa as i128
+        };
+        // Normalise: strip trailing zero bits so the common-denominator shift
+        // below stays far inside i128 instead of overflowing on a wide spread.
+        let mut exponent = exponent;
+        while signed != 0 && signed % 2 == 0 {
+            signed /= 2;
+            exponent += 1;
+        }
+        (signed, exponent)
+    }
+
+    /// Exact sign of the orientation determinant, computed in i128 after
+    /// rescaling every coordinate to a common power-of-two denominator.
+    fn oracle(a: (f64, f64), b: (f64, f64), c: (f64, f64)) -> Sign {
+        let parts = [a.0, a.1, b.0, b.1, c.0, c.1].map(decompose);
+        let min_exponent = parts.iter().map(|&(_, e)| e).min().expect("non-empty");
+        // Rescaling to the smallest exponent makes every value an exact
+        // integer; the shift is bounded because the generator caps the spread.
+        let max_shift = parts
+            .iter()
+            .map(|&(_, e)| e - min_exponent)
+            .max()
+            .expect("non-empty");
+        // 12-bit mantissas plus a bounded spread must leave room for the
+        // determinant's products; assert it rather than overflowing silently.
+        assert!(
+            max_shift < 40,
+            "exponent spread {max_shift} too wide for i128"
+        );
+        let scaled = parts.map(|(m, e)| m << (e - min_exponent));
+        let [ax, ay, bx, by, cx, cy] = scaled;
+        let d = (ax - cx) * (by - cy) - (ay - cy) * (bx - cx);
+        match d.cmp(&0) {
+            core::cmp::Ordering::Greater => Sign::Positive,
+            core::cmp::Ordering::Less => Sign::Negative,
+            core::cmp::Ordering::Equal => Sign::Zero,
+        }
+    }
+
+    let mut state = 0x1234_5678_9ABC_DEF0_u64;
+    let mut rng = || {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        state
+    };
+
+    let mut escalations = 0_u32;
+    let mut rounding_losses = 0_u32;
+
+    for _ in 0..20_000 {
+        // Small mantissas with a wide exponent spread: the products stay
+        // exactly representable while the subtractions genuinely round.
+        let coordinate = |rng: &mut dyn FnMut() -> u64| {
+            let r = rng();
+            // Full 53-bit mantissas: this is what makes `a.x - c.x` round when
+            // the exponents differ, which is the whole point of this test.
+            let mantissa = ((r >> 11) as i64) - (1 << 52);
+            let exponent = ((r % 9) as i32) - 4;
+            (mantissa as f64) * 2.0_f64.powi(exponent)
+        };
+
+        let ax = coordinate(&mut rng);
+        let ay = coordinate(&mut rng);
+        let bx = coordinate(&mut rng);
+        let by = coordinate(&mut rng);
+        // Place c near the line AB so the filter is pushed into its uncertain
+        // band; a random third point is essentially never near-degenerate.
+        let k = 2.0 + (rng() % 3) as f64;
+        let cx = ax + (bx - ax) * k;
+        let cy = ay + (by - ay) * k;
+
+        let (fa, fb, fc) = (p(ax, ay), p(bx, by), p(cx, cy));
+
+        // Premise check: the f64 subtraction must lose bits somewhere, or the
+        // correction terms remain unreachable and this test proves nothing.
+        let (dm, de) = decompose(ax - cx);
+        let (am, ae) = decompose(ax);
+        let (cm, ce) = decompose(cx);
+        let exact_difference =
+            (am << (ae - ae.min(ce).min(de))) - (cm << (ce - ae.min(ce).min(de)));
+        if (dm << (de - ae.min(ce).min(de))) != exact_difference {
+            rounding_losses += 1;
+        }
+
+        assert_eq!(
+            sign_of(orient2d(fa, fb, fc)),
+            oracle((ax, ay), (bx, by), (cx, cy)),
+            "disagreement on a=({ax}, {ay}) b=({bx}, {by}) c=({cx}, {cy})"
+        );
+
+        if matches!(orient2d_filter(fa, fb, fc), Certified::Uncertain { .. }) {
+            escalations += 1;
+        }
+    }
+
+    assert!(escalations > 0, "the exact path was never exercised");
+    assert!(
+        rounding_losses > 0,
+        "no coordinate difference rounded; correction terms stayed unreachable"
+    );
+}

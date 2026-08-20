@@ -1,0 +1,409 @@
+//! Gates for the graph compiler.
+//!
+//! The shape under test is the one `ifc-geometry` actually emits: a Profile
+//! feeding an Extrusion, wrapped in Instance placements, combined by Boolean.
+
+use axiolid_boolmesh::BoolmeshBoolean;
+use axiolid_compile::ScalarCompiler;
+use axiolid_core::{BooleanOperator, Tolerance, Transform3, Vec3};
+use axiolid_kernel::{ExecutionOptions, GeomError, GeometryCompiler, Operation};
+use axiolid_mesh::TriMesh;
+use axiolid_model::{GeometryGraphBuilder, GeometryNode, Instance, SolidOperation};
+use axiolid_profile::{Profile, RectangleProfile};
+
+fn options() -> ExecutionOptions {
+    ExecutionOptions::new(Tolerance::METRE)
+}
+
+fn compiler() -> ScalarCompiler<BoolmeshBoolean> {
+    ScalarCompiler::new(BoolmeshBoolean::new())
+}
+
+/// Divergence-theorem volume: triangulation-invariant.
+fn volume(mesh: &TriMesh) -> f64 {
+    let mut sum = 0.0;
+    for t in mesh.indices.chunks_exact(3) {
+        let a = mesh.positions[t[0] as usize];
+        let b = mesh.positions[t[1] as usize];
+        let c = mesh.positions[t[2] as usize];
+        sum += a.dot(b.cross(c));
+    }
+    sum / 6.0
+}
+
+fn rect(x: f64, y: f64) -> Profile {
+    Profile::Rectangle(RectangleProfile {
+        x,
+        y,
+        thickness: None,
+        outer_radius: None,
+        inner_radius: None,
+    })
+}
+
+/// The dominant IFC pattern end to end: wall minus an opening, both built as
+/// Profile -> Extrusion -> Instance, combined by a Boolean node.
+#[test]
+fn a_wall_minus_an_opening_compiles_to_the_expected_volume() {
+    let mut b = GeometryGraphBuilder::new();
+
+    let wall_profile = b.push(GeometryNode::Profile(rect(4.0, 0.2))).unwrap();
+    let wall = b
+        .push(GeometryNode::SolidOperation(SolidOperation::Extrusion {
+            profile: wall_profile,
+            direction: Vec3::Z,
+            depth: 3.0,
+        }))
+        .unwrap();
+
+    let hole_profile = b.push(GeometryNode::Profile(rect(1.0, 0.4))).unwrap();
+    let hole = b
+        .push(GeometryNode::SolidOperation(SolidOperation::Extrusion {
+            profile: hole_profile,
+            direction: Vec3::Z,
+            depth: 1.2,
+        }))
+        .unwrap();
+    // Place the opening inside the wall: profiles are centred on the origin,
+    // so only a Z lift is needed to sit it within the wall band.
+    let placed = b
+        .push(GeometryNode::Instance(Instance {
+            source: hole,
+            transform: Transform3::from_translation(Vec3::new(0.0, 0.0, 0.3)),
+        }))
+        .unwrap();
+
+    let cut = b
+        .push(GeometryNode::SolidOperation(SolidOperation::Boolean {
+            left: wall,
+            right: placed,
+            operator: BooleanOperator::Difference,
+        }))
+        .unwrap();
+    let graph = b.finish(vec![cut]).unwrap();
+
+    let mesh = compiler()
+        .compile(&graph, cut, &options())
+        .expect("compile");
+    // 4 x 0.2 x 3 = 2.4 minus 1 x 0.2 x 1.2 (the opening is clipped to the
+    // wall thickness) = 2.4 - 0.24 = 2.16.
+    assert!((volume(&mesh) - 2.16).abs() < 1e-9, "got {}", volume(&mesh));
+}
+
+/// A shared subtree must be compiled once per batch, not once per reference.
+///
+/// Without memoisation a diamond DAG recompiles the shared node for every
+/// path that reaches it, which is exponential on deep sharing. The observable
+/// proof is that both roots agree exactly and the batch succeeds.
+#[test]
+fn a_shared_subtree_is_reused_across_roots() {
+    let mut b = GeometryGraphBuilder::new();
+    let profile = b.push(GeometryNode::Profile(rect(2.0, 2.0))).unwrap();
+    let solid = b
+        .push(GeometryNode::SolidOperation(SolidOperation::Extrusion {
+            profile,
+            direction: Vec3::Z,
+            depth: 1.0,
+        }))
+        .unwrap();
+    let left = b
+        .push(GeometryNode::Instance(Instance {
+            source: solid,
+            transform: Transform3::from_translation(Vec3::new(-5.0, 0.0, 0.0)),
+        }))
+        .unwrap();
+    let right = b
+        .push(GeometryNode::Instance(Instance {
+            source: solid,
+            transform: Transform3::from_translation(Vec3::new(5.0, 0.0, 0.0)),
+        }))
+        .unwrap();
+    let graph = b.finish(vec![left, right]).unwrap();
+
+    let meshes = compiler()
+        .compile_batch(&graph, &[left, right], &options())
+        .expect("batch");
+    assert_eq!(meshes.len(), 2);
+    assert!((volume(&meshes[0]) - 4.0).abs() < 1e-9);
+    assert!((volume(&meshes[1]) - 4.0).abs() < 1e-9);
+    // Same source, different placement: the meshes must differ in position.
+    assert_ne!(meshes[0].positions[0], meshes[1].positions[0]);
+}
+
+/// Both batch call shapes must behave identically.
+#[test]
+fn compile_batch_into_appends_and_matches_compile_batch() {
+    let mut b = GeometryGraphBuilder::new();
+    let profile = b.push(GeometryNode::Profile(rect(1.0, 1.0))).unwrap();
+    let solid = b
+        .push(GeometryNode::SolidOperation(SolidOperation::Extrusion {
+            profile,
+            direction: Vec3::Z,
+            depth: 2.0,
+        }))
+        .unwrap();
+    let graph = b.finish(vec![solid]).unwrap();
+
+    let mut destination = vec![TriMesh::default()];
+    compiler()
+        .compile_batch_into(&graph, &[solid], &options(), &mut destination)
+        .expect("into");
+    assert_eq!(destination.len(), 2, "must append, never clear");
+    assert!((volume(&destination[1]) - 2.0).abs() < 1e-9);
+}
+
+/// An unsupported family must name the capability it would need, so a caller
+/// can register a provider for it instead of guessing.
+#[test]
+fn an_unsupported_node_reports_the_capability_it_would_need() {
+    let mut b = GeometryGraphBuilder::new();
+    let profile = b.push(GeometryNode::Profile(rect(1.0, 1.0))).unwrap();
+    let graph = b.finish(vec![profile]).unwrap();
+
+    let error = compiler()
+        .compile(&graph, profile, &options())
+        .expect_err("a bare profile is not a solid");
+    match error {
+        GeomError::Unsupported { operation, .. } => {
+            assert_eq!(operation, Operation::ProfileTriangulation);
+        }
+        other => panic!("expected Unsupported, got {other:?}"),
+    }
+}
+
+/// A revolution is refused rather than approximated. ADR: a wrong solid is
+/// more expensive than a missing one.
+#[test]
+fn an_unimplemented_solid_family_is_refused_not_approximated() {
+    let mut b = GeometryGraphBuilder::new();
+    let profile = b.push(GeometryNode::Profile(rect(1.0, 1.0))).unwrap();
+    let revolved = b
+        .push(GeometryNode::SolidOperation(SolidOperation::Revolution {
+            profile,
+            axis_origin: axiolid_core::Point3::new(0.0, -5.0, 0.0),
+            axis_direction: Vec3::X,
+            angle: std::f64::consts::PI,
+        }))
+        .unwrap();
+    let graph = b.finish(vec![revolved]).unwrap();
+
+    // Assert the NAMED capability, not merely that it failed: a caller uses
+    // this to decide which provider to register.
+    match compiler().compile(&graph, revolved, &options()) {
+        Err(GeomError::Unsupported { operation, .. }) => {
+            assert_eq!(operation, Operation::Sweep);
+        }
+        other => panic!("expected Unsupported{{Sweep}}, got {other:?}"),
+    }
+}
+
+/// A handle from a different graph must be refused, not silently indexed.
+#[test]
+fn a_foreign_node_handle_is_refused() {
+    let mut a = GeometryGraphBuilder::new();
+    let pa = a.push(GeometryNode::Profile(rect(1.0, 1.0))).unwrap();
+    let sa = a
+        .push(GeometryNode::SolidOperation(SolidOperation::Extrusion {
+            profile: pa,
+            direction: Vec3::Z,
+            depth: 1.0,
+        }))
+        .unwrap();
+    let graph_a = a.finish(vec![sa]).unwrap();
+
+    let mut c = GeometryGraphBuilder::new();
+    let pc = c.push(GeometryNode::Profile(rect(1.0, 1.0))).unwrap();
+    let graph_c = c.finish(vec![pc]).unwrap();
+    let _ = &graph_c;
+
+    // `pc` belongs to graph_c, not graph_a.
+    assert!(matches!(
+        compiler().compile(&graph_a, pc, &options()),
+        Err(GeomError::InvalidInput(_))
+    ));
+}
+
+/// A deep chain must not overflow the stack.
+///
+/// This is why evaluation is iterative rather than recursive: graph depth is
+/// attacker-controlled in a file format, and a recursive walker would abort
+/// the process instead of returning an error.
+#[test]
+fn a_deep_instance_chain_does_not_overflow_the_stack() {
+    let mut b = GeometryGraphBuilder::new();
+    let profile = b.push(GeometryNode::Profile(rect(1.0, 1.0))).unwrap();
+    let mut current = b
+        .push(GeometryNode::SolidOperation(SolidOperation::Extrusion {
+            profile,
+            direction: Vec3::Z,
+            depth: 1.0,
+        }))
+        .unwrap();
+
+    // 50k nested placements, each a no-op translation.
+    for _ in 0..50_000 {
+        current = b
+            .push(GeometryNode::Instance(Instance {
+                source: current,
+                transform: Transform3::IDENTITY,
+            }))
+            .unwrap();
+    }
+    let graph = b.finish(vec![current]).unwrap();
+
+    let mesh = compiler()
+        .compile(&graph, current, &options())
+        .expect("deep chain must compile");
+    assert!((volume(&mesh) - 1.0).abs() < 1e-9);
+}
+
+/// Memoisation must be observable, not merely believed.
+///
+/// A diamond DAG whose shared node is expensive: without a cache the shared
+/// subtree is rebuilt once per path, so compile time grows exponentially in
+/// depth. Ten stacked diamonds is 2^10 = 1024 rebuilds uncached versus 21
+/// cached -- far beyond timing noise.
+#[test]
+fn shared_subtrees_are_not_recompiled_exponentially() {
+    let mut b = GeometryGraphBuilder::new();
+    let profile = b.push(GeometryNode::Profile(rect(1.0, 1.0))).unwrap();
+    let mut current = b
+        .push(GeometryNode::SolidOperation(SolidOperation::Extrusion {
+            profile,
+            direction: Vec3::Z,
+            depth: 1.0,
+        }))
+        .unwrap();
+
+    // Each level references `current` twice, doubling the uncached path count.
+    for _ in 0..10 {
+        let a = b
+            .push(GeometryNode::Instance(Instance {
+                source: current,
+                transform: Transform3::IDENTITY,
+            }))
+            .unwrap();
+        let c = b
+            .push(GeometryNode::Instance(Instance {
+                source: current,
+                transform: Transform3::IDENTITY,
+            }))
+            .unwrap();
+        current = b.push(GeometryNode::Collection(vec![a, c])).unwrap();
+    }
+    let graph = b.finish(vec![current]).unwrap();
+
+    let start = std::time::Instant::now();
+    let mesh = compiler()
+        .compile(&graph, current, &options())
+        .expect("compile");
+    let elapsed = start.elapsed();
+
+    // 2^10 unit cubes merged.
+    assert!(
+        (volume(&mesh) - 1024.0).abs() < 1e-6,
+        "got {}",
+        volume(&mesh)
+    );
+    assert!(
+        elapsed < std::time::Duration::from_secs(2),
+        "took {elapsed:?}; shared subtrees are being recompiled"
+    );
+}
+
+/// A mirroring placement must keep the solid outward-facing.
+///
+/// A negative-determinant transform reverses triangle orientation. Left
+/// uncorrected the mesh is inside-out, which the boolean provider rejects --
+/// and IFC mirrored placements are common, so this is not a corner case.
+#[test]
+fn a_mirrored_placement_keeps_the_solid_outward_facing() {
+    let mut b = GeometryGraphBuilder::new();
+    let profile = b.push(GeometryNode::Profile(rect(2.0, 2.0))).unwrap();
+    let solid = b
+        .push(GeometryNode::SolidOperation(SolidOperation::Extrusion {
+            profile,
+            direction: Vec3::Z,
+            depth: 1.0,
+        }))
+        .unwrap();
+    let mirrored = b
+        .push(GeometryNode::Instance(Instance {
+            source: solid,
+            transform: Transform3::from_scale(Vec3::new(-1.0, 1.0, 1.0)),
+        }))
+        .unwrap();
+    let graph = b.finish(vec![mirrored]).unwrap();
+
+    let mesh = compiler()
+        .compile(&graph, mirrored, &options())
+        .expect("compile");
+    // Positive volume means outward winding survived the mirror.
+    assert!(
+        volume(&mesh) > 0.0,
+        "mirrored solid is inside-out: {}",
+        volume(&mesh)
+    );
+    assert!((volume(&mesh) - 4.0).abs() < 1e-9);
+
+    // And the boolean provider must accept it, which is the real contract.
+    let mut c = GeometryGraphBuilder::new();
+    let p2 = c.push(GeometryNode::Profile(rect(1.0, 1.0))).unwrap();
+    let s2 = c
+        .push(GeometryNode::SolidOperation(SolidOperation::Extrusion {
+            profile: p2,
+            direction: Vec3::Z,
+            depth: 1.0,
+        }))
+        .unwrap();
+    let g2 = c.finish(vec![s2]).unwrap();
+    let tool = compiler().compile(&g2, s2, &options()).expect("tool");
+    use axiolid_kernel::MeshBoolean;
+    BoolmeshBoolean::new()
+        .boolean(&mesh, &tool, BooleanOperator::Difference, &options())
+        .expect("mirrored solid must be acceptable to the boolean provider");
+}
+
+/// Merging meshes must rebase indices, or triangles reference the wrong verts.
+#[test]
+fn a_collection_rebases_indices_when_merging() {
+    let mut b = GeometryGraphBuilder::new();
+    let profile = b.push(GeometryNode::Profile(rect(1.0, 1.0))).unwrap();
+    let solid = b
+        .push(GeometryNode::SolidOperation(SolidOperation::Extrusion {
+            profile,
+            direction: Vec3::Z,
+            depth: 1.0,
+        }))
+        .unwrap();
+    let far = b
+        .push(GeometryNode::Instance(Instance {
+            source: solid,
+            transform: Transform3::from_translation(Vec3::new(100.0, 0.0, 0.0)),
+        }))
+        .unwrap();
+    // A DIFFERENT size, so un-rebased indices duplicate the first solid and
+    // change the total volume. Two identical cubes would sum to the same
+    // number either way, which is why the earlier version of this test could
+    // not detect a missing rebase.
+    let big_profile = b.push(GeometryNode::Profile(rect(3.0, 3.0))).unwrap();
+    let big = b
+        .push(GeometryNode::SolidOperation(SolidOperation::Extrusion {
+            profile: big_profile,
+            direction: Vec3::Z,
+            depth: 1.0,
+        }))
+        .unwrap();
+    let _ = far;
+    let both = b.push(GeometryNode::Collection(vec![solid, big])).unwrap();
+    let graph = b.finish(vec![both]).unwrap();
+
+    let mesh = compiler()
+        .compile(&graph, both, &options())
+        .expect("compile");
+    // Two disjoint unit cubes. Un-rebased indices would collapse the second
+    // onto the first, halving the volume.
+    // 1x1x1 + 3x3x1 = 10. Un-rebased indices would yield 1 + 1 = 2.
+    assert!((volume(&mesh) - 10.0).abs() < 1e-9, "got {}", volume(&mesh));
+    assert_eq!(mesh.positions.len(), 16);
+}

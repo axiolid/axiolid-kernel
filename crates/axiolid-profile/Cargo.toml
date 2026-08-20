@@ -1,0 +1,11 @@
+[package]
+name = "axiolid-profile"
+description = "Exact 2D profile representations for sweeps and sectioned solids"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-curve.workspace = true

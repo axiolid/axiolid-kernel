@@ -1,0 +1,11 @@
+[package]
+name = "axiolid-mesh"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Triangle meshes: the discrete representation every backend consumes."
+
+[dependencies]
+axiolid-core.workspace = true

@@ -1,0 +1,12 @@
+[package]
+name = "axiolid-sweep"
+description = "Algorithms for extrusion, revolution, directrix sweeps, and sectioned solids"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-mesh.workspace = true
+axiolid-model.workspace = true

@@ -1,0 +1,12 @@
+[package]
+name = "axiolid-surface"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Surface evaluation: elementary surfaces, swept surfaces, NURBS patches."
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-curve.workspace = true

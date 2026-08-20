@@ -1,0 +1,23 @@
+#![forbid(unsafe_code)]
+
+//! Portable scalar reference implementation: the correctness oracle (ADR 0012).
+//!
+//! No intrinsics, no threading, no feature gates. Every optimized backend is
+//! validated by differential test against this crate, so it must stay readable
+//! and obviously correct in preference to being fast.
+
+pub mod arithmetic;
+pub mod expansion;
+pub mod orient3;
+pub mod orientation;
+pub mod polygon;
+pub mod scene;
+pub mod sphere;
+pub mod static_filter;
+
+pub use expansion::{two_diff, two_product, two_sum};
+pub use orient3::{orient3d, orient3d_filter};
+pub use orientation::{orient2d, orient2d_filter};
+pub use polygon::{ring_orientation, signed_area2, triangulate_simple};
+pub use sphere::{incircle, incircle_filter, insphere, insphere_filter};
+pub use static_filter::StaticFilter;

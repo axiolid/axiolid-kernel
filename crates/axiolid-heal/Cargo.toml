@@ -1,0 +1,10 @@
+[package]
+name = "axiolid-heal"
+description = "Explicit diagnosis and opt-in repair contracts for dirty geometry"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+axiolid-core.workspace = true

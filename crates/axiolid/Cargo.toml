@@ -1,0 +1,79 @@
+[package]
+name = "axiolid"
+description = "Feature-gated facade for Axiolid's format-neutral geometry stack"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+default = ["mesh", "cpu"]
+
+# Representation capabilities. These features are additive.
+mesh = ["dep:axiolid-mesh"]
+profiles = ["dep:axiolid-profile"]
+curves = ["dep:axiolid-curve"]
+surfaces = ["curves", "dep:axiolid-surface"]
+topology = ["curves", "surfaces", "dep:axiolid-topology"]
+primitives = ["dep:axiolid-primitive"]
+model = [
+    "mesh",
+    "profiles",
+    "curves",
+    "surfaces",
+    "topology",
+    "primitives",
+    "dep:axiolid-model",
+]
+
+# Algorithms. Heavy implementations remain optional.
+sweeps = ["mesh", "profiles", "curves", "dep:axiolid-sweep"]
+tessellation = ["mesh", "curves", "surfaces", "topology", "dep:axiolid-tessellate"]
+spatial = ["mesh", "dep:axiolid-spatial"]
+measure = ["mesh", "dep:axiolid-measure"]
+heal = ["mesh", "dep:axiolid-heal"]
+kernel = ["dep:axiolid-kernel"]
+mesh-boolean = ["kernel", "mesh", "axiolid-kernel/mesh-boolean"]
+graph-compile = ["kernel", "model", "mesh", "axiolid-kernel/model"]
+
+# Execution contexts and operation adapters. CPU stays portable by default;
+# optimized paths are selected at runtime, never by building the whole crate for
+# one host CPU.
+cpu = ["dep:axiolid-backend-cpu"]
+parallel = ["cpu", "axiolid-backend-cpu/parallel"]
+simd = ["cpu", "axiolid-backend-cpu/simd"]
+gpu = ["graph-compile", "dep:axiolid-backend-gpu"]
+
+# Named bundles describe capability, not a source format.
+discrete = [
+    "mesh",
+    "profiles",
+    "primitives",
+    "sweeps",
+    "tessellation",
+    "spatial",
+    "measure",
+    "mesh-boolean",
+    "cpu",
+]
+parametric = ["model", "curves", "surfaces", "topology"]
+advanced = ["discrete", "parametric", "heal"]
+full = ["advanced", "parallel", "simd", "gpu"]
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-mesh = { workspace = true, optional = true }
+axiolid-profile = { workspace = true, optional = true }
+axiolid-curve = { workspace = true, optional = true }
+axiolid-surface = { workspace = true, optional = true }
+axiolid-topology = { workspace = true, optional = true }
+axiolid-primitive = { workspace = true, optional = true }
+axiolid-model = { workspace = true, optional = true }
+axiolid-sweep = { workspace = true, optional = true }
+axiolid-tessellate = { workspace = true, optional = true }
+axiolid-spatial = { workspace = true, optional = true }
+axiolid-measure = { workspace = true, optional = true }
+axiolid-heal = { workspace = true, optional = true }
+axiolid-kernel = { workspace = true, optional = true }
+axiolid-backend-cpu = { workspace = true, optional = true }
+axiolid-backend-gpu = { workspace = true, optional = true }

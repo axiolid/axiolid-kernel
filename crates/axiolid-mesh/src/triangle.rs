@@ -1,0 +1,109 @@
+//! Indexed triangle mesh representation.
+
+use axiolid_core::{Aabb, Point3, Vec3};
+
+use crate::MeshValidationError;
+
+/// Optional independently indexed vertex normals.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct NormalAttribute {
+    /// Normal values.
+    pub values: Vec<Vec3>,
+    /// Optional corner indices; absent means normals align with positions.
+    pub indices: Option<Vec<u32>>,
+}
+
+/// Indexed triangle mesh in local coordinates.
+///
+/// Dirty source geometry is representable. Call [`TriMesh::validate_structure`]
+/// at trust boundaries; manifold validation is a separate, more expensive pass.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct TriMesh {
+    /// Vertex positions.
+    pub positions: Vec<Point3>,
+    /// Triangle corner indices, three entries per triangle.
+    pub indices: Vec<u32>,
+    /// Optional normals preserved from the source.
+    pub normals: Option<NormalAttribute>,
+}
+
+impl TriMesh {
+    /// Construct a position/index mesh without normals.
+    pub fn new(positions: Vec<Point3>, indices: Vec<u32>) -> Self {
+        Self {
+            positions,
+            indices,
+            normals: None,
+        }
+    }
+
+    /// Number of complete triangles.
+    pub fn triangle_count(&self) -> usize {
+        self.indices.len() / 3
+    }
+
+    /// Bounds of all positions.
+    pub fn bounds(&self) -> Aabb {
+        let mut bounds = Aabb::default();
+        for &position in &self.positions {
+            bounds.extend(position);
+        }
+        bounds
+    }
+
+    /// Cheap index-buffer and attribute-size validation.
+    pub fn validate_structure(&self) -> Result<(), MeshValidationError> {
+        if self.indices.len() % 3 != 0 {
+            return Err(MeshValidationError::IncompleteTriangle {
+                index_count: self.indices.len(),
+            });
+        }
+        if let Some(&index) = self
+            .indices
+            .iter()
+            .find(|&&index| index as usize >= self.positions.len())
+        {
+            return Err(MeshValidationError::PositionIndexOutOfRange {
+                index,
+                position_count: self.positions.len(),
+            });
+        }
+        if let Some(normals) = &self.normals {
+            if let Some(indices) = &normals.indices {
+                if indices.len() != self.indices.len() {
+                    return Err(MeshValidationError::NormalIndexCount {
+                        expected: self.indices.len(),
+                        actual: indices.len(),
+                    });
+                }
+                if let Some(&index) = indices
+                    .iter()
+                    .find(|&&index| index as usize >= normals.values.len())
+                {
+                    return Err(MeshValidationError::NormalIndexOutOfRange {
+                        index,
+                        normal_count: normals.values.len(),
+                    });
+                }
+            } else if normals.values.len() != self.positions.len() {
+                return Err(MeshValidationError::NormalCount {
+                    expected: self.positions.len(),
+                    actual: normals.values.len(),
+                });
+            }
+        }
+        Ok(())
+    }
+
+    /// Whether cheap structural validation succeeds.
+    pub fn is_structurally_valid(&self) -> bool {
+        self.validate_structure().is_ok()
+    }
+
+    /// Triangles in deterministic index-buffer order.
+    pub fn triangles(&self) -> impl ExactSizeIterator<Item = [u32; 3]> + '_ {
+        self.indices
+            .chunks_exact(3)
+            .map(|triangle| [triangle[0], triangle[1], triangle[2]])
+    }
+}

@@ -1,0 +1,10 @@
+[package]
+name = "axiolid-primitive"
+description = "Exact parametric primitive solids used as CSG leaves"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+axiolid-core.workspace = true

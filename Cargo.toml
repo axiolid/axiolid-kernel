@@ -1,0 +1,55 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+authors = ["point-grey"]
+repository = "https://github.com/GeneralPawz/axiolid"
+
+[workspace.dependencies]
+# Format-agnostic Axiolid geometry kernel. Leaf crates remain independently consumable.
+axiolid = { path = "crates/axiolid", default-features = false }
+axiolid-core = { path = "crates/axiolid-core" }
+axiolid-mesh = { path = "crates/axiolid-mesh" }
+axiolid-model = { path = "crates/axiolid-model" }
+axiolid-primitive = { path = "crates/axiolid-primitive" }
+axiolid-heal = { path = "crates/axiolid-heal" }
+axiolid-profile = { path = "crates/axiolid-profile" }
+axiolid-curve = { path = "crates/axiolid-curve" }
+axiolid-surface = { path = "crates/axiolid-surface" }
+axiolid-sweep = { path = "crates/axiolid-sweep" }
+axiolid-topology = { path = "crates/axiolid-topology" }
+axiolid-tessellate = { path = "crates/axiolid-tessellate" }
+axiolid-spatial = { path = "crates/axiolid-spatial" }
+axiolid-measure = { path = "crates/axiolid-measure" }
+axiolid-scalar = { path = "crates/axiolid-scalar" }
+axiolid-compile = { path = "crates/axiolid-compile" }
+axiolid-kernel = { path = "crates/axiolid-kernel", default-features = false }
+axiolid-backend-cpu = { path = "crates/axiolid-backend-cpu", default-features = false }
+axiolid-backend-gpu = { path = "crates/axiolid-backend-gpu", default-features = false }
+axiolid-boolmesh = { path = "crates/axiolid-boolmesh" }
+glam = "0.29"
+thiserror = "2.0"
+rayon = "1.10"
+smallvec = "1.13"
+ahash = "0.8"
+memmap2 = "0.9"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 1
+
+[profile.bench]
+lto = "thin"
+codegen-units = 1
+debug = true

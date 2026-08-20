@@ -1,0 +1,17 @@
+[package]
+name = "axiolid-boolmesh"
+description = "boolmesh-backed MeshBoolean provider"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-mesh.workspace = true
+axiolid-kernel = { workspace = true, features = ["mesh-boolean"] }
+boolmesh = "0.1.9"
+
+[[bench]]
+name = "subtract_many"
+harness = false

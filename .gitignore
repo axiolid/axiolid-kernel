@@ -1,0 +1,25 @@
+# Rust build artifacts. `target` is a symlink to /mnt/backup/build-cache/nehirde-target
+# (bbv-dev root disk is sparse) — see AGENTS.md.
+/target
+**/*.rs.bk
+*.pdb
+/target/criterion
+
+# references/ holds symlinks to full clones on /mnt/backup — never track the
+# clone contents, only our own AGENTS.md files under references/.
+references/*
+!references/AGENTS.md
+!references/README.md
+!references/AGENTS-ifc-spec.md
+
+# Editor / OS cruft
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Agent plan/scratch — not part of the repo history
+.hermes/
+
+# Generated API docs (cargo doc output), regenerate via `cargo doc --workspace --no-deps`
+/docs/api/target-doc/

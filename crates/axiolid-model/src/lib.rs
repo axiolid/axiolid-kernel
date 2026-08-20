@@ -1,0 +1,28 @@
+#![forbid(unsafe_code)]
+
+//! Format-neutral geometry intermediate representation.
+//!
+//! Source adapters lower into an immutable [`GeometryGraph`]. Nodes preserve
+//! exact curve, surface, topology, instancing, and construction intent; kernels
+//! choose how to evaluate or tessellate them. Typed append-only handles replace
+//! recursive `Box` trees and make mapped-item/CSG cycles impossible.
+
+pub mod curve_relation;
+pub mod graph;
+pub mod id;
+pub mod node;
+pub mod solid_operation;
+pub mod surface_relation;
+mod validation;
+pub mod value;
+
+pub use axiolid_core::BooleanOperator;
+pub use curve_relation::{
+    CurveRelation, CurveSegment, MasterRepresentation, Transition, TrimSelector, TrimmingPreference,
+};
+pub use graph::{GeometryGraph, GeometryGraphBuilder, GraphError};
+pub use id::NodeId;
+pub use node::{GeometryNode, Instance, PointOnCurve, PointOnSurface};
+pub use solid_operation::{Section, SolidOperation};
+pub use surface_relation::SurfaceRelation;
+pub use value::BuiltInNode;

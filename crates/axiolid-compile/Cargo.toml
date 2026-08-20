@@ -1,0 +1,22 @@
+[package]
+name = "axiolid-compile"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Scalar reference GeometryCompiler: profiles, extrusion, transforms, boolean dispatch."
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-mesh.workspace = true
+axiolid-model.workspace = true
+axiolid-topology.workspace = true
+axiolid-profile.workspace = true
+axiolid-curve.workspace = true
+axiolid-kernel = { workspace = true, features = ["mesh-boolean", "model"] }
+axiolid-scalar.workspace = true
+earcut = "0.4"
+
+[dev-dependencies]
+axiolid-boolmesh.workspace = true
