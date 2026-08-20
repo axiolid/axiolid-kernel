@@ -1,0 +1,43 @@
+name: Publish crates
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_publish:
+        description: Publish every workspace crate at the version committed on main
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crates-io-publish
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify release packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify every crate can be packaged
+        run: cargo package --workspace --locked
+
+  publish:
+    name: Publish to crates.io
+    needs: verify
+    if: inputs.confirm_publish
+    runs-on: ubuntu-latest
+    environment:
+      name: crates-io
+      url: https://crates.io
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Publish workspace
+        run: cargo publish --workspace --locked
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

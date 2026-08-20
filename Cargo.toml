@@ -9,29 +9,31 @@ rust-version = "1.85"
 license = "MPL-2.0"
 authors = ["point-grey"]
 repository = "https://github.com/axiolid/axiolid-kernel"
+homepage = "https://axiolid.github.io/axiolid-kernel/"
+readme = "README.md"
 
 [workspace.dependencies]
 # Format-agnostic Axiolid geometry kernel. Leaf crates remain independently consumable.
-axiolid = { path = "crates/axiolid", default-features = false }
-axiolid-core = { path = "crates/axiolid-core" }
-axiolid-mesh = { path = "crates/axiolid-mesh" }
-axiolid-model = { path = "crates/axiolid-model" }
-axiolid-primitive = { path = "crates/axiolid-primitive" }
-axiolid-heal = { path = "crates/axiolid-heal" }
-axiolid-profile = { path = "crates/axiolid-profile" }
-axiolid-curve = { path = "crates/axiolid-curve" }
-axiolid-surface = { path = "crates/axiolid-surface" }
-axiolid-sweep = { path = "crates/axiolid-sweep" }
-axiolid-topology = { path = "crates/axiolid-topology" }
-axiolid-tessellate = { path = "crates/axiolid-tessellate" }
-axiolid-spatial = { path = "crates/axiolid-spatial" }
-axiolid-measure = { path = "crates/axiolid-measure" }
-axiolid-scalar = { path = "crates/axiolid-scalar" }
-axiolid-compile = { path = "crates/axiolid-compile" }
-axiolid-kernel = { path = "crates/axiolid-kernel", default-features = false }
-axiolid-backend-cpu = { path = "crates/axiolid-backend-cpu", default-features = false }
-axiolid-backend-gpu = { path = "crates/axiolid-backend-gpu", default-features = false }
-axiolid-boolmesh = { path = "crates/axiolid-boolmesh" }
+axiolid = { path = "crates/axiolid", version = "0.1.0", default-features = false }
+axiolid-core = { path = "crates/axiolid-core", version = "0.1.0" }
+axiolid-mesh = { path = "crates/axiolid-mesh", version = "0.1.0" }
+axiolid-model = { path = "crates/axiolid-model", version = "0.1.0" }
+axiolid-primitive = { path = "crates/axiolid-primitive", version = "0.1.0" }
+axiolid-heal = { path = "crates/axiolid-heal", version = "0.1.0" }
+axiolid-profile = { path = "crates/axiolid-profile", version = "0.1.0" }
+axiolid-curve = { path = "crates/axiolid-curve", version = "0.1.0" }
+axiolid-surface = { path = "crates/axiolid-surface", version = "0.1.0" }
+axiolid-sweep = { path = "crates/axiolid-sweep", version = "0.1.0" }
+axiolid-topology = { path = "crates/axiolid-topology", version = "0.1.0" }
+axiolid-tessellate = { path = "crates/axiolid-tessellate", version = "0.1.0" }
+axiolid-spatial = { path = "crates/axiolid-spatial", version = "0.1.0" }
+axiolid-measure = { path = "crates/axiolid-measure", version = "0.1.0" }
+axiolid-scalar = { path = "crates/axiolid-scalar", version = "0.1.0" }
+axiolid-compile = { path = "crates/axiolid-compile", version = "0.1.0" }
+axiolid-kernel = { path = "crates/axiolid-kernel", version = "0.1.0", default-features = false }
+axiolid-backend-cpu = { path = "crates/axiolid-backend-cpu", version = "0.1.0", default-features = false }
+axiolid-backend-gpu = { path = "crates/axiolid-backend-gpu", version = "0.1.0", default-features = false }
+axiolid-boolmesh = { path = "crates/axiolid-boolmesh", version = "0.1.0" }
 glam = "0.29"
 thiserror = "2.0"
 rayon = "1.10"

@@ -111,6 +111,7 @@ The workspace also carries feature-isolation and mutation probes. See [Contribut
 - [Capability status](https://axiolid.github.io/axiolid-kernel/capabilities)
 - [Roadmap](docs/ROADMAP.md)
 - [Changelog](docs/CHANGELOG.md)
+- [Sponsor Axiolid](https://github.com/sponsors/GeneralPawz)
 - [Issue tracker](https://github.com/axiolid/axiolid-kernel/issues)
 
 ## License
