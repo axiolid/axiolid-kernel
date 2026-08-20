@@ -109,8 +109,9 @@ The workspace also carries feature-isolation and mutation probes. See [Contribut
 - [Documentation](https://axiolid.github.io/axiolid-kernel/)
 - [Architecture decisions](https://axiolid.github.io/axiolid-kernel/adr/0009-layered-geometry-dag)
 - [Capability status](https://axiolid.github.io/axiolid-kernel/capabilities)
-- [Issue tracker](https://github.com/axiolid/axiolid-kernel/issues)
+- [Roadmap](docs/ROADMAP.md)
 - [Changelog](docs/CHANGELOG.md)
+- [Issue tracker](https://github.com/axiolid/axiolid-kernel/issues)
 
 ## License
 

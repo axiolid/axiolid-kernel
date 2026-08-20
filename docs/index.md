@@ -46,3 +46,4 @@ Axiolid is early software. The project deliberately distinguishes storage, contr
 - [Capabilities](/capabilities) for what is implemented, represented, or intentionally deferred.
 - [Architecture](/architecture) for dependency direction and execution seams.
 - [Architecture decisions](/adr/0009-layered-geometry-dag) for the non-negotiable design choices.
+- [Roadmap](/ROADMAP) and [changelog](/CHANGELOG) for current direction and user-visible history.

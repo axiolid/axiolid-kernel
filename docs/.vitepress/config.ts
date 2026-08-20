@@ -57,8 +57,9 @@ export default defineConfig({
         ],
       },
       {
-        text: "Project",
+        text: "About",
         items: [
+          { text: "Roadmap", link: "/ROADMAP" },
           { text: "Changelog", link: "/CHANGELOG" },
           { text: "Research", link: "/research/geometry-kernel-capability-comparison" },
           { text: "Licensing", link: "/guide/licensing" },
