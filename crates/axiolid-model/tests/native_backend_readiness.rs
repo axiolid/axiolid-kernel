@@ -78,12 +78,12 @@ fn hostility_for_type_name(name: &str) -> Option<Hostility> {
 }
 
 fn workspace_root() -> PathBuf {
-    // `CARGO_MANIFEST_DIR` is this crate; the workspace root is two levels up
-    // from `crates/<crate>`.
+    // `CARGO_MANIFEST_DIR` is `crates/<crate>`; its grandparent is the
+    // standalone workspace root.
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     manifest
         .ancestors()
-        .nth(3)
+        .nth(2)
         .expect("workspace root above crates/<crate>")
         .to_path_buf()
 }
