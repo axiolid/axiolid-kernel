@@ -4,6 +4,7 @@ These records capture durable choices that preserve Axiolid’s format-neutral, 
 
 | ADR | Decision |
 | --- | --- |
+| [0001](./0001-axiolid-ifc-split-and-kernel-contract.md) | IFC split and kernel contract |
 | [0002](./0002-hardware-abstraction-and-backend-selection.md) | Hardware abstraction and backend selection |
 | [0003](./0003-pure-rust-mesh-boolean.md) | Pure-Rust mesh Boolean direction |
 | [0004](./0004-package-layout-and-backend-features.md) | Package layout and backend features |

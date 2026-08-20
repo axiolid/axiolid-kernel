@@ -1,10 +1,4 @@
 /* ADR links use semantic file names, but display compact human-facing IDs. */
-.adr-section-label {
-  align-items: center;
-  display: inline-flex;
-  gap: 8px;
-}
-
 .adr-icon {
   color: var(--vp-c-brand-1);
   flex: 0 0 auto;

@@ -1,6 +1,7 @@
 import { defineConfig } from "vitepress";
 
 const adrs = [
+  ["0001-axiolid-ifc-split-and-kernel-contract", 1, "IFC split and kernel contract"],
   ["0002-hardware-abstraction-and-backend-selection", 2, "Hardware and backends"],
   ["0003-pure-rust-mesh-boolean", 3, "Pure-Rust mesh booleans"],
   ["0004-package-layout-and-backend-features", 4, "Package layout"],
@@ -65,7 +66,7 @@ export default defineConfig({
         ],
       },
       {
-        text: `<span class="adr-section-label">${adrIcon}<span>Architecture decisions</span></span>`,
+        text: "Architecture decisions",
         items: adrs.map(adrSidebarItem),
       },
     ],
