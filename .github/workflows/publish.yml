@@ -3,11 +3,14 @@ name: Publish crates
 on:
   workflow_dispatch:
     inputs:
-      confirm_publish:
-        description: Publish every workspace crate at the version committed on main
+      release_action:
+        description: Choose publish to upload immutable crate versions to crates.io
         required: true
-        type: boolean
-        default: false
+        type: choice
+        default: verify-only
+        options:
+          - verify-only
+          - publish
 
 permissions:
   contents: read
@@ -29,7 +32,7 @@ jobs:
   publish:
     name: Publish to crates.io
     needs: verify
-    if: inputs.confirm_publish
+    if: inputs.release_action == 'publish'
     runs-on: ubuntu-latest
     environment:
       name: crates-io
