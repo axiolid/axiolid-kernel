@@ -1,0 +1,41 @@
+/* ADR links use semantic file names, but display compact human-facing IDs. */
+.adr-section-label {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.adr-icon {
+  color: var(--vp-c-brand-1);
+  flex: 0 0 auto;
+  height: 15px;
+  width: 15px;
+}
+
+.adr-sidebar-label {
+  align-items: center;
+  column-gap: 7px;
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr) max-content;
+  width: 100%;
+}
+
+.adr-sidebar-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adr-sidebar-number {
+  color: var(--vp-c-text-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  padding-left: 8px;
+  text-align: right;
+}
+
+.VPSidebarItem.is-active .adr-sidebar-number,
+.VPSidebarItem .link:hover .adr-sidebar-number {
+  color: var(--vp-c-brand-1);
+}

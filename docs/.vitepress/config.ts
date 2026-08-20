@@ -1,17 +1,26 @@
 import { defineConfig } from "vitepress";
 
 const adrs = [
-  ["0002-hardware-abstraction-and-backend-selection", "0002 Hardware and backends"],
-  ["0003-pure-rust-mesh-boolean", "0003 Pure-Rust mesh booleans"],
-  ["0004-package-layout-and-backend-features", "0004 Package layout"],
-  ["0009-layered-geometry-dag", "0009 Layered geometry DAG"],
-  ["0011-native-accelerator-backends-out-of-tree", "0011 Native accelerators"],
-  ["0012-scalar-reference-ownership", "0012 Scalar reference"],
-  ["0013-deferred-performance-techniques", "0013 Deferred performance work"],
-  ["0014-adopt-boolmesh-mesh-boolean", "0014 Boolmesh provider"],
-  ["0015-adopt-earcut-polygon-triangulation", "0015 Earcut triangulation"],
-  ["0016-predicate-ownership-and-adopted-implementations", "0016 Predicate ownership"],
+  ["0002-hardware-abstraction-and-backend-selection", 2, "Hardware and backends"],
+  ["0003-pure-rust-mesh-boolean", 3, "Pure-Rust mesh booleans"],
+  ["0004-package-layout-and-backend-features", 4, "Package layout"],
+  ["0009-layered-geometry-dag", 9, "Layered geometry DAG"],
+  ["0011-native-accelerator-backends-out-of-tree", 11, "Native accelerators"],
+  ["0012-scalar-reference-ownership", 12, "Scalar reference"],
+  ["0013-deferred-performance-techniques", 13, "Deferred performance work"],
+  ["0014-adopt-boolmesh-mesh-boolean", 14, "Boolmesh provider"],
+  ["0015-adopt-earcut-polygon-triangulation", 15, "Earcut triangulation"],
+  ["0016-predicate-ownership-and-adopted-implementations", 16, "Predicate ownership"],
 ] as const;
+
+const adrIcon = `<svg class="adr-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg>`;
+
+function adrSidebarItem([file, number, title]: (typeof adrs)[number]) {
+  return {
+    text: `<span class="adr-sidebar-label">${adrIcon}<span class="adr-sidebar-title">${title}</span><span class="adr-sidebar-number">${number}</span></span>`,
+    link: `/adr/${file}`,
+  };
+}
 
 export default defineConfig({
   title: "Axiolid",
@@ -55,7 +64,10 @@ export default defineConfig({
           { text: "Contributing", link: "/guide/contributing" },
         ],
       },
-      { text: "Architecture decisions", items: adrs.map(([file, text]) => ({ text, link: `/adr/${file}` })) },
+      {
+        text: `<span class="adr-section-label">${adrIcon}<span>Architecture decisions</span></span>`,
+        items: adrs.map(adrSidebarItem),
+      },
     ],
     socialLinks: [{ icon: "github", link: "https://github.com/axiolid/axiolid-kernel" }],
     footer: {
