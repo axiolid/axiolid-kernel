@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Axiolid">
+  <rect width="128" height="128" rx="28" fill="#111827"/>
+  <path d="M64 18 108 43v42l-44 25-44-25V43L64 18Zm0 14L35 49v30l29 17 29-17V49L64 32Z" fill="#60a5fa"/>
+  <path d="m64 45 17 10v18L64 83 47 73V55l17-10Z" fill="#f8fafc"/>
+</svg>

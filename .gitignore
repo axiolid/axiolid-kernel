@@ -23,3 +23,7 @@ references/*
 
 # Generated API docs (cargo doc output), regenerate via `cargo doc --workspace --no-deps`
 /docs/api/target-doc/
+
+# VitePress build artifacts
+docs/node_modules/
+docs/.vitepress/dist/

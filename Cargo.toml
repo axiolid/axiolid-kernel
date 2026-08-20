@@ -8,7 +8,7 @@ edition = "2021"
 rust-version = "1.85"
 license = "MIT"
 authors = ["point-grey"]
-repository = "https://github.com/GeneralPawz/axiolid"
+repository = "https://github.com/axiolid/axiolid-kernel"
 
 [workspace.dependencies]
 # Format-agnostic Axiolid geometry kernel. Leaf crates remain independently consumable.
