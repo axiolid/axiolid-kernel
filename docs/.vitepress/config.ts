@@ -51,6 +51,7 @@ export default defineConfig({
         items: [
           { text: "Changelog", link: "/CHANGELOG" },
           { text: "Research", link: "/research/geometry-kernel-capability-comparison" },
+          { text: "Licensing", link: "/guide/licensing" },
           { text: "Contributing", link: "/guide/contributing" },
         ],
       },
@@ -58,7 +59,7 @@ export default defineConfig({
     ],
     socialLinks: [{ icon: "github", link: "https://github.com/axiolid/axiolid-kernel" }],
     footer: {
-      message: "Released under the MIT License.",
+      message: "Released under the Mozilla Public License 2.0.",
       copyright: "Copyright © 2026 Axiolid contributors",
     },
     search: { provider: "local" },

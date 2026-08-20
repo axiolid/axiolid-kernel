@@ -81,7 +81,7 @@ where a caller-side loop would serialize and pay dispatch per opening.
   `manifold-rust` is Apache-2.0 (not MPL as implied above) and remains the
   fallback; it is not yet fixture-tested.
 - Licensing: `boolmesh` is MPL-2.0 (file-level copyleft). **Checked in 0014:**
-  depending imposes no obligation on our MIT code; vendoring-and-patching does.
+  depending adds no copyleft obligation to Axiolid's MPL-covered source; vendoring-and-patching changes that analysis.
   It is therefore an unmodified dependency, never vendored.
 
 ## Relation to existing code

@@ -88,10 +88,9 @@ Adopt `boolmesh` as the first concrete `MeshBoolean` provider, as a **normal
 cargo dependency of a dedicated adapter crate** — never vendored, never edited.
 
 `boolmesh` is MPL-2.0, which is *file-level* copyleft: modifications to its own
-files must be published under MPL-2.0, but merely depending on it imposes no
-licence obligation on our MIT code. Depending is therefore free; vendoring and
-patching is not. Keeping it as an unmodified dependency preserves the MIT
-licence of the workspace.
+files must be published under MPL-2.0, but merely depending on it does not add
+obligations beyond Axiolid's own MPL-covered source. Depending preserves a clean
+licence boundary; vendoring and patching must be reviewed separately.
 
 The provider lives behind `axiolid_kernel::MeshBoolean` per ADR 0003, so this
 choice remains reversible: replacing `boolmesh` with `manifold-rust` or with an

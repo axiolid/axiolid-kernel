@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://axiolid.github.io/axiolid-kernel/"><img alt="Documentation" src="https://img.shields.io/badge/docs-Axiolid-111827?style=flat-square"></a>
   <a href="https://github.com/axiolid/axiolid-kernel/actions/workflows/docs.yml"><img alt="Documentation deployment" src="https://github.com/axiolid/axiolid-kernel/actions/workflows/docs.yml/badge.svg"></a>
-  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-2563eb?style=flat-square"></a>
+  <a href="LICENSE"><img alt="MPL-2.0 license" src="https://img.shields.io/badge/license-MPL--2.0-2563eb?style=flat-square"></a>
   <img alt="MSRV Rust 1.85" src="https://img.shields.io/badge/MSRV-1.85-b7410e?style=flat-square">
 </p>
 
@@ -114,4 +114,4 @@ The workspace also carries feature-isolation and mutation probes. See [Contribut
 
 ## License
 
-Axiolid is licensed under [MIT](LICENSE).
+Axiolid is licensed under [Mozilla Public License 2.0](LICENSE). Separate application files may remain proprietary; see the [licensing guide](https://axiolid.github.io/axiolid-kernel/guide/licensing).

@@ -14,14 +14,14 @@ I fetched; **[IMPRESSION]** marks my own judgement.
 
 ## 0. Executive summary of the licensing situation
 
-`axiolid` is MIT. The relevant constraint is *inbound* license compatibility.
+`axiolid` is MPL-2.0. The relevant constraint is *inbound* license compatibility.
 
-| License of dependency | Can an MIT project depend on it? | Note |
+| License of dependency | Can an MPL-2.0 project depend on it? | Note |
 |---|---|---|
 | MIT, `MIT OR Apache-2.0` | Yes, freely | Ideal |
-| Apache-2.0 (alone) | Yes | Permissive, but adds a patent-grant + NOTICE obligation and is one-way incompatible with GPLv2. Your *own* license stays MIT; you just ship attribution. |
+| Apache-2.0 (alone) | Yes | Permissive, but adds a patent-grant + NOTICE obligation and is one-way incompatible with GPLv2. Axiolid remains MPL-2.0; you also ship attribution. |
 | 0BSD | Yes, freely | Most permissive of all — no attribution required |
-| MPL-2.0 | Yes, with care | **File-level copyleft.** Linking/using is fine and does not infect your MIT code. But modifications *to MPL-licensed files* must stay MPL and be published. Must be noted in NOTICE. |
+| MPL-2.0 | Yes, with care | **File-level copyleft.** Linking/using is fine. Modifications *to MPL-licensed files* must stay MPL and be made available when distributed. |
 | LGPL-2.1 | Problematic | Dynamic linking only; static linking (Rust's default) triggers relinking obligations. Effectively unusable for a statically-linked Rust lib. |
 | GPL | No | Excluded by the brief |
 
@@ -160,9 +160,8 @@ self-overlap).
 **[IMPRESSION]** This is the single most interesting crate in the set for a
 pure-Rust kernel: it is the only pure-Rust implementation of Manifold-class
 robust mesh booleans. The MPL-2.0 file-level copyleft is a real but bounded
-cost — using it as a dependency is fine and does not affect axiolid's MIT
-licensing; only edits to boolmesh's own files would need to be published
-under MPL.
+cost — using it as a dependency is fine; only edits to boolmesh's own files
+would need to be published under MPL.
 
 #### parry / rapier — https://github.com/dimforge/parry
 **[MEASURED]** Apache-2.0, pure Rust, `parry3d` 0.30.2 (2026-08-08),

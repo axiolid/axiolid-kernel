@@ -122,7 +122,7 @@ libraries.
 | OCCT | Large C++ toolkit graph and native runtime | LGPL-2.1 with the OCCT exception [OCCT license] |
 | IfcOpenShell passthrough | C++ plugin inside IfcOpenShell; avoids a heavyweight modeling-kernel conversion but is not a standalone Rust dependency | Source header is LGPL-3.0-or-later [Ifc passthrough API] |
 | OpenUSD | Large C++ scene/composition and imaging stack | Tomorrow Open Source Technology License 1.0 [USD license] |
-| Axiolid | Rust workspace; no mandatory C++ kernel; adopted providers stay behind narrow traits | MIT workspace license (`Cargo.toml`) |
+| Axiolid | Rust workspace; no mandatory C++ kernel; adopted providers stay behind narrow traits | MPL-2.0 workspace license (`Cargo.toml`) |
 
 ## System profiles
 

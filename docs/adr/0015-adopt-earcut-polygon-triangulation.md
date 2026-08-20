@@ -41,7 +41,7 @@ gates.
 | Option | Why not |
 | --- | --- |
 | Keep debugging the hand-rolled clipper | Another session at least, to re-solve a solved problem. The remaining Goal A risk is in extrusion, transforms, and boolean dispatch — not here. |
-| `earcutr` (ISC) | Also viable, 2.7M recent downloads. `earcut` was chosen for the MIT/Apache-2.0 licence matching the workspace exactly, and a more recent release (2026-07). |
+| `earcutr` (ISC) | Also viable, 2.7M recent downloads. `earcut` was chosen for the permissive MIT/Apache-2.0 licence, compatible with the workspace, and a more recent release (2026-07). |
 | `spade` (Delaunay) | Solves a different problem: constrained Delaunay is heavier than needed, and quality triangles are not required for volume-correct extrusion. |
 | `lyon_tessellation` | Aimed at path/vector rendering with anti-aliasing concerns; a much larger surface than needed. |
 
@@ -53,7 +53,7 @@ gates.
   the hand-rolled version, and hollow-section extrusion is volume-exact.
 - Dependency weight is small: `earcut -> num-traits -> autocfg`, pure Rust, no
   C++, no `-sys` crate.
-- Licence is cleaner than boolmesh's MPL-2.0: MIT OR Apache-2.0 imposes nothing.
+- MIT OR Apache-2.0 is permissive and does not extend Axiolid's MPL-2.0 obligations to the dependency.
 
 **Negative / costs**
 
