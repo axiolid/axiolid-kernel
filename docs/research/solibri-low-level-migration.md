@@ -38,7 +38,7 @@ No benchmark claim is accepted without a release-mode baseline, output-equivalen
 | `spatial/bvh` | `axiolid-spatial` | completed | Solibri retains labels/AABBs; adapter delegates all hierarchy work. |
 | `mesh/validate` | `axiolid-mesh` | completed | Adapter uses a zero-copy mesh view and preserves Solibri health outcomes. |
 | `profile/triangulate` | `axiolid-scalar` / `axiolid-tessellate` | partial | Simple loops use the certified Axiolid scalar adapter; holes remain blocked pending a maintained constrained backend. |
-| `predicates/*` and narrow phase | `axiolid-scalar` / `axiolid-measure` | inventory | Port only source-neutral predicates and query evidence, then differential-test. |
+| `predicates/*` and narrow phase | `axiolid-scalar` / future query layer | partial | Certified segment/triangle contact is implemented; deterministic metric witnesses and triangle/triangle distance remain a separate query-layer slice. |
 | `query/{clash,distance,containment,footprint,portal}` | Axiolid query crates | inventory | Separate reusable query kernel from Solibri identifiers and rule interpretation. |
 | `solid/*` | `axiolid-boolmesh` / `axiolid-sweep` | inventory | Do not import native CSG bindings or Solibri representation policy. |
 | `native_stair*`, `native_ramp`, `native_vertical_access`, head-clearance policy | Solibri rules/domain | excluded | Extract only generic slice/distance/clearance primitives that a neutral API can express. |
