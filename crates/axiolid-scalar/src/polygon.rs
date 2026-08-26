@@ -41,18 +41,17 @@ fn sign_of(a: Point2, b: Point2, c: Point2) -> Sign {
         .expect("orient2d escalates to exact arithmetic and always certifies")
 }
 
-/// Whether `p` lies strictly inside triangle `a,b,c`, using certified signs.
+/// Whether `p` lies in or on the boundary of counter-clockwise triangle
+/// `a,b,c`, using certified signs.
 ///
-/// A point exactly on an edge is NOT inside: clipping an ear that touches a
-/// remaining vertex would produce a zero-area sliver and corrupt the fan.
-fn strictly_inside(a: Point2, b: Point2, c: Point2, p: Point2) -> bool {
+/// A non-corner vertex on an ear boundary blocks that ear. Otherwise the clip
+/// can leave a negatively wound remainder whose signed area merely cancels the
+/// outside area it emitted.
+fn blocks_ear(a: Point2, b: Point2, c: Point2, p: Point2) -> bool {
     let s1 = sign_of(a, b, p);
     let s2 = sign_of(b, c, p);
     let s3 = sign_of(c, a, p);
-    if s1 == Sign::Zero || s2 == Sign::Zero || s3 == Sign::Zero {
-        return false;
-    }
-    s1 == s2 && s2 == s3
+    s1 != Sign::Negative && s2 != Sign::Negative && s3 != Sign::Negative
 }
 
 /// Whether vertex `i` of `ring` is a clippable ear of a CCW polygon.
@@ -82,7 +81,7 @@ fn is_ear(ring: &[Point2], indices: &[usize], at: usize) -> bool {
         .filter(|&&idx| idx != ia && idx != ib && idx != ic)
         .map(|&idx| ring[idx])
         .filter(|q| *q != a && *q != b && *q != c)
-        .any(|q| strictly_inside(a, b, c, q))
+        .any(|q| blocks_ear(a, b, c, q))
 }
 
 /// Triangulate a simple CCW polygon by ear clipping.
@@ -129,9 +128,10 @@ pub fn triangulate_simple(ring: &[Point2]) -> GeomResult<Vec<[u32; 3]>> {
     // The final triangle must still enclose area; a collinear remainder means
     // the whole ring was degenerate and no valid fan exists.
     let (a, b, c) = (ring[indices[0]], ring[indices[1]], ring[indices[2]]);
-    if sign_of(a, b, c) == Sign::Zero {
+    if sign_of(a, b, c) != Sign::Positive {
         return Err(GeomError::Degenerate(
-            "final triangle is collinear; ring encloses no area".to_owned(),
+            "final triangle is not positively wound; polygon is self-intersecting or degenerate"
+                .to_owned(),
         ));
     }
     out.push([indices[0] as u32, indices[1] as u32, indices[2] as u32]);

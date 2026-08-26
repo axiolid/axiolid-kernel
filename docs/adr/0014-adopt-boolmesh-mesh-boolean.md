@@ -33,7 +33,7 @@ the lower-friction option if it proves equivalent.
 
 Dependency weight (`cargo tree`): the entire transitive graph is `glam`. No
 `build.rs`, no `-sys` crate, no C++ toolchain. 4,519 LOC, **zero `unsafe`**,
-edition 2024 (workspace MSRV 1.85 satisfies it). f64 is the default precision
+edition 2024 (workspace MSRV is Rust 1.88). f64 is the default precision
 (`K_PRECISION = 1e-12`); `f32` is an opt-in feature.
 
 **Fixture `issue_2019_wall_two_overlapping_openings`** — a 4x0.2x3 wall minus
