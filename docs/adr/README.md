@@ -15,3 +15,4 @@ These records capture durable choices that preserve Axiolid’s format-neutral, 
 | [0014](./0014-adopt-boolmesh-mesh-boolean.md) | Adopt Boolmesh as mesh Boolean provider |
 | [0015](./0015-adopt-earcut-polygon-triangulation.md) | Adopt Earcut for polygon triangulation |
 | [0016](./0016-predicate-ownership-and-adopted-implementations.md) | Predicate ownership and adopted implementations |
+| [0017](./0017-solid-boolean-contract-before-implementation.md) | Solid boolean semantics defined before implementation |
