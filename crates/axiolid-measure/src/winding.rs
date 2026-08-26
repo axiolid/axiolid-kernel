@@ -96,10 +96,11 @@ impl<'a, M: TriangleMeshView + ?Sized> WindingMesh<'a, M> {
                 .map(|index| index as usize);
             let [a, b, c] = indices.map(|index| self.mesh.position(index) - point);
             let squared_lengths = [a.length_squared(), b.length_squared(), c.length_squared()];
-            if squared_lengths
-                .iter()
-                .any(|&squared_length| squared_length <= singular_distance_squared)
-            {
+            let singular = squared_lengths.iter().any(|&squared_length| {
+                squared_length == 0.0
+                    || (self.tolerance.linear() > 0.0 && squared_length < singular_distance_squared)
+            });
+            if singular {
                 skipped_singular_triangles += 1;
                 continue;
             }
