@@ -26,6 +26,10 @@ fn tetra_surface_and_volume_properties_are_raw_and_deterministic() {
     let volume = volume_properties(&mesh, Tolerance::ZERO).unwrap();
     assert!((volume.signed_volume - 1.0 / 6.0).abs() < 1e-12);
     assert_eq!(volume.centroid, Point3::splat(0.25));
+    for _ in 0..16 {
+        assert_eq!(surface_properties(&mesh, Tolerance::ZERO).unwrap(), surface);
+        assert_eq!(volume_properties(&mesh, Tolerance::ZERO).unwrap(), volume);
+    }
 }
 
 #[test]
