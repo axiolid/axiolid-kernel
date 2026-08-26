@@ -5,15 +5,17 @@
 //! N-gons remain [`PolygonMesh`] until explicit triangulation. [`TriMesh`] is
 //! the compact exchange type for render, spatial, and mesh-kernel algorithms.
 
+pub mod audit;
 pub mod error;
 pub mod polygon;
 pub mod triangle;
 pub mod view;
 
+pub use audit::{audit_mesh, MeshHealth};
 pub use error::MeshValidationError;
 pub use polygon::{PolygonFace, PolygonMesh};
 pub use triangle::{NormalAttribute, TriMesh};
-pub use view::MeshView;
+pub use view::{MeshView, TriangleMeshView};
 
 #[cfg(test)]
 mod tests {

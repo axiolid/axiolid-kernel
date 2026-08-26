@@ -39,6 +39,14 @@ pub struct Tolerance {
 }
 
 impl Tolerance {
+    /// Exact-coordinate policy. Use only when the caller intentionally wants no
+    /// scale-derived tolerance, such as compatibility validation of an existing
+    /// source model.
+    pub const ZERO: Self = Self {
+        linear: 0.0,
+        angular: 0.0,
+    };
+
     /// One micrometre linear and one nanoradian angular tolerance when geometry
     /// has already been normalized to metres.
     pub const METRE: Self = Self {

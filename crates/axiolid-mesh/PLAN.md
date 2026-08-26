@@ -1,16 +1,18 @@
 # axiolid-mesh implementation plan
 
-Status: architecture scaffold; algorithms incomplete. This is planning context,
-not standing agent instruction.
+Status: structural audit implemented; repair and richer topology remain planned.
 
 ## Established
 
 - Crate boundary and dependency direction are executable in the layering gate.
-- Public data/contracts compile. Behavior remains scaffold unless a test names it.
+- `TriangleMeshView` adapts foreign index storage without ownership conversion.
+- `audit_mesh` reports malformed input, non-finite coordinates, tolerance-aware
+  degenerate faces, boundary edges, and non-manifold edges deterministically.
+  It does not mutate or reject dirty source geometry.
 
 ## Next implementation wave
 
-Add attribute channels, manifold diagnostics, and zero-copy iterators.
+Add attribute channels, explicit repair plans, and richer topology diagnostics.
 
 ## Exit evidence
 
