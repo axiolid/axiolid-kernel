@@ -29,6 +29,10 @@ pub struct MeshHealth {
     pub boundary_edges: usize,
     /// Undirected edges with more than two usable incident triangles.
     pub non_manifold_edges: usize,
+    /// Two-manifold edges whose incident faces use the same directed edge.
+    /// Such a mesh is closed but has inconsistent local winding, so signed
+    /// enclosed-volume reduction is not structurally trustworthy.
+    pub inconsistent_winding_edges: usize,
     /// First `(triangle, source_index)` which could not address a position.
     pub first_invalid_index: Option<(usize, u64)>,
     /// First non-finite position index.
@@ -47,6 +51,7 @@ impl MeshHealth {
             && self.degenerate_triangles == 0
             && self.boundary_edges == 0
             && self.non_manifold_edges == 0
+            && self.inconsistent_winding_edges == 0
     }
 }
 
@@ -66,7 +71,7 @@ pub fn audit_mesh<M: TriangleMeshView + ?Sized>(mesh: &M, tolerance: Tolerance) 
     let mut first_invalid_index = None;
     let mut degenerate_triangles = 0;
     let mut usable_triangles = 0;
-    let mut edges = BTreeMap::<(u64, u64), usize>::new();
+    let mut edges = BTreeMap::<(u64, u64), (usize, i8)>::new();
     let squared_double_area_limit = tolerance.linear().powi(4);
 
     for triangle_index in 0..triangles {
@@ -101,7 +106,10 @@ pub fn audit_mesh<M: TriangleMeshView + ?Sized>(mesh: &M, tolerance: Tolerance) 
             (triangle[1], triangle[2]),
             (triangle[2], triangle[0]),
         ] {
-            *edges.entry((left.min(right), left.max(right))).or_default() += 1;
+            let direction = if left < right { 1 } else { -1 };
+            let entry = edges.entry((left.min(right), left.max(right))).or_default();
+            entry.0 += 1;
+            entry.1 += direction;
         }
     }
 
@@ -112,8 +120,12 @@ pub fn audit_mesh<M: TriangleMeshView + ?Sized>(mesh: &M, tolerance: Tolerance) 
         invalid_indices,
         non_finite_positions,
         degenerate_triangles,
-        boundary_edges: edges.values().filter(|&&count| count == 1).count(),
-        non_manifold_edges: edges.values().filter(|&&count| count > 2).count(),
+        boundary_edges: edges.values().filter(|&&(count, _)| count == 1).count(),
+        non_manifold_edges: edges.values().filter(|&&(count, _)| count > 2).count(),
+        inconsistent_winding_edges: edges
+            .values()
+            .filter(|&&(count, winding)| count == 2 && winding != 0)
+            .count(),
         first_invalid_index,
         first_non_finite_position,
     }
