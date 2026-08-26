@@ -55,7 +55,7 @@ impl MeshHealth {
 /// A triangle is degenerate when its doubled area is at most
 /// `tolerance.linear()²`; the implementation compares squared values to avoid a
 /// square root. Pass [`Tolerance::ZERO`] for exact-coordinate compatibility.
-pub fn audit_mesh(mesh: &impl TriangleMeshView, tolerance: Tolerance) -> MeshHealth {
+pub fn audit_mesh<M: TriangleMeshView + ?Sized>(mesh: &M, tolerance: Tolerance) -> MeshHealth {
     let positions = mesh.position_count();
     let triangles = mesh.triangle_count();
     let first_non_finite_position = (0..positions).find(|&index| !mesh.position(index).is_finite());

@@ -12,3 +12,4 @@ description = "Metric properties: area, volume, centroid, moments of inertia."
 
 [dependencies]
 axiolid-core.workspace = true
+axiolid-mesh.workspace = true
