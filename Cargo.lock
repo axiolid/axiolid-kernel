@@ -16,6 +16,7 @@ dependencies = [
  "axiolid-backend-gpu",
  "axiolid-core",
  "axiolid-curve",
+ "axiolid-field",
  "axiolid-heal",
  "axiolid-kernel",
  "axiolid-measure",
@@ -83,6 +84,13 @@ dependencies = [
 
 [[package]]
 name = "axiolid-curve"
+version = "0.1.0"
+dependencies = [
+ "axiolid-core",
+]
+
+[[package]]
+name = "axiolid-field"
 version = "0.1.0"
 dependencies = [
  "axiolid-core",

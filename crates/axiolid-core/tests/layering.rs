@@ -71,6 +71,9 @@ const TIERS: &[(&str, u8)] = &[
     ("axiolid-spatial", 2),
     ("axiolid-measure", 2),
     ("axiolid-overlay", 2),
+    // Sampled layered fields: coverage, morphology, clearance, and opt-in
+    // geometry-only traversal. Algorithms over representations, so L2.
+    ("axiolid-field", 2),
     ("axiolid-heal", 2),
     ("axiolid-kernel", 2),
     // The scalar reference implementation (ADR 0012). Consumes the kernel

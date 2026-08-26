@@ -74,6 +74,15 @@ pub mod overlay {
     pub use axiolid_overlay::*;
 }
 
+/// Frame-neutral sampled layered fields.
+///
+/// Coverage, morphology, and clearance are always available with this feature.
+/// Geometry-only traversal is a further opt-in via `field-navigation`.
+#[cfg(feature = "field")]
+pub mod field {
+    pub use axiolid_field::*;
+}
+
 #[cfg(feature = "heal")]
 pub mod heal {
     pub use axiolid_heal::*;

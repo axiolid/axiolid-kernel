@@ -35,6 +35,8 @@ tessellation = ["mesh", "curves", "surfaces", "topology", "dep:axiolid-tessellat
 spatial = ["mesh", "dep:axiolid-spatial"]
 measure = ["mesh", "dep:axiolid-measure"]
 overlay = ["dep:axiolid-overlay"]
+field = ["dep:axiolid-field"]
+field-navigation = ["field", "axiolid-field/navigation"]
 heal = ["mesh", "dep:axiolid-heal"]
 kernel = ["dep:axiolid-kernel"]
 mesh-boolean = ["kernel", "mesh", "axiolid-kernel/mesh-boolean"]
@@ -78,6 +80,7 @@ axiolid-tessellate = { workspace = true, optional = true }
 axiolid-spatial = { workspace = true, optional = true }
 axiolid-measure = { workspace = true, optional = true }
 axiolid-overlay = { workspace = true, optional = true }
+axiolid-field = { workspace = true, optional = true }
 axiolid-heal = { workspace = true, optional = true }
 axiolid-kernel = { workspace = true, optional = true }
 axiolid-backend-cpu = { workspace = true, optional = true }
