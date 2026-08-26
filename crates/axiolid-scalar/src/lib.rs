@@ -12,6 +12,7 @@ pub mod orient3;
 pub mod orientation;
 pub mod polygon;
 pub mod scene;
+pub mod segment_triangle;
 pub mod sphere;
 pub mod static_filter;
 
@@ -19,5 +20,6 @@ pub use expansion::{two_diff, two_product, two_sum};
 pub use orient3::{orient3d, orient3d_filter};
 pub use orientation::{orient2d, orient2d_filter};
 pub use polygon::{ring_orientation, signed_area2, triangulate_simple};
+pub use segment_triangle::{segment_triangle_relation, SegmentTriangleRelation};
 pub use sphere::{incircle, incircle_filter, insphere, insphere_filter};
 pub use static_filter::StaticFilter;
