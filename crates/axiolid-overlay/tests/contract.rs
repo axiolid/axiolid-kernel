@@ -154,4 +154,26 @@ fn valid_hole_is_accepted_and_reported() {
     assert_eq!(got.evidence.subject_rings, 2);
     assert_eq!(got.evidence.clip_rings, 1);
     assert!(got.polygons.iter().any(|p| p.holes.len() == 1));
+    assert_eq!(got.evidence.output_holes, 1);
+}
+
+#[test]
+fn rejects_self_crossing_ring() {
+    let mut a = input(0.0, 0.0, 1.0, 1.0);
+    a.polygons[0].outer.points = vec![
+        Point2::new(0.0, 0.0),
+        Point2::new(1.0, 1.0),
+        Point2::new(0.0, 1.0),
+        Point2::new(1.0, 0.0),
+    ];
+    assert_eq!(
+        overlay(
+            &a,
+            &input(3.0, 0.0, 1.0, 1.0),
+            OverlayOperation::Union,
+            FillRule::EvenOdd,
+            Tolerance::ZERO
+        ),
+        Err(OverlayError::SelfIntersection)
+    );
 }

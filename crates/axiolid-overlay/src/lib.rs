@@ -39,6 +39,8 @@ pub enum OverlayError {
     RingTooShort,
     RepeatedVertex,
     ZeroArea,
+    /// Non-adjacent boundary segments meet or cross.
+    SelfIntersection,
     HoleOutsideOuter,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,6 +48,8 @@ pub struct OverlayEvidence {
     pub subject_rings: usize,
     pub clip_rings: usize,
     pub output_polygons: usize,
+    /// Number of inner boundary components across all result polygons.
+    pub output_holes: usize,
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct OverlayResult {
@@ -61,6 +65,41 @@ fn signed(r: &Ring) -> f64 {
         .sum::<f64>()
         * 0.5
 }
+fn cross(a: Point2, b: Point2, c: Point2) -> f64 {
+    (b - a).perp_dot(c - a)
+}
+
+fn segments_intersect(a: Point2, b: Point2, c: Point2, d: Point2, epsilon: f64) -> bool {
+    let ac = cross(a, b, c);
+    let ad = cross(a, b, d);
+    let ca = cross(c, d, a);
+    let cb = cross(c, d, b);
+    // Boundary contact is topology, not a repairable numerical nuisance.
+    (ac.abs() <= epsilon || ad.abs() <= epsilon || ca.abs() <= epsilon || cb.abs() <= epsilon)
+        || ((ac > 0.0) != (ad > 0.0) && (ca > 0.0) != (cb > 0.0))
+}
+
+fn self_intersects(r: &Ring, t: Tolerance) -> bool {
+    let n = r.points.len();
+    for i in 0..n {
+        for j in i + 1..n {
+            if j == i + 1 || (i == 0 && j + 1 == n) {
+                continue;
+            }
+            if segments_intersect(
+                r.points[i],
+                r.points[(i + 1) % n],
+                r.points[j],
+                r.points[(j + 1) % n],
+                t.linear(),
+            ) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 fn validate_ring(r: &Ring, t: Tolerance) -> Result<(), OverlayError> {
     if r.points.len() < 3 {
         return Err(OverlayError::RingTooShort);
@@ -76,6 +115,9 @@ fn validate_ring(r: &Ring, t: Tolerance) -> Result<(), OverlayError> {
     {
         return Err(OverlayError::RepeatedVertex);
     };
+    if self_intersects(r, t) {
+        return Err(OverlayError::SelfIntersection);
+    }
     if signed(r).abs() <= t.linear().powi(2) {
         return Err(OverlayError::ZeroArea);
     };
@@ -207,6 +249,7 @@ pub fn overlay(
         subject_rings: subject.polygons.iter().map(|p| 1 + p.holes.len()).sum(),
         clip_rings: clip.polygons.iter().map(|p| 1 + p.holes.len()).sum(),
         output_polygons: polygons.len(),
+        output_holes: polygons.iter().map(|polygon| polygon.holes.len()).sum(),
     };
     Ok(OverlayResult { polygons, evidence })
 }
