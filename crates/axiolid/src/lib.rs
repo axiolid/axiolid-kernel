@@ -69,6 +69,11 @@ pub mod measure {
     pub use axiolid_measure::*;
 }
 
+#[cfg(feature = "overlay")]
+pub mod overlay {
+    pub use axiolid_overlay::*;
+}
+
 #[cfg(feature = "heal")]
 pub mod heal {
     pub use axiolid_heal::*;

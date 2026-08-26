@@ -1,0 +1,212 @@
+#![forbid(unsafe_code)]
+//! Validated, deterministic planar boolean overlay.
+use axiolid_core::{Frame2, Point2, Tolerance};
+use i_overlay::core::{fill_rule::FillRule as BackendFill, overlay_rule::OverlayRule};
+use i_overlay::float::single::SingleFloatOverlay;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FillRule {
+    EvenOdd,
+    NonZero,
+    Positive,
+    Negative,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OverlayOperation {
+    Intersection,
+    Union,
+    Difference,
+    Xor,
+}
+#[derive(Debug, Clone, PartialEq)]
+pub struct Ring {
+    pub points: Vec<Point2>,
+}
+#[derive(Debug, Clone, PartialEq)]
+pub struct Polygon {
+    pub outer: Ring,
+    pub holes: Vec<Ring>,
+}
+#[derive(Debug, Clone, PartialEq)]
+pub struct OverlayInput {
+    pub frame: Frame2,
+    pub polygons: Vec<Polygon>,
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OverlayError {
+    InvalidFrame,
+    NonFinitePoint,
+    RingTooShort,
+    RepeatedVertex,
+    ZeroArea,
+    HoleOutsideOuter,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OverlayEvidence {
+    pub subject_rings: usize,
+    pub clip_rings: usize,
+    pub output_polygons: usize,
+}
+#[derive(Debug, Clone, PartialEq)]
+pub struct OverlayResult {
+    pub polygons: Vec<Polygon>,
+    pub evidence: OverlayEvidence,
+}
+fn signed(r: &Ring) -> f64 {
+    r.points
+        .iter()
+        .zip(r.points.iter().cycle().skip(1))
+        .take(r.points.len())
+        .map(|(a, b)| a.x * b.y - b.x * a.y)
+        .sum::<f64>()
+        * 0.5
+}
+fn validate_ring(r: &Ring, t: Tolerance) -> Result<(), OverlayError> {
+    if r.points.len() < 3 {
+        return Err(OverlayError::RingTooShort);
+    };
+    if !r.points.iter().all(|p| p.is_finite()) {
+        return Err(OverlayError::NonFinitePoint);
+    };
+    if r.points
+        .iter()
+        .zip(r.points.iter().cycle().skip(1))
+        .take(r.points.len())
+        .any(|(a, b)| (*a - *b).length() <= t.linear())
+    {
+        return Err(OverlayError::RepeatedVertex);
+    };
+    if signed(r).abs() <= t.linear().powi(2) {
+        return Err(OverlayError::ZeroArea);
+    };
+    Ok(())
+}
+fn validate(input: &OverlayInput, t: Tolerance) -> Result<(), OverlayError> {
+    let f = input.frame;
+    if !f.origin.is_finite()
+        || !f.x.is_finite()
+        || !f.y.is_finite()
+        || (f.x.length() - 1.).abs() > t.linear()
+        || (f.y.length() - 1.).abs() > t.linear()
+        || f.x.dot(f.y).abs() > t.linear()
+        || f.x.perp_dot(f.y) <= 0.
+    {
+        return Err(OverlayError::InvalidFrame);
+    }
+    for p in &input.polygons {
+        validate_ring(&p.outer, t)?;
+        for h in &p.holes {
+            validate_ring(h, t)?;
+            if !contains(&p.outer, h.points[0]) {
+                return Err(OverlayError::HoleOutsideOuter);
+            }
+        }
+    }
+    Ok(())
+}
+fn contains(r: &Ring, p: Point2) -> bool {
+    let mut inside = false;
+    for (a, b) in r
+        .points
+        .iter()
+        .zip(r.points.iter().cycle().skip(1))
+        .take(r.points.len())
+    {
+        if (a.y > p.y) != (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x {
+            inside = !inside
+        }
+    }
+    inside
+}
+fn backend(p: &[Polygon]) -> Vec<Vec<Vec<[f64; 2]>>> {
+    p.iter()
+        .map(|x| {
+            core::iter::once(&x.outer)
+                .chain(x.holes.iter())
+                .map(|r| r.points.iter().map(|q| [q.x, q.y]).collect())
+                .collect()
+        })
+        .collect()
+}
+fn canonical(mut r: Ring, want_positive: bool) -> Ring {
+    if (signed(&r) > 0.) != want_positive {
+        r.points.reverse()
+    };
+    let k = r
+        .points
+        .iter()
+        .enumerate()
+        .min_by(|a, b| {
+            a.1.x
+                .total_cmp(&b.1.x)
+                .then(a.1.y.total_cmp(&b.1.y))
+                .then(a.0.cmp(&b.0))
+        })
+        .map(|x| x.0)
+        .unwrap_or(0);
+    r.points.rotate_left(k);
+    r
+}
+/// Performs a neutral planar overlay. Output ordering is deterministic: polygons sort by outer-ring lexicographic start, rings are canonicalized CCW/CW.
+pub fn overlay(
+    subject: &OverlayInput,
+    clip: &OverlayInput,
+    operation: OverlayOperation,
+    fill: FillRule,
+    tolerance: Tolerance,
+) -> Result<OverlayResult, OverlayError> {
+    validate(subject, tolerance)?;
+    validate(clip, tolerance)?;
+    if subject.frame != clip.frame {
+        return Err(OverlayError::InvalidFrame);
+    };
+    let rule = match operation {
+        OverlayOperation::Intersection => OverlayRule::Intersect,
+        OverlayOperation::Union => OverlayRule::Union,
+        OverlayOperation::Difference => OverlayRule::Difference,
+        OverlayOperation::Xor => OverlayRule::Xor,
+    };
+    let fill = match fill {
+        FillRule::EvenOdd => BackendFill::EvenOdd,
+        FillRule::NonZero => BackendFill::NonZero,
+        FillRule::Positive => BackendFill::Positive,
+        FillRule::Negative => BackendFill::Negative,
+    };
+    let shapes = backend(&subject.polygons).overlay(&backend(&clip.polygons), rule, fill);
+    let mut polygons: Vec<Polygon> = shapes
+        .into_iter()
+        .filter_map(|s| {
+            let mut it = s.into_iter();
+            let outer = it.next()?;
+            let outer = canonical(
+                Ring {
+                    points: outer.into_iter().map(|p| Point2::new(p[0], p[1])).collect(),
+                },
+                true,
+            );
+            let holes = it
+                .map(|r| {
+                    canonical(
+                        Ring {
+                            points: r.into_iter().map(|p| Point2::new(p[0], p[1])).collect(),
+                        },
+                        false,
+                    )
+                })
+                .collect();
+            Some(Polygon { outer, holes })
+        })
+        .collect();
+    polygons.sort_by(|a, b| {
+        a.outer.points[0]
+            .x
+            .total_cmp(&b.outer.points[0].x)
+            .then(a.outer.points[0].y.total_cmp(&b.outer.points[0].y))
+    });
+    let evidence = OverlayEvidence {
+        subject_rings: subject.polygons.iter().map(|p| 1 + p.holes.len()).sum(),
+        clip_rings: clip.polygons.iter().map(|p| 1 + p.holes.len()).sum(),
+        output_polygons: polygons.len(),
+    };
+    Ok(OverlayResult { polygons, evidence })
+}

@@ -24,7 +24,7 @@
 //!                        axiolid-model
 //!    ^
 //!   L2  algorithms       axiolid-sweep, axiolid-tessellate, axiolid-spatial,
-//!                        axiolid-measure, axiolid-heal, axiolid-kernel
+//!                        axiolid-measure, axiolid-overlay, axiolid-heal, axiolid-kernel
 //!    ^
 //!   L3  implementations  axiolid-backend-cpu, axiolid-backend-gpu
 //!    ^
@@ -70,6 +70,7 @@ const TIERS: &[(&str, u8)] = &[
     ("axiolid-tessellate", 2),
     ("axiolid-spatial", 2),
     ("axiolid-measure", 2),
+    ("axiolid-overlay", 2),
     ("axiolid-heal", 2),
     ("axiolid-kernel", 2),
     // The scalar reference implementation (ADR 0012). Consumes the kernel
