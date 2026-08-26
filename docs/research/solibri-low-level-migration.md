@@ -37,7 +37,7 @@ No benchmark claim is accepted without a release-mode baseline, output-equivalen
 |---|---|---|---|
 | `spatial/bvh` | `axiolid-spatial` | completed | Solibri retains labels/AABBs; adapter delegates all hierarchy work. |
 | `mesh/validate` | `axiolid-mesh` | completed | Adapter uses a zero-copy mesh view and preserves Solibri health outcomes. |
-| `profile/triangulate` | `axiolid-tessellate` | blocked | Current `earcutr` upstream is archived; require a maintained fork plus adversarial differential fixtures. |
+| `profile/triangulate` | `axiolid-scalar` / `axiolid-tessellate` | partial | Simple loops use the certified Axiolid scalar adapter; holes remain blocked pending a maintained constrained backend. |
 | `predicates/*` and narrow phase | `axiolid-scalar` / `axiolid-measure` | inventory | Port only source-neutral predicates and query evidence, then differential-test. |
 | `query/{clash,distance,containment,footprint,portal}` | Axiolid query crates | inventory | Separate reusable query kernel from Solibri identifiers and rule interpretation. |
 | `solid/*` | `axiolid-boolmesh` / `axiolid-sweep` | inventory | Do not import native CSG bindings or Solibri representation policy. |
