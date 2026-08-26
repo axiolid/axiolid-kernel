@@ -109,6 +109,7 @@ name = "axiolid-measure"
 version = "0.1.0"
 dependencies = [
  "axiolid-core",
+ "axiolid-mesh",
 ]
 
 [[package]]
