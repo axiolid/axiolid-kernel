@@ -20,11 +20,33 @@ impl Aabb {
         }
     }
 
+    /// Construct a non-empty box containing exactly one point.
+    #[inline]
+    pub const fn from_point(point: Point3) -> Self {
+        Self {
+            min: point,
+            max: point,
+        }
+    }
+
     /// Grow to include a point.
     #[inline]
     pub fn extend(&mut self, point: Point3) {
         self.min = self.min.min(point);
         self.max = self.max.max(point);
+    }
+
+    /// Grow to include every point in another box.
+    #[inline]
+    pub fn union(&mut self, other: &Self) {
+        self.min = self.min.min(other.min);
+        self.max = self.max.max(other.max);
+    }
+
+    /// Whether both corners are finite coordinates.
+    #[inline]
+    pub fn is_finite(&self) -> bool {
+        self.min.is_finite() && self.max.is_finite()
     }
 
     /// Whether the boxes overlap. Touching counts as overlap.
@@ -51,6 +73,26 @@ impl Aabb {
         } else {
             self.max - self.min
         }
+    }
+
+    /// Centre point, or zero for an empty box.
+    #[inline]
+    pub fn center(&self) -> Point3 {
+        if self.is_empty() {
+            Vec3::ZERO
+        } else {
+            (self.min + self.max) * 0.5
+        }
+    }
+
+    /// Minimum Euclidean distance between box surfaces. Touching and overlap
+    /// have distance zero.
+    #[inline]
+    pub fn gap(&self, other: &Self) -> Scalar {
+        let separation = (other.min - self.max)
+            .max(self.min - other.max)
+            .max(Vec3::ZERO);
+        separation.length()
     }
 }
 

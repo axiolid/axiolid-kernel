@@ -1,18 +1,27 @@
 # axiolid-spatial implementation plan
 
-Status: architecture scaffold; algorithms incomplete. This is planning context,
-not standing agent instruction.
+Status: BVH implemented; octree and uniform-grid providers remain planned.
 
 ## Established
 
 - Crate boundary and dependency direction are executable in the layering gate.
-- Public data/contracts compile. Behavior remains scaffold unless a test names it.
+- [`Bvh`](src/bvh.rs) is a read-only, deterministic median-split broad-phase
+  provider. It rejects malformed bounds, preserves accepted input pair order,
+  supports callback AABB/ray traversal, pair candidates, and filtered nearest
+  queries.
+- It is intentionally serial today. The public `SpatialIndex` callback seam
+  leaves room for parallel CPU and GPU providers without coupling the contract
+  to either execution strategy.
 
 ## Next implementation wave
 
-Port and benchmark the Solibri BVH behind SpatialIndex.
+- Benchmark this BVH against the Solibri reference on representative sparse,
+  dense, and adversarial distributions before adding parallel build/query code.
+- Add octree or uniform-grid providers only where a measured workload justifies
+  their different update/query trade-offs.
 
 ## Exit evidence
 
-Targeted tests, feature-isolated compile where applicable, mutation-verified
-architecture/validation gates, and benchmarks before performance claims.
+Targeted differential tests, feature-isolated compile where applicable,
+mutation-verified architecture/validation gates, and benchmarks before
+performance claims.

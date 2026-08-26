@@ -13,6 +13,13 @@ pub struct SpatialItem<K> {
     pub bounds: Aabb,
 }
 
+impl<K> SpatialItem<K> {
+    /// Construct one caller-keyed broad-phase item.
+    pub const fn new(key: K, bounds: Aabb) -> Self {
+        Self { key, bounds }
+    }
+}
+
 /// Ray hit returned in ascending distance order where supported.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RayHit<K> {
