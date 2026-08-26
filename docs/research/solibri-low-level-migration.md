@@ -30,3 +30,19 @@ No benchmark claim is accepted without a release-mode baseline, output-equivalen
 ## Explicit exclusions
 
 `native_stair*`, `native_ramp`, `native_vertical_access`, `native_head_clearance`, source-native compatibility behavior, IFC placement/lowering, and checker/report policy remain above Axiolid in Solibri or Nehirde adapters/rules.
+
+## Capability matrix
+
+| Solibri area | Target layer | Status | Migration rule |
+|---|---|---|---|
+| `spatial/bvh` | `axiolid-spatial` | completed | Solibri retains labels/AABBs; adapter delegates all hierarchy work. |
+| `mesh/validate` | `axiolid-mesh` | completed | Adapter uses a zero-copy mesh view and preserves Solibri health outcomes. |
+| `profile/triangulate` | `axiolid-tessellate` | blocked | Current `earcutr` upstream is archived; require a maintained fork plus adversarial differential fixtures. |
+| `predicates/*` and narrow phase | `axiolid-scalar` / `axiolid-measure` | inventory | Port only source-neutral predicates and query evidence, then differential-test. |
+| `query/{clash,distance,containment,footprint,portal}` | Axiolid query crates | inventory | Separate reusable query kernel from Solibri identifiers and rule interpretation. |
+| `solid/*` | `axiolid-boolmesh` / `axiolid-sweep` | inventory | Do not import native CSG bindings or Solibri representation policy. |
+| `native_stair*`, `native_ramp`, `native_vertical_access`, head-clearance policy | Solibri rules/domain | excluded | Extract only generic slice/distance/clearance primitives that a neutral API can express. |
+
+Every candidate requires: API contract and tolerance policy, no IFC/Solibri/rule
+imports, deterministic scalar tests plus a Solibri adapter differential test,
+and an explicit CPU-batching/GPU-provider assessment before performance work.
