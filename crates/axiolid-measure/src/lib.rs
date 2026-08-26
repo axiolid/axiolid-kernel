@@ -7,6 +7,11 @@
 
 pub mod measure;
 pub mod properties;
+pub mod proximity;
 
 pub use measure::Measure;
 pub use properties::MassProperties;
+pub use proximity::{
+    closest_point_on_triangle, closest_points_on_segments, closest_points_on_triangles,
+    ClosestPoints3, ProximityError,
+};
