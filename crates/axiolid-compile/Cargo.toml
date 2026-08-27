@@ -22,4 +22,9 @@ axiolid-scalar.workspace = true
 earcut = "0.4"
 
 [dev-dependencies]
+# The measurement oracle. `volume_properties` audits closed-two-manifoldness
+# before it integrates, so using it makes the extrusion tests assert
+# watertightness and volume in one call instead of trusting a hand-rolled
+# divergence sum that would happily integrate a broken mesh.
+axiolid-measure.workspace = true
 axiolid-boolmesh.workspace = true

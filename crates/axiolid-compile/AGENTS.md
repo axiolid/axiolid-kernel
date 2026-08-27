@@ -29,7 +29,18 @@ ellipse or a rational spline.
 
 `tests/extrusion_volume.rs` pins the identity `volume == area * depth` for
 every supported profile family, and asserts the chord budget actually bounds
-the volume error (measured: error is O(chord), constant under 5).
+the volume error (measured: error is O(chord), constant under 5). Volume and
+area come from `axiolid-measure`, never a local divergence sum: that crate
+audits closed-two-manifold first, so a hand-rolled integral would silently
+measure a torn shell.
+
+**Tolerance must scale with the chord budget.** `audit_mesh` calls a triangle
+degenerate when `2A <= tolerance.linear()^2`. A cylinder flattened at chord
+`c` has side quads about `sqrt(8*r*c)` wide and cap slivers far smaller, so a
+fixed `Tolerance::MILLIMETRE` rejects perfectly correct geometry as soon as a
+caller asks for sub-millimetre accuracy. Use `tolerance_for(chord)` in tests;
+in production pass a tolerance derived from the same budget that drove
+flattening. This is not a test artefact -- it is a real API contract.
 
 ## Adopted dependencies
 

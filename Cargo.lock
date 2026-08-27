@@ -68,6 +68,7 @@ dependencies = [
  "axiolid-core",
  "axiolid-curve",
  "axiolid-kernel",
+ "axiolid-measure",
  "axiolid-mesh",
  "axiolid-model",
  "axiolid-profile",

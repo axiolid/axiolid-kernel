@@ -31,16 +31,34 @@ use axiolid_scalar::signed_area2;
 
 const TAU: Scalar = core::f64::consts::TAU;
 
-/// Signed volume by the divergence theorem, independent of the extruder.
+/// Signed volume via the measurement oracle (`axiolid-measure`).
+///
+/// Deliberately not a local divergence sum. `volume_properties` refuses a mesh
+/// that is not closed and two-manifold *before* it integrates, so every call
+/// here asserts watertightness as well as volume. A hand-rolled integral
+/// cannot: it returns a plausible number for a mesh with a missing face.
 fn volume(mesh: &TriMesh) -> Scalar {
-    let mut v = 0.0;
-    for c in mesh.indices.chunks_exact(3) {
-        let a = mesh.positions[c[0] as usize];
-        let b = mesh.positions[c[1] as usize];
-        let d = mesh.positions[c[2] as usize];
-        v += a.dot(b.cross(d)) / 6.0;
-    }
-    v
+    volume_at(mesh, Tolerance::MILLIMETRE)
+}
+
+/// Measure with an explicit tolerance.
+///
+/// `audit_mesh` calls a triangle degenerate when its doubled area is at most
+/// `tolerance.linear()`, so the tolerance must match the scale of the mesh
+/// being measured. A cylinder flattened at chord budget `h` has side triangles
+/// about `h` wide: judging those with a fixed MILLIMETRE tolerance would
+/// classify perfectly correct geometry as degenerate as soon as the caller
+/// asks for sub-millimetre accuracy. Tolerance is a property of the
+/// measurement, not a constant.
+fn volume_at(mesh: &TriMesh, tolerance: Tolerance) -> Scalar {
+    axiolid_measure::volume_properties(mesh, tolerance)
+        .expect("extrusion output must be closed and two-manifold")
+        .signed_volume
+}
+
+/// A tolerance proportional to a chord budget, floored at f64 sanity.
+fn tolerance_for(chord: Scalar) -> Tolerance {
+    Tolerance::new((chord * 1e-3).max(1e-12), 1e-9).expect("valid tolerance")
 }
 
 /// Cross-section area from the flattened rings: outer minus holes.
@@ -80,7 +98,7 @@ fn assert_volume_is_area_times_depth(profile: &Profile, depth: Scalar, what: &st
     let mesh = extrude_profile(&rings, Vec3::Z, depth, Tolerance::MILLIMETRE).expect("extrude");
 
     let want = ring_area(&rings) * depth;
-    let got = volume(&mesh);
+    let got = volume_at(&mesh, tolerance_for(chord));
     // Relative tolerance: a flattened curve's area is itself an approximation,
     // bounded by the chord budget, so an absolute epsilon would be wrong.
     let tol = (want.abs() * 1e-6).max(1e-9);
@@ -125,7 +143,7 @@ fn a_circle_extrudes_to_a_cylinder_of_pi_r_squared_h() {
     let rings = profile_rings(&p, 1e-6, Tolerance::MILLIMETRE).expect("rings");
     let mesh = extrude_profile(&rings, Vec3::Z, h, Tolerance::MILLIMETRE).expect("extrude");
     let want = core::f64::consts::PI * r * r * h;
-    let got = volume(&mesh);
+    let got = volume_at(&mesh, tolerance_for(1e-6));
     // A flattened circle is an inscribed polygon, so it under-estimates.
     // The gap must be small and one-signed -- that is the tolerance working.
     assert!(got < want, "inscribed polygon must under-estimate");
@@ -152,10 +170,14 @@ fn an_annulus_loses_exactly_its_hole() {
     });
     let hollow_rings = profile_rings(&p, 1e-6, Tolerance::MILLIMETRE).unwrap();
     let filled_rings = profile_rings(&filled, 1e-6, Tolerance::MILLIMETRE).unwrap();
-    let hollow =
-        volume(&extrude_profile(&hollow_rings, Vec3::Z, 2.0, Tolerance::MILLIMETRE).unwrap());
-    let solid =
-        volume(&extrude_profile(&filled_rings, Vec3::Z, 2.0, Tolerance::MILLIMETRE).unwrap());
+    let hollow = volume_at(
+        &extrude_profile(&hollow_rings, Vec3::Z, 2.0, Tolerance::MILLIMETRE).unwrap(),
+        tolerance_for(1e-6),
+    );
+    let solid = volume_at(
+        &extrude_profile(&filled_rings, Vec3::Z, 2.0, Tolerance::MILLIMETRE).unwrap(),
+        tolerance_for(1e-6),
+    );
     let inner_volume = core::f64::consts::PI * 2.0 * 2.0 * 2.0;
     assert!(
         ((solid - hollow) - inner_volume).abs() / inner_volume < 1e-5,
@@ -177,7 +199,7 @@ fn an_ellipse_profile_now_extrudes_at_all() {
     let rings = profile_rings(&p, 1e-6, Tolerance::MILLIMETRE).expect("ellipse must be supported");
     let mesh = extrude_profile(&rings, Vec3::Z, 2.0, Tolerance::MILLIMETRE).expect("extrude");
     let want = core::f64::consts::PI * 3.0 * 1.5 * 2.0;
-    let got = volume(&mesh);
+    let got = volume_at(&mesh, tolerance_for(1e-6));
     assert!(got < want, "inscribed polygon under-estimates");
     assert!(
         (want - got) / want < 1e-6,
@@ -293,7 +315,7 @@ fn a_tighter_chord_budget_converges_on_the_true_cylinder() {
     for chord in [1e-2, 1e-3, 1e-4, 1e-5, 1e-6] {
         let rings = profile_rings(&p, chord, Tolerance::MILLIMETRE).unwrap();
         let mesh = extrude_profile(&rings, Vec3::Z, 1.0, Tolerance::MILLIMETRE).unwrap();
-        let error = (exact - volume(&mesh)).abs();
+        let error = (exact - volume_at(&mesh, tolerance_for(chord))).abs();
         assert!(
             error < previous,
             "error must shrink monotonically: {error} !< {previous} at chord {chord}"
@@ -339,8 +361,8 @@ fn an_extruded_solid_is_accepted_by_the_conformance_gated_boolean() {
         .expect("extruded solids must satisfy the boolean preconditions");
 
     // The cut removed material but did not annihilate the cylinder.
-    let cut = volume(&outcome.mesh);
-    let whole = volume(&cylinder);
+    let cut = volume_at(&outcome.mesh, tolerance_for(1e-4));
+    let whole = volume_at(&cylinder, tolerance_for(1e-4));
     assert!(
         cut > 0.0 && cut < whole,
         "difference volume {cut} must be between 0 and {whole}"
@@ -373,5 +395,111 @@ fn a_full_circle_ring_does_not_repeat_its_closing_vertex() {
     assert!(
         (first - last).length() > 1e-12,
         "ring repeats its first vertex"
+    );
+}
+
+/// The centroid of a prism sits at exactly half its depth.
+///
+/// Volume is blind to defects the centroid is not: reflecting a cap through
+/// the mid-plane, or emitting the two caps at swapped heights, both preserve
+/// the divergence integral while moving the centre of mass.
+#[test]
+fn an_extruded_prism_centres_at_half_its_depth() {
+    let depth = 3.0;
+    let p = Profile::Rectangle(RectangleProfile {
+        x: 4.0,
+        y: 2.0,
+        thickness: None,
+        outer_radius: None,
+        inner_radius: None,
+    });
+    let rings = profile_rings(&p, 1e-4, Tolerance::MILLIMETRE).expect("rings");
+    let mesh = extrude_profile(&rings, Vec3::Z, depth, Tolerance::MILLIMETRE).expect("extrude");
+    let props = axiolid_measure::volume_properties(&mesh, tolerance_for(1e-4))
+        .expect("prism must be closed and two-manifold");
+    assert!(
+        (props.centroid.z - depth * 0.5).abs() < 1e-12,
+        "prism centroid z {} != half depth {}",
+        props.centroid.z,
+        depth * 0.5
+    );
+    // A rectangle centred on the origin keeps the centroid on the axis.
+    assert!(props.centroid.x.abs() < 1e-12 && props.centroid.y.abs() < 1e-12);
+}
+
+/// A cylinder's total surface area converges on 2*pi*r^2 + 2*pi*r*h.
+///
+/// Volume exercises the caps and the interior; area exercises the *sides*.
+/// An extruder emitting one triangle per boundary edge instead of two would
+/// still be closed and could still integrate to a believable volume, but its
+/// lateral area would be visibly short.
+#[test]
+fn a_cylinder_surface_area_converges_on_the_analytic_value() {
+    let (r, h) = (1.0, 2.0);
+    let p = Profile::Circle(CircleProfile {
+        radius: r,
+        thickness: None,
+    });
+    let rings = profile_rings(&p, 1e-6, Tolerance::MILLIMETRE).expect("rings");
+    let mesh = extrude_profile(&rings, Vec3::Z, h, Tolerance::MILLIMETRE).expect("extrude");
+    let props = axiolid_measure::surface_properties(&mesh, tolerance_for(1e-6))
+        .expect("cylinder must be surface-usable");
+    let analytic = 2.0 * core::f64::consts::PI * r * r + core::f64::consts::TAU * r * h;
+    let rel = (props.area - analytic).abs() / analytic;
+    assert!(
+        rel < 1e-5,
+        "cylinder area {} vs analytic {analytic} (rel {rel:.3e})",
+        props.area
+    );
+}
+
+/// The measurement oracle refuses an open mesh; a raw integral would not.
+///
+/// This is the whole reason these tests call `axiolid-measure` instead of
+/// summing tetrahedra locally. Deleting one triangle leaves a mesh whose
+/// divergence sum is still a finite, plausible number -- and which is not a
+/// solid. `volume_properties` audits closed-two-manifoldness first, so the
+/// defect surfaces as a refusal instead of a slightly-wrong volume.
+#[test]
+fn the_oracle_refuses_an_open_mesh_a_raw_integral_would_accept() {
+    let p = Profile::Rectangle(RectangleProfile {
+        x: 2.0,
+        y: 2.0,
+        thickness: None,
+        outer_radius: None,
+        inner_radius: None,
+    });
+    let rings = profile_rings(&p, 1e-4, Tolerance::MILLIMETRE).expect("rings");
+    let mesh = extrude_profile(&rings, Vec3::Z, 1.0, Tolerance::MILLIMETRE).expect("extrude");
+
+    // Sound to begin with.
+    let whole = axiolid_measure::volume_properties(&mesh, tolerance_for(1e-4))
+        .expect("intact extrusion is a solid")
+        .signed_volume;
+    assert!((whole - 4.0).abs() < 1e-9, "2x2x1 box, got {whole}");
+
+    // Remove one triangle: still finite under a raw integral, no longer a solid.
+    let mut holed = mesh.clone();
+    holed.indices.truncate(holed.indices.len() - 3);
+
+    let raw: Scalar = holed
+        .indices
+        .chunks_exact(3)
+        .map(|c| {
+            let a = holed.positions[c[0] as usize];
+            let b = holed.positions[c[1] as usize];
+            let d = holed.positions[c[2] as usize];
+            a.dot(b.cross(d)) / 6.0
+        })
+        .sum();
+    assert!(
+        raw.is_finite(),
+        "a raw integral reports a plausible number for a holed mesh: {raw}"
+    );
+
+    let refused = axiolid_measure::volume_properties(&holed, tolerance_for(1e-4));
+    assert!(
+        refused.is_err(),
+        "the oracle must refuse an open mesh, got {refused:?}"
     );
 }
