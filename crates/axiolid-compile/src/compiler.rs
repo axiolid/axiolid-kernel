@@ -197,7 +197,14 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
             } => {
                 let subject = self.cached(cache, *left)?;
                 let tool = self.cached(cache, *right)?;
-                self.boolean.boolean(subject, tool, *operator, options)
+                // The compiler produces a mesh graph, so it takes the mesh and
+                // drops the evidence here. A caller wanting boolean diagnostics
+                // calls the registry directly; threading evidence through every
+                // DAG node would change the compile contract, which is a
+                // separate decision from fixing the boolean contract.
+                self.boolean
+                    .boolean(subject, tool, *operator, options)
+                    .map(|outcome| outcome.mesh)
             }
             // Every remaining family is a sweep of some kind (revolution,
             // swept disk, fixed-reference, surface-curve, sectioned spine) or

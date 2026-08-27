@@ -376,6 +376,18 @@ fn every_geometry_source_module_is_declared() {
             if file.file_name().and_then(|v| v.to_str()) == Some("lib.rs") {
                 continue;
             }
+            // `src/bin/*.rs` are separate binary targets, not modules of the
+            // library, so no `mod` declaration exists or should. Cargo builds
+            // them by path convention. Without this the gate reports a missing
+            // declaration file for every developer tool shipped in-crate.
+            if file
+                .parent()
+                .and_then(|parent| parent.file_name())
+                .and_then(|name| name.to_str())
+                == Some("bin")
+            {
+                continue;
+            }
             let stem = file
                 .file_stem()
                 .and_then(|v| v.to_str())

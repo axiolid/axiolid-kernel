@@ -25,7 +25,8 @@ fn sequential(subject: &TriMesh, tools: &[TriMesh]) -> TriMesh {
     for tool in tools {
         current = provider
             .boolean(&current, tool, BooleanOperator::Difference, &options())
-            .expect("sequential difference");
+            .expect("sequential difference")
+            .mesh;
     }
     current
 }
@@ -52,7 +53,8 @@ fn disjoint_cutters_agree_with_the_sequential_path() {
     let expected = sequential(&wall, &tools);
     let actual = BoolmeshBoolean::new()
         .subtract_many(&wall, &tools, &options())
-        .expect("grouped");
+        .expect("grouped")
+        .mesh;
 
     assert_same_volume(&expected, &actual, "disjoint");
     assert!(
@@ -79,7 +81,8 @@ fn overlapping_cutters_are_not_fused() {
     let expected = sequential(&wall, &tools);
     let actual = BoolmeshBoolean::new()
         .subtract_many(&wall, &tools, &options())
-        .expect("grouped");
+        .expect("grouped")
+        .mesh;
 
     assert_same_volume(&expected, &actual, "overlapping");
 }
@@ -99,7 +102,8 @@ fn a_mixed_layout_groups_only_what_is_disjoint() {
     let expected = sequential(&wall, &tools);
     let actual = BoolmeshBoolean::new()
         .subtract_many(&wall, &tools, &options())
-        .expect("grouped");
+        .expect("grouped")
+        .mesh;
 
     assert_same_volume(&expected, &actual, "mixed");
 }
@@ -112,13 +116,15 @@ fn empty_and_single_tool_batches_behave_like_the_default() {
 
     let none = provider
         .subtract_many(&wall, &[], &options())
-        .expect("no tools");
+        .expect("no tools")
+        .mesh;
     assert_same_volume(&wall, &none, "empty batch");
 
     let tool = boxx(2.0, 0.1, 1.0, 0.5, 0.5, 1.0, 0.0);
     let one = provider
         .subtract_many(&wall, std::slice::from_ref(&tool), &options())
-        .expect("one tool");
+        .expect("one tool")
+        .mesh;
     let expected = sequential(&wall, std::slice::from_ref(&tool));
     assert_same_volume(&expected, &one, "single tool");
 }
@@ -158,7 +164,8 @@ fn grouped_and_sequential_agree_across_random_layouts() {
         let expected = sequential(&wall, &tools);
         let actual = provider
             .subtract_many(&wall, &tools, &options())
-            .expect("grouped");
+            .expect("grouped")
+            .mesh;
         assert_same_volume(&expected, &actual, &format!("random case {case}"));
 
         if actual.triangle_count() != wall.triangle_count() {

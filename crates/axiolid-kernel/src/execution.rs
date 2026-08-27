@@ -2,6 +2,7 @@
 
 use axiolid_core::Tolerance;
 
+use crate::cancel::CancellationToken;
 use crate::{BackendId, GeomError, GeomResult, Precision};
 
 /// Reproducibility requirement.
@@ -181,7 +182,12 @@ impl ScratchRequirement {
     ///
     /// An unbounded requirement never fits a declared budget: allowing it would
     /// make the budget advisory, which is the failure this type exists to stop.
-    pub const fn fits_budget(self, options: &ExecutionOptions, elements: usize) -> bool {
+    /// Whether this requirement fits the caller's memory budget.
+    ///
+    /// No longer `const`: it reads an [`ExecutionOptions`] that now owns a
+    /// shared cancellation handle, so it cannot be destructured at compile
+    /// time. Budget checks happen once per dispatch, not on a hot path.
+    pub fn fits_budget(self, options: &ExecutionOptions, elements: usize) -> bool {
         match options.memory_budget_bytes() {
             None => true,
             Some(budget) => match self.upper_bound_bytes(elements) {
@@ -261,8 +267,12 @@ impl OutputBound {
     }
 }
 
-/// Operation policy with explicit tolerance and precision.
-#[derive(Debug, Clone, Copy, PartialEq)]
+/// Operation policy with explicit tolerance, precision, and cancellation.
+///
+/// Deliberately not `Copy`: it carries a shared [`CancellationToken`], and an
+/// implicitly copied cancellation handle is a footgun. Callers clone when they
+/// mean to share the token and construct fresh options when they do not.
+#[derive(Debug, Clone, PartialEq)]
 pub struct ExecutionOptions {
     tolerance: Tolerance,
     precision: Precision,
@@ -271,6 +281,7 @@ pub struct ExecutionOptions {
     device: DevicePreference,
     residency: DataResidency,
     memory_budget_bytes: Option<usize>,
+    cancellation: Option<CancellationToken>,
 }
 
 impl ExecutionOptions {
@@ -284,23 +295,50 @@ impl ExecutionOptions {
             device: DevicePreference::Auto,
             residency: DataResidency::HOST,
             memory_budget_bytes: None,
+            cancellation: None,
+        }
+    }
+
+    /// Attach a cooperative cancellation token.
+    ///
+    /// Absent a token, an operation runs to completion; there is no ambient
+    /// cancellation source. Providers declare how finely they poll via
+    /// [`crate::CancellationGranularity`], so a caller can see the real latency.
+    pub fn with_cancellation(mut self, token: CancellationToken) -> Self {
+        self.cancellation = Some(token);
+        self
+    }
+
+    /// The attached cancellation token, if any.
+    pub fn cancellation(&self) -> Option<&CancellationToken> {
+        self.cancellation.as_ref()
+    }
+
+    /// `Err(GeomError::Cancelled)` if a token is attached and cancelled.
+    ///
+    /// The call providers make at each poll point: `options.check_cancelled()?`.
+    /// Cheap (one relaxed load) and a no-op when no token is attached.
+    pub fn check_cancelled(&self) -> crate::GeomResult<()> {
+        match &self.cancellation {
+            Some(token) => token.check(),
+            None => Ok(()),
         }
     }
 
     /// Set required precision.
-    pub const fn with_precision(mut self, precision: Precision) -> Self {
+    pub fn with_precision(mut self, precision: Precision) -> Self {
         self.precision = precision;
         self
     }
 
     /// Set determinism requirement.
-    pub const fn with_determinism(mut self, value: Determinism) -> Self {
+    pub fn with_determinism(mut self, value: Determinism) -> Self {
         self.determinism = value;
         self
     }
 
     /// Set scheduling preference. Returns `None` for zero explicit threads.
-    pub const fn with_parallelism(mut self, value: Parallelism) -> Option<Self> {
+    pub fn with_parallelism(mut self, value: Parallelism) -> Option<Self> {
         if matches!(value, Parallelism::Threads(0)) {
             return None;
         }
@@ -309,55 +347,55 @@ impl ExecutionOptions {
     }
 
     /// Set device preference.
-    pub const fn with_device(mut self, value: DevicePreference) -> Self {
+    pub fn with_device(mut self, value: DevicePreference) -> Self {
         self.device = value;
         self
     }
 
     /// Declare where inputs live and where outputs are wanted.
-    pub const fn with_residency(mut self, value: DataResidency) -> Self {
+    pub fn with_residency(mut self, value: DataResidency) -> Self {
         self.residency = value;
         self
     }
 
     /// Bound temporary allocation.
-    pub const fn with_memory_budget(mut self, bytes: usize) -> Self {
+    pub fn with_memory_budget(mut self, bytes: usize) -> Self {
         self.memory_budget_bytes = Some(bytes);
         self
     }
 
     /// Tolerance.
-    pub const fn tolerance(self) -> Tolerance {
+    pub fn tolerance(&self) -> Tolerance {
         self.tolerance
     }
 
     /// Precision.
-    pub const fn precision(self) -> Precision {
+    pub fn precision(&self) -> Precision {
         self.precision
     }
 
     /// Determinism requirement.
-    pub const fn determinism(self) -> Determinism {
+    pub fn determinism(&self) -> Determinism {
         self.determinism
     }
 
     /// Scheduling preference.
-    pub const fn parallelism(self) -> Parallelism {
+    pub fn parallelism(&self) -> Parallelism {
         self.parallelism
     }
 
     /// Device preference.
-    pub const fn device(self) -> DevicePreference {
+    pub fn device(&self) -> DevicePreference {
         self.device
     }
 
     /// Optional temporary-memory budget.
-    pub const fn memory_budget_bytes(self) -> Option<usize> {
+    pub fn memory_budget_bytes(&self) -> Option<usize> {
         self.memory_budget_bytes
     }
 
     /// Where inputs live and where outputs are wanted.
-    pub const fn residency(self) -> DataResidency {
+    pub fn residency(&self) -> DataResidency {
         self.residency
     }
 
@@ -367,7 +405,7 @@ impl ExecutionOptions {
     /// enforcement point every hot path routes through. Backends must call it
     /// *before* the allocation, not after: reporting an overrun once the
     /// allocation already succeeded defeats the purpose of a budget.
-    pub fn charge_scratch(self, bytes: usize) -> GeomResult<()> {
+    pub fn charge_scratch(&self, bytes: usize) -> GeomResult<()> {
         match self.memory_budget_bytes {
             Some(budget) if bytes > budget => Err(GeomError::BudgetExceeded { resource: "memory" }),
             _ => Ok(()),

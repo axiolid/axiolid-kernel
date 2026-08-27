@@ -75,7 +75,8 @@ fn an_extruded_wall_can_be_cut_by_the_boolean_provider() {
     let options = ExecutionOptions::new(Tolerance::METRE);
     let cut = provider
         .boolean(&wall, &opening, BooleanOperator::Difference, &options)
-        .expect("the provider must accept compiler output");
+        .expect("the provider must accept compiler output")
+        .mesh;
 
     // The opening spans the full 0.2 m thickness, so the removed volume is
     // 1.0 x 0.2 x 1.2 = 0.24, not the opening's own 0.48.
@@ -97,10 +98,12 @@ fn difference_and_intersection_partition_an_extruded_wall() {
 
     let diff = provider
         .boolean(&wall, &tool, BooleanOperator::Difference, &options)
-        .expect("difference");
+        .expect("difference")
+        .mesh;
     let isect = provider
         .boolean(&wall, &tool, BooleanOperator::Intersection, &options)
-        .expect("intersection");
+        .expect("intersection")
+        .mesh;
 
     let sum = volume(&diff) + volume(&isect);
     assert!(

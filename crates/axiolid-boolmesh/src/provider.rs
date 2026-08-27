@@ -2,7 +2,8 @@
 
 use axiolid_core::BooleanOperator;
 use axiolid_kernel::{
-    Backend, BackendDescriptor, BackendId, ExecutionOptions, ExecutionTarget, GeomError,
+    symmetric_difference_via_composition, Backend, BackendDescriptor, BackendId, BooleanEvidence,
+    BooleanOutcome, CancellationGranularity, ExecutionOptions, ExecutionTarget, GeomError,
     GeomResult, MeshBoolean, ScratchRequirement,
 };
 use axiolid_mesh::TriMesh;
@@ -63,12 +64,34 @@ fn check_result(result: &TriMesh, operation: BooleanOperator) -> GeomResult<()> 
 }
 
 impl MeshBoolean for BoolmeshBoolean {
+    /// Measured, not guessed.
+    ///
     /// `boolmesh` builds a Morton collider and intersection tables sized by the
-    /// combined input, and does not expose a bound. Declaring `Unbounded` keeps
-    /// it honest: a caller with a hard memory budget will be refused rather
-    /// than silently allowed to allocate past it.
+    /// combined input. It exposes no bound, so this was measured directly with
+    /// a counting global allocator (`src/bin/scratch_probe.rs`) across all four
+    /// operations at 24 to 1,536 input triangles:
+    ///
+    /// ```text
+    ///  triangles   peak bytes   bytes/triangle   worst operation
+    ///         24        63852             2660   SymmetricDifference
+    ///         96       125580             1308   SymmetricDifference
+    ///        384       438844             1142   SymmetricDifference
+    ///       1536      1756060             1143   SymmetricDifference
+    /// ```
+    ///
+    /// Consumption is linear in input size, converging to roughly 1.1 KiB per
+    /// triangle; the higher ratio at small inputs is fixed setup cost being
+    /// divided by few triangles. `SymmetricDifference` is worst because it is
+    /// composed from three passes and holds intermediates alive.
+    ///
+    /// The declared bound is 4 KiB per triangle: above the worst observed
+    /// ratio with roughly 1.5x headroom for allocator variance and future
+    /// operand shapes. A declared bound that is occasionally too low is worse
+    /// than `Unbounded`, because it makes a budget look enforced when it is not.
     fn scratch_requirement(&self) -> ScratchRequirement {
-        ScratchRequirement::Unbounded
+        ScratchRequirement::PerElement {
+            bytes_per_element: 4096,
+        }
     }
 
     /// Group mutually disjoint cutters and remove each group with one
@@ -78,12 +101,19 @@ impl MeshBoolean for BoolmeshBoolean {
     /// disjoint solids being their union. Bounding-box grouping over-separates
     /// but never wrongly fuses, so the result is identical to the sequential
     /// default -- gated by volume equality in `tests/batch.rs`.
+    /// `boolmesh` takes no cancellation handle, so nothing can interrupt a
+    /// single boolean once it starts. Declared honestly: the batch override
+    /// polls between groups, which is the only real poll point available.
+    fn cancellation_granularity(&self) -> CancellationGranularity {
+        CancellationGranularity::BetweenOperations
+    }
+
     fn subtract_many(
         &self,
         subject: &TriMesh,
         tools: &[TriMesh],
         options: &ExecutionOptions,
-    ) -> GeomResult<TriMesh> {
+    ) -> GeomResult<BooleanOutcome> {
         self.subtract_grouped(subject, tools, options)
     }
 
@@ -92,24 +122,133 @@ impl MeshBoolean for BoolmeshBoolean {
         subject: &TriMesh,
         tool: &TriMesh,
         operation: BooleanOperator,
-        _options: &ExecutionOptions,
-    ) -> GeomResult<TriMesh> {
+        options: &ExecutionOptions,
+    ) -> GeomResult<BooleanOutcome> {
+        // `SymmetricDifference` has no `boolmesh` counterpart. Compose it from
+        // the three primitives rather than pretending the backend's operation
+        // set is the contract's; `sub_operations` in the evidence records that
+        // the caller got a composed result.
+        if operation == BooleanOperator::SymmetricDifference {
+            return symmetric_difference_via_composition(self, subject, tool, options);
+        }
+
         let op = match operation {
             BooleanOperator::Union => OpType::Add,
             BooleanOperator::Intersection => OpType::Intersect,
             BooleanOperator::Difference => OpType::Subtract,
+            BooleanOperator::SymmetricDifference => unreachable!("composed above"),
+            // A future operand added to the contract. Refusing is honest and
+            // lets the registry fall back to a provider that supports it.
+            _ => {
+                return Err(GeomError::Unsupported {
+                    backend: BoolmeshBoolean::ID,
+                    operation: axiolid_kernel::Operation::MeshBoolean,
+                })
+            }
         };
+        options.check_cancelled()?;
         let subject_manifold = to_manifold(subject, "subject")?;
         let tool_manifold = to_manifold(tool, "tool")?;
 
-        let output = compute_boolean(&subject_manifold, &tool_manifold, op).map_err(|reason| {
-            GeomError::Degenerate(format!("boolmesh {operation:?} failed: {reason}"))
-        })?;
+        let output = match compute_boolean(&subject_manifold, &tool_manifold, op) {
+            Ok(output) => output,
+            // An empty result is a legitimate value under the contract: the
+            // intersection of disjoint solids is nothing. `boolmesh` signals
+            // that by failing to build a mesh from an empty vertex matrix, so
+            // translate it back into the empty solid the contract specifies
+            // rather than surfacing a backend quirk as a geometry error.
+            Err(reason) if is_empty_result(&reason) => {
+                let empty = TriMesh::new(Vec::new(), Vec::new());
+                let evidence = evidence_for(subject, &[tool], &empty, 1);
+                return Ok(BooleanOutcome::new(empty, evidence));
+            }
+            Err(reason) => {
+                return Err(GeomError::Degenerate(format!(
+                    "boolmesh {operation:?} failed: {reason}"
+                )))
+            }
+        };
 
         let result = from_manifold(&output);
         check_result(&result, operation)?;
-        Ok(result)
+        let evidence = evidence_for(subject, &[tool], &result, 1);
+        Ok(BooleanOutcome::new(result, evidence))
     }
+}
+
+/// Whether a `boolmesh` failure actually means "the result is empty".
+///
+/// Matched on the message because the backend does not expose a typed empty
+/// case. Narrow on purpose: any other failure stays a real error rather than
+/// being silently converted into an empty solid, which would turn a genuine
+/// fault into a plausible-looking zero-volume answer.
+fn is_empty_result(reason: &impl std::fmt::Display) -> bool {
+    let text = reason.to_string().to_lowercase();
+    text.contains("empty pos matrix") || text.contains("empty mesh")
+}
+
+/// Build evidence for one completed operation.
+///
+/// `output_components` counts connected components by union-find over shared
+/// vertex indices. A difference that severs a wall reports two components, so
+/// the caller learns about the split here rather than in a later quantity.
+fn evidence_for(
+    subject: &TriMesh,
+    tools: &[&TriMesh],
+    result: &TriMesh,
+    sub_operations: usize,
+) -> BooleanEvidence {
+    let disjoint = tools
+        .iter()
+        .filter(|tool| !subject.bounds().intersects(&tool.bounds()))
+        .count();
+    BooleanEvidence::record(
+        subject.triangle_count(),
+        tools.iter().map(|t| t.triangle_count()).sum(),
+        result.triangle_count(),
+        connected_components(result),
+    )
+    .with_disjoint_tools(disjoint)
+    .with_sub_operations(sub_operations)
+    // `boolmesh` does not report coincident-face encounters, so claiming
+    // detection would be a lie. Left false until a provider can answer.
+    .with_coincident_faces(false)
+}
+
+/// Connected components over vertices shared by triangles, via union-find.
+fn connected_components(mesh: &TriMesh) -> usize {
+    let count = mesh.positions.len();
+    if count == 0 {
+        return 0;
+    }
+    let mut parent: Vec<usize> = (0..count).collect();
+
+    fn find(parent: &mut [usize], mut node: usize) -> usize {
+        while parent[node] != node {
+            parent[node] = parent[parent[node]];
+            node = parent[node];
+        }
+        node
+    }
+
+    for triangle in mesh.indices.chunks_exact(3) {
+        let a = find(&mut parent, triangle[0] as usize);
+        for corner in &triangle[1..] {
+            let b = find(&mut parent, *corner as usize);
+            if a != b {
+                parent[b] = a;
+            }
+        }
+    }
+
+    // Only vertices actually referenced by a triangle count: an unreferenced
+    // position is not a component, it is unused data.
+    let mut roots = std::collections::BTreeSet::new();
+    for index in &mesh.indices {
+        let root = find(&mut parent, *index as usize);
+        roots.insert(root);
+    }
+    roots.len()
 }
 
 /// Batch difference: fuse mutually disjoint cutters, then subtract per group.
@@ -130,23 +269,30 @@ impl BoolmeshBoolean {
         subject: &TriMesh,
         tools: &[TriMesh],
         options: &ExecutionOptions,
-    ) -> GeomResult<TriMesh> {
+    ) -> GeomResult<BooleanOutcome> {
         let bounds: Vec<_> = tools.iter().map(TriMesh::bounds).collect();
         let groups = crate::grouping::disjoint_groups(&bounds);
 
         let mut current = subject.clone();
+        let mut sub_operations = 0;
         for group in &groups {
+            // The only real poll point: between groups. Cancelling here returns
+            // no mesh at all rather than a partially cut one.
+            options.check_cancelled()?;
+            sub_operations += 1;
             // A single-member group gains nothing from fusing, so skip the
             // copy and subtract the tool directly.
             if let [only] = group.as_slice() {
-                current = self.difference(&current, &tools[*only], options)?;
+                current = self.difference(&current, &tools[*only], options)?.mesh;
                 continue;
             }
             let members: Vec<&TriMesh> = group.iter().map(|&i| &tools[i]).collect();
             let fused = crate::grouping::fuse(&members);
-            current = self.difference(&current, &fused, options)?;
+            current = self.difference(&current, &fused, options)?.mesh;
         }
-        Ok(current)
+        let borrowed: Vec<&TriMesh> = tools.iter().collect();
+        let evidence = evidence_for(subject, &borrowed, &current, sub_operations);
+        Ok(BooleanOutcome::new(current, evidence))
     }
 
     /// One difference, routed through the same validation as `boolean`.
@@ -155,7 +301,7 @@ impl BoolmeshBoolean {
         subject: &TriMesh,
         tool: &TriMesh,
         options: &ExecutionOptions,
-    ) -> GeomResult<TriMesh> {
+    ) -> GeomResult<BooleanOutcome> {
         self.boolean(subject, tool, BooleanOperator::Difference, options)
     }
 }

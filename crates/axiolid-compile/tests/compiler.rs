@@ -359,6 +359,8 @@ fn a_mirrored_placement_keeps_the_solid_outward_facing() {
     let g2 = c.finish(vec![s2]).unwrap();
     let tool = compiler().compile(&g2, s2, &options()).expect("tool");
     use axiolid_kernel::MeshBoolean;
+    // The assertion is that an admissible mirrored solid is accepted; the
+    // resulting geometry is not what this test is about.
     BoolmeshBoolean::new()
         .boolean(&mesh, &tool, BooleanOperator::Difference, &options())
         .expect("mirrored solid must be acceptable to the boolean provider");

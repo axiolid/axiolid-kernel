@@ -32,7 +32,8 @@ fn wall_minus_three_overlapping_openings() {
 
     let result = BoolmeshBoolean::new()
         .subtract_many(&wall, &openings, &ExecutionOptions::new(Tolerance::METRE))
-        .expect("wall minus three overlapping openings");
+        .expect("wall minus three overlapping openings")
+        .mesh;
 
     assert!(
         result.validate_structure().is_ok(),

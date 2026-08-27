@@ -1,0 +1,124 @@
+//! What a boolean actually did, alongside the mesh it produced.
+//!
+//! `axiolid-overlay` returns `OverlayResult`; `axiolid-field` returns
+//! `FieldEvidence`. The 3D boolean previously returned a bare `TriMesh`, which
+//! made the operation most in need of diagnostics the only one without any.
+//! This module closes that gap with the same mental model: *what did the kernel
+//! actually do to my geometry?*
+
+use axiolid_mesh::TriMesh;
+
+/// Counters describing one boolean evaluation.
+///
+/// Every field is a fact about the computation, never a quality verdict. A
+/// caller decides whether a given count is acceptable for its domain.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[non_exhaustive]
+pub struct BooleanEvidence {
+    /// Triangles in the subject operand as supplied.
+    pub subject_triangles: usize,
+    /// Triangles across all tool operands as supplied.
+    pub tool_triangles: usize,
+    /// Triangles in the result.
+    pub output_triangles: usize,
+    /// Connected components in the result.
+    ///
+    /// A difference that splits a wall into two pieces reports `2`. Callers
+    /// that expect a single solid can detect the split instead of discovering
+    /// it downstream in a quantity takeoff.
+    pub output_components: usize,
+    /// Tool operands that did not intersect the subject at all.
+    ///
+    /// A no-op cut is usually a placement bug upstream, but it is not an error
+    /// here, so it is reported rather than rejected.
+    pub disjoint_tools: usize,
+    /// Sub-operations executed, for composed operands.
+    ///
+    /// `SymmetricDifference` composed from union, intersection, and difference
+    /// reports `3`; a native implementation reports `1`. This is how a caller
+    /// tells a composed path from a primitive one.
+    pub sub_operations: usize,
+    /// Whether the provider detected coincident faces between operands.
+    ///
+    /// Coincident faces are the dominant source of cross-kernel disagreement.
+    /// Reporting the encounter lets a caller treat those results with more
+    /// care without Axiolid choosing a policy on its behalf.
+    pub coincident_faces_encountered: bool,
+}
+
+impl BooleanEvidence {
+    /// Record one completed operation.
+    ///
+    /// A constructor rather than struct-literal syntax because the type is
+    /// `#[non_exhaustive]`: out-of-tree providers must be able to build
+    /// evidence without breaking when a counter is added.
+    pub fn record(
+        subject_triangles: usize,
+        tool_triangles: usize,
+        output_triangles: usize,
+        output_components: usize,
+    ) -> Self {
+        Self {
+            subject_triangles,
+            tool_triangles,
+            output_triangles,
+            output_components,
+            disjoint_tools: 0,
+            sub_operations: 1,
+            coincident_faces_encountered: false,
+        }
+    }
+
+    /// Set the count of tools that did not meet the subject.
+    pub const fn with_disjoint_tools(mut self, count: usize) -> Self {
+        self.disjoint_tools = count;
+        self
+    }
+
+    /// Set how many sub-operations produced this result.
+    pub const fn with_sub_operations(mut self, count: usize) -> Self {
+        self.sub_operations = count;
+        self
+    }
+
+    /// Record that coincident faces were encountered between operands.
+    pub const fn with_coincident_faces(mut self, encountered: bool) -> Self {
+        self.coincident_faces_encountered = encountered;
+        self
+    }
+
+    /// Merge evidence from a sub-operation into a running total.
+    ///
+    /// Input counts come from the outermost call, so they are kept rather than
+    /// summed; output counts and flags come from the final sub-operation.
+    pub fn absorb(&mut self, other: Self) {
+        self.output_triangles = other.output_triangles;
+        self.output_components = other.output_components;
+        self.disjoint_tools += other.disjoint_tools;
+        self.sub_operations += other.sub_operations;
+        self.coincident_faces_encountered |= other.coincident_faces_encountered;
+    }
+}
+
+/// A boolean result: the mesh plus what was done to produce it.
+#[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
+pub struct BooleanOutcome {
+    /// Resulting solid. An empty mesh is a valid answer, not a failure:
+    /// `A ∩ B` for disjoint operands is legitimately empty.
+    pub mesh: TriMesh,
+    /// What the provider did.
+    pub evidence: BooleanEvidence,
+}
+
+impl BooleanOutcome {
+    /// Pair a mesh with its evidence.
+    pub const fn new(mesh: TriMesh, evidence: BooleanEvidence) -> Self {
+        Self { mesh, evidence }
+    }
+
+    /// Whether the operation produced no geometry.
+    pub fn is_empty(&self) -> bool {
+        self.mesh.indices.is_empty()
+    }
+}

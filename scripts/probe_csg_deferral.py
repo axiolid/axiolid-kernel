@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Mutation probes for the ADR 0017 CSG deferral guard.
 
+Scope note: sections 1-4 of ADR 0017 have landed, so the probes that asserted
+their absence were pruned. The landed contract is probed by
+`probe_boolean_contract.py`. What remains here guards the still-open items:
+the scalar oracle, the conformance suite, and the no-native-backend rule.
+
 Each probe simulates one gap being closed (or the deferral being violated) and
 asserts the guard suite FAILS. A surviving probe means the guard is blind.
 """
@@ -17,12 +22,6 @@ CRATES = ROOT / "crates"
 # (name, relative path, anchor, replacement)
 PROBES = [
     (
-        "op-set-gains-symmetric-difference",
-        "axiolid-core/src/operation.rs",
-        "    Difference,\n}",
-        "    Difference,\n    SymmetricDifference,\n}",
-    ),
-    (
         "scalar-gains-boolean-oracle",
         "axiolid-scalar/src/lib.rs",
         "#![forbid(unsafe_code)]",
@@ -34,24 +33,6 @@ PROBES = [
         "//! Mesh boolean capability and executable provider registry.",
         "//! Mesh boolean capability and executable provider registry.\n"
         "// pub fn assert_mesh_boolean_conformance() {}",
-    ),
-    (
-        "execution-gains-cancellation",
-        "axiolid-kernel/src/execution.rs",
-        "pub enum ScratchRequirement {",
-        "pub struct CancellationToken;\npub enum ScratchRequirement {",
-    ),
-    (
-        "kernel-gains-solid-validation",
-        "axiolid-kernel/src/boolean.rs",
-        "pub trait MeshBoolean: Backend {",
-        "pub enum SolidValidation {}\npub trait MeshBoolean: Backend {",
-    ),
-    (
-        "boolean-gains-evidence",
-        "axiolid-kernel/src/boolean.rs",
-        "#[derive(Debug, Clone)]\nstruct RegisteredBoolean {",
-        "pub struct BooleanEvidence;\n#[derive(Debug, Clone)]\nstruct RegisteredBoolean {",
     ),
     (
         "native-cpp-backend-introduced",

@@ -1,6 +1,6 @@
 # 0017 — Solid boolean semantics are defined before an implementation is chosen
 
-- **Status:** Proposed
+- **Status:** Accepted (sections 1-4 landed; 5-6 outstanding)
 - **Date:** 2026-08-26
 - **Deciders:** Friedrich, Hermes
 - **Supersedes:** — (extends [0003](./0003-pure-rust-mesh-boolean.md) and [0014](./0014-adopt-boolmesh-mesh-boolean.md))
@@ -17,7 +17,7 @@ Measured against the tree at the time of writing, that leak has started:
 | --- | --- | --- |
 | 1 | `BooleanOperator` has exactly three variants — `Union`, `Intersection`, `Difference` — which is exactly `boolmesh::OpType` (`Add`, `Intersect`, `Subtract`), a 1:1 map in `provider.rs:97`. `axiolid-overlay`, designed contract-first, has **four** (adds `Xor`). The 2D and 3D operation sets disagree, and the 3D one has the shape of its backend. | `axiolid-core/src/operation.rs:5`, `axiolid-overlay/src/lib.rs:16` |
 | 2 | Preconditions are enforced in the **L3 adapter**, not the L2 contract: `to_manifold` in `axiolid-boolmesh/src/convert.rs:45` decides closedness, orientation, and zero-volume. A second provider brings a second interpretation of "valid input". | `convert.rs:45-79` |
-| 3 | `boolean()` returns a bare `TriMesh`. Overlay returns `OverlayResult { polygons, evidence }`; field returns `SamplingEvidence`. The operation most in need of evidence has none, because the backend returns none. | `axiolid-kernel/src/boolean.rs:28` |
+| 3 | `boolean()` returns a bare `TriMesh`. Overlay returns `OverlayResult { polygons, evidence }`; field returns `FieldEvidence`. The operation most in need of evidence has none, because the backend returns none. | `axiolid-kernel/src/boolean.rs:28` |
 | 4 | `GeomError::Cancelled` is declared and produced **nowhere**; `ExecutionOptions` carries no token or deadline. The cancellation contract is fictional. | `grep Cancelled` → only the `enum` definition |
 | 5 | The only provider declares `ScratchRequirement::Unbounded`, so the memory budget is unenforceable for every real call. | `provider.rs:70` |
 | 6 | `axiolid-scalar` implements no `MeshBoolean`. The single most consequential operation has **no oracle**, in direct violation of ADR 0012's ordering rule. | `grep MeshBoolean crates/axiolid-scalar/src/` → no match |
@@ -136,6 +136,36 @@ plausibility, budget refusal, cancellation honoured, bit-identical repeated
 runs, agreement with the scalar oracle, and no inside-out output.
 
 **A provider that has not passed the conformance suite is not registrable.**
+
+## Status of each leak
+
+Sections 1-4 landed on 2026-08-26; the table records what closed and how.
+
+| # | Leak | Status | Landed as |
+| --- | --- | --- | --- |
+| 1 | 3D operation set mirrors the backend | **Closed** | `BooleanOperator` is `#[non_exhaustive]` with four regularized operands matching `axiolid-overlay`. `SymmetricDifference` is composed via `symmetric_difference_via_composition` where a provider lacks it natively. |
+| 2 | Preconditions owned by the L3 adapter | **Closed** | `axiolid-kernel::solid::SolidRequirements` (`Structural` / `Enclosing` / `Oriented`), validated by the registry **before** dispatch, so admissibility cannot vary by provider. |
+| 3 | Boolean returns a bare mesh | **Closed** | `BooleanOutcome { mesh, evidence }` with `BooleanEvidence` counters, mirroring `OverlayEvidence` and `FieldEvidence`. |
+| 4 | Cancellation is fictional | **Closed** | `CancellationToken` + `ExecutionOptions::with_cancellation`; providers declare `CancellationGranularity` honestly rather than claiming responsiveness they lack. |
+| 5 | Provider declares `Unbounded` scratch | **Closed** | Measured with a counting allocator (`axiolid-boolmesh/src/bin/scratch_probe.rs`): linear, ~1.1 KiB/triangle asymptotically, 2,660 B/triangle worst at small N. Declared `PerElement { bytes_per_element: 4096 }`. |
+| 6 | No scalar boolean oracle | **Open** | Requires `axiolid-scalar` to implement `MeshBoolean`. Guarded by `csg_deferral::scalar_boolean_oracle_gap_is_still_open`. |
+| 7 | Provider tests bind the concrete type | **Open** | Requires an exported generic conformance suite. Guarded by `csg_deferral::provider_conformance_suite_gap_is_still_open`. |
+
+### Consequences of the landed work
+
+- `ExecutionOptions` is **no longer `Copy`**, because it carries a shared
+  cancellation handle. An implicitly copied cancellation token is a footgun.
+  Accessors now borrow instead of consuming, which is the better shape anyway.
+- A latent bug surfaced and was fixed: `boolmesh` reports the intersection of
+  disjoint solids as an *error* (`empty pos matrix`). The contract says an
+  empty result is a **value**, so the adapter now translates it. Without the
+  four-operand contract forcing a disjoint `A ∩ B`, this would have stayed
+  hidden until a user hit it.
+- The retired guards behaved as designed: three fired the moment their gap
+  closed. A fourth, `precondition_ownership_gap_is_still_open`, kept passing
+  because it probed for the name `SolidValidation` while the landed type is
+  `SolidRequirements` — a false negative, and precisely why guards are
+  mutation-probed rather than trusted.
 
 ## Alternatives considered
 

@@ -21,6 +21,7 @@ fn apply(subject: &TriMesh, tool: &TriMesh, op: BooleanOperator) -> TriMesh {
     BoolmeshBoolean::new()
         .boolean(subject, tool, op, &options())
         .unwrap_or_else(|error| panic!("{op:?} failed: {error}"))
+        .mesh
 }
 
 /// The wall/opening case, checked by conservation rather than by index match.

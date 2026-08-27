@@ -112,7 +112,8 @@ fn sequential(
     for tool in tools {
         current = provider
             .boolean(&current, tool, BooleanOperator::Difference, options)
-            .expect("sequential difference");
+            .expect("sequential difference")
+            .mesh;
     }
     current
 }
@@ -141,6 +142,7 @@ fn main() {
                 provider
                     .subtract_many(&subject, &tools, &options)
                     .expect("grouped difference")
+                    .mesh
             });
             // The claim is an optimisation, not a behaviour change: if the
             // volumes disagree the speedup is meaningless.

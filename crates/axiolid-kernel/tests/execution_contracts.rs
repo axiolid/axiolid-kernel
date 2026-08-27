@@ -200,7 +200,27 @@ mod registry {
         Backend, BackendDescriptor, BackendId, ExecutionOptions, ExecutionTarget, GeomError,
         GeomResult, MeshBoolean, MeshBooleanRegistry, ScratchRequirement,
     };
+    use axiolid_kernel::{BooleanEvidence, BooleanOutcome};
     use axiolid_mesh::TriMesh;
+
+    /// Outward-oriented unit cube: the minimal admissible boolean operand.
+    fn admissible_cube() -> TriMesh {
+        let positions = vec![
+            [0.0, 0.0, 0.0].into(),
+            [1.0, 0.0, 0.0].into(),
+            [1.0, 1.0, 0.0].into(),
+            [0.0, 1.0, 0.0].into(),
+            [0.0, 0.0, 1.0].into(),
+            [1.0, 0.0, 1.0].into(),
+            [1.0, 1.0, 1.0].into(),
+            [0.0, 1.0, 1.0].into(),
+        ];
+        let indices = vec![
+            0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5, 2, 3, 7, 2, 7,
+            6, 3, 0, 4, 3, 4, 7,
+        ];
+        TriMesh::new(positions, indices)
+    }
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
 
@@ -229,14 +249,22 @@ mod registry {
             _tool: &TriMesh,
             _operation: BooleanOperator,
             _options: &ExecutionOptions,
-        ) -> GeomResult<TriMesh> {
+        ) -> GeomResult<BooleanOutcome> {
             self.calls.fetch_add(1, Ordering::SeqCst);
-            Ok(subject.clone())
+            Ok(BooleanOutcome::new(
+                subject.clone(),
+                BooleanEvidence::default(),
+            ))
         }
     }
 
+    /// Operand for the budget tests.
+    ///
+    /// Was a degenerate three-vertex sheet, which the contract now rejects
+    /// before dispatch. These tests are about budget routing, not
+    /// admissibility, so they need a mesh that actually gets that far.
     fn mesh() -> TriMesh {
-        TriMesh::new(vec![axiolid_core::Point3::ZERO; 3], vec![0, 1, 2])
+        admissible_cube()
     }
 
     /// The budget is only real if it blocks dispatch. A provider whose declared

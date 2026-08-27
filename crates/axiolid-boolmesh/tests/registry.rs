@@ -30,7 +30,8 @@ fn the_registry_dispatches_to_the_provider() {
             BooleanOperator::Difference,
             &ExecutionOptions::new(Tolerance::METRE),
         )
-        .expect("registry dispatch");
+        .expect("registry dispatch")
+        .mesh;
 
     assert!(volume(&result) < volume(&wall));
 }

@@ -93,7 +93,8 @@ fn subtraction_never_increases_volume() {
             BooleanOperator::Difference,
             &options(),
         )
-        .expect("difference");
+        .expect("difference")
+        .mesh;
     let after = volume(&result);
     assert!(
         after < before,

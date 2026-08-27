@@ -6,8 +6,9 @@ use axiolid_core::BooleanOperator;
 use axiolid_mesh::TriMesh;
 
 use crate::{
-    Backend, BackendId, DevicePreference, ExecutionOptions, ExecutionTarget, GeomError, GeomResult,
-    Operation, ScratchRequirement,
+    Backend, BackendId, BooleanEvidence, BooleanOutcome, CancellationGranularity, DevicePreference,
+    ExecutionOptions, ExecutionTarget, GeomError, GeomResult, Operation, ScratchRequirement,
+    SolidRequirements,
 };
 
 /// Mesh boolean provider.
@@ -24,29 +25,115 @@ pub trait MeshBoolean: Backend {
         ScratchRequirement::Unbounded
     }
 
-    /// Apply one set operation.
+    /// How finely this provider polls a cancellation token.
+    ///
+    /// Defaults to [`CancellationGranularity::None`]: a provider that has not
+    /// declared otherwise is assumed not to poll. Claiming responsiveness a
+    /// provider does not have is worse than admitting none.
+    fn cancellation_granularity(&self) -> CancellationGranularity {
+        CancellationGranularity::None
+    }
+
+    /// Admissibility this provider requires of its operands.
+    ///
+    /// Advisory only: the registry validates at the contract level before
+    /// dispatch. A provider declaring a *lower* level does not thereby get to
+    /// accept looser input, and one declaring a higher level is rejected by the
+    /// conformance suite for narrowing the contract.
+    fn solid_requirements(&self) -> SolidRequirements {
+        SolidRequirements::Oriented
+    }
+
+    /// Apply one regularized set operation.
+    ///
+    /// Operands are pre-validated by the registry. Returns a
+    /// [`BooleanOutcome`]: the mesh plus what was done to produce it. An empty
+    /// result mesh is a legitimate value, not an error.
     fn boolean(
         &self,
         subject: &TriMesh,
         tool: &TriMesh,
         operation: BooleanOperator,
         options: &ExecutionOptions,
-    ) -> GeomResult<TriMesh>;
+    ) -> GeomResult<BooleanOutcome>;
 
     /// Subtract many tools in one batch so implementations can union or schedule
     /// cutters efficiently. The default is correct but deliberately simple.
+    ///
+    /// The default polls cancellation between tools, which is why the default
+    /// granularity for an overriding provider must be declared honestly.
     fn subtract_many(
         &self,
         subject: &TriMesh,
         tools: &[TriMesh],
         options: &ExecutionOptions,
-    ) -> GeomResult<TriMesh> {
+    ) -> GeomResult<BooleanOutcome> {
+        let mut evidence = BooleanEvidence {
+            subject_triangles: subject.triangle_count(),
+            tool_triangles: tools.iter().map(TriMesh::triangle_count).sum(),
+            output_triangles: subject.triangle_count(),
+            output_components: 1,
+            ..BooleanEvidence::default()
+        };
         let mut result = subject.clone();
         for tool in tools {
-            result = self.boolean(&result, tool, BooleanOperator::Difference, options)?;
+            options.check_cancelled()?;
+            let outcome = self.boolean(&result, tool, BooleanOperator::Difference, options)?;
+            evidence.absorb(outcome.evidence);
+            result = outcome.mesh;
         }
-        Ok(result)
+        Ok(BooleanOutcome::new(result, evidence))
     }
+}
+
+/// Compose `A △ B` as `(A ∪ B) \ (A ∩ B)`.
+///
+/// Free-standing rather than a trait default so a provider cannot accidentally
+/// inherit a composed implementation while reporting `sub_operations: 1`. A
+/// native implementor overrides [`MeshBoolean::boolean`] and never calls this.
+///
+/// Composition is the reason `BooleanEvidence::sub_operations` exists: without
+/// it a caller cannot tell a three-pass emulation from a single-pass primitive,
+/// and the two have materially different numerical behaviour.
+pub fn symmetric_difference_via_composition<P>(
+    provider: &P,
+    subject: &TriMesh,
+    tool: &TriMesh,
+    options: &ExecutionOptions,
+) -> GeomResult<BooleanOutcome>
+where
+    P: MeshBoolean + ?Sized,
+{
+    options.check_cancelled()?;
+    let union = provider.boolean(subject, tool, BooleanOperator::Union, options)?;
+    options.check_cancelled()?;
+    let intersection = provider.boolean(subject, tool, BooleanOperator::Intersection, options)?;
+
+    // A ∩ B empty means the operands are disjoint, so A △ B == A ∪ B. Skipping
+    // the final difference is not just an optimisation: subtracting an empty
+    // solid is a degenerate operand many backends reject.
+    if intersection.mesh.indices.is_empty() {
+        let mut evidence = union.evidence;
+        evidence.sub_operations = 2;
+        evidence.coincident_faces_encountered |= intersection.evidence.coincident_faces_encountered;
+        return Ok(BooleanOutcome::new(union.mesh, evidence));
+    }
+
+    options.check_cancelled()?;
+    let difference = provider.boolean(
+        &union.mesh,
+        &intersection.mesh,
+        BooleanOperator::Difference,
+        options,
+    )?;
+
+    let mut evidence = difference.evidence;
+    evidence.subject_triangles = subject.triangle_count();
+    evidence.tool_triangles = tool.triangle_count();
+    evidence.sub_operations = 3;
+    evidence.coincident_faces_encountered |= union.evidence.coincident_faces_encountered
+        || intersection.evidence.coincident_faces_encountered;
+    Ok(BooleanOutcome::new(difference.mesh, evidence))
 }
 
 #[derive(Debug, Clone)]
@@ -97,8 +184,8 @@ impl MeshBooleanRegistry {
         &self,
         options: &ExecutionOptions,
         elements: usize,
-        execute: impl Fn(&dyn MeshBoolean) -> GeomResult<TriMesh>,
-    ) -> GeomResult<TriMesh> {
+        execute: impl Fn(&dyn MeshBoolean) -> GeomResult<BooleanOutcome>,
+    ) -> GeomResult<BooleanOutcome> {
         let mut last_retryable = None;
         let mut over_budget = None;
         for entry in &self.providers {
@@ -118,7 +205,7 @@ impl MeshBooleanRegistry {
                 continue;
             }
             match execute(entry.provider.as_ref()) {
-                Ok(mesh) => return Ok(mesh),
+                Ok(outcome) => return Ok(outcome),
                 Err(error @ (GeomError::Unsupported { .. } | GeomError::Unavailable { .. })) => {
                     last_retryable = Some(error);
                 }
@@ -140,7 +227,10 @@ impl MeshBooleanRegistry {
         tool: &TriMesh,
         operation: BooleanOperator,
         options: &ExecutionOptions,
-    ) -> GeomResult<TriMesh> {
+    ) -> GeomResult<BooleanOutcome> {
+        // Admissibility is contract-level and checked before any provider sees
+        // the operands, so dispatch cannot change which inputs are legal.
+        SolidRequirements::Oriented.validate_operands(subject, &[tool])?;
         self.dispatch(options, subject.triangle_count(), |provider| {
             provider.boolean(subject, tool, operation, options)
         })
@@ -152,7 +242,9 @@ impl MeshBooleanRegistry {
         subject: &TriMesh,
         tools: &[TriMesh],
         options: &ExecutionOptions,
-    ) -> GeomResult<TriMesh> {
+    ) -> GeomResult<BooleanOutcome> {
+        let borrowed: Vec<&TriMesh> = tools.iter().collect();
+        SolidRequirements::Oriented.validate_operands(subject, &borrowed)?;
         let elements =
             subject.triangle_count() + tools.iter().map(TriMesh::triangle_count).sum::<usize>();
         self.dispatch(options, elements, |provider| {
@@ -177,6 +269,28 @@ fn matches_device(preference: DevicePreference, id: BackendId, target: Execution
 
 #[cfg(test)]
 mod tests {
+    /// Outward-oriented unit cube: the minimal admissible operand.
+    ///
+    /// Dispatch tests need a mesh that passes contract validation, because
+    /// validation now runs before any provider is consulted.
+    fn admissible_cube() -> TriMesh {
+        let positions = vec![
+            [0.0, 0.0, 0.0].into(),
+            [1.0, 0.0, 0.0].into(),
+            [1.0, 1.0, 0.0].into(),
+            [0.0, 1.0, 0.0].into(),
+            [0.0, 0.0, 1.0].into(),
+            [1.0, 0.0, 1.0].into(),
+            [1.0, 1.0, 1.0].into(),
+            [0.0, 1.0, 1.0].into(),
+        ];
+        let indices = vec![
+            0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5, 2, 3, 7, 2, 7,
+            6, 3, 0, 4, 3, 4, 7,
+        ];
+        TriMesh::new(positions, indices)
+    }
+
     use std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -209,8 +323,11 @@ mod tests {
             _tool: &TriMesh,
             _operation: BooleanOperator,
             _options: &ExecutionOptions,
-        ) -> GeomResult<TriMesh> {
-            Ok(subject.clone())
+        ) -> GeomResult<BooleanOutcome> {
+            Ok(BooleanOutcome::new(
+                subject.clone(),
+                BooleanEvidence::default(),
+            ))
         }
     }
 
@@ -243,10 +360,13 @@ mod tests {
             _tool: &TriMesh,
             _operation: BooleanOperator,
             _options: &ExecutionOptions,
-        ) -> GeomResult<TriMesh> {
+        ) -> GeomResult<BooleanOutcome> {
             self.calls.fetch_add(1, Ordering::Relaxed);
             match self.result {
-                ProbeResult::Success => Ok(subject.clone()),
+                ProbeResult::Success => Ok(BooleanOutcome::new(
+                    subject.clone(),
+                    BooleanEvidence::default(),
+                )),
                 ProbeResult::Unsupported => Err(GeomError::Unsupported {
                     backend: self.id,
                     operation: Operation::MeshBoolean,
@@ -280,7 +400,7 @@ mod tests {
             _tool: &TriMesh,
             _operation: BooleanOperator,
             _options: &ExecutionOptions,
-        ) -> GeomResult<TriMesh> {
+        ) -> GeomResult<BooleanOutcome> {
             Err(GeomError::InvalidInput(
                 "batch provider must use its batch override".to_owned(),
             ))
@@ -291,9 +411,12 @@ mod tests {
             subject: &TriMesh,
             _tools: &[TriMesh],
             _options: &ExecutionOptions,
-        ) -> GeomResult<TriMesh> {
+        ) -> GeomResult<BooleanOutcome> {
             self.calls.fetch_add(1, Ordering::Relaxed);
-            Ok(subject.clone())
+            Ok(BooleanOutcome::new(
+                subject.clone(),
+                BooleanEvidence::default(),
+            ))
         }
     }
 
@@ -308,12 +431,12 @@ mod tests {
             },
         );
         let options = ExecutionOptions::new(Tolerance::METRE);
-        let mesh = TriMesh::default();
+        let mesh = admissible_cube();
         assert_eq!(
             registry
                 .boolean(&mesh, &mesh, BooleanOperator::Difference, &options)
                 .expect("registered provider executes"),
-            mesh
+            BooleanOutcome::new(mesh, BooleanEvidence::default())
         );
     }
 
@@ -327,14 +450,14 @@ mod tests {
                 calls: calls.clone(),
             },
         );
-        let mesh = TriMesh::default();
+        let mesh = admissible_cube();
         let options = ExecutionOptions::new(Tolerance::METRE);
 
         assert_eq!(
             registry
                 .subtract_many(&mesh, &[mesh.clone(), mesh.clone()], &options)
                 .expect("batch provider executes"),
-            mesh
+            BooleanOutcome::new(mesh, BooleanEvidence::default())
         );
         assert_eq!(calls.load(Ordering::Relaxed), 1);
     }
@@ -372,7 +495,7 @@ mod tests {
                 calls: low_calls.clone(),
             },
         );
-        let mesh = TriMesh::default();
+        let mesh = admissible_cube();
         let auto = ExecutionOptions::new(Tolerance::METRE);
         assert!(registry
             .boolean(&mesh, &mesh, BooleanOperator::Union, &auto)
@@ -381,7 +504,7 @@ mod tests {
         assert_eq!(unsupported_calls.load(Ordering::Relaxed), 1);
         assert_eq!(low_calls.load(Ordering::Relaxed), 1);
 
-        let cpu = auto.with_device(DevicePreference::Cpu);
+        let cpu = auto.clone().with_device(DevicePreference::Cpu);
         assert!(registry
             .boolean(&mesh, &mesh, BooleanOperator::Union, &cpu)
             .is_ok());
@@ -421,7 +544,7 @@ mod tests {
     #[test]
     fn empty_registry_returns_structured_unsupported_error() {
         let registry = MeshBooleanRegistry::new();
-        let mesh = TriMesh::default();
+        let mesh = admissible_cube();
         let error = registry
             .boolean(
                 &mesh,
