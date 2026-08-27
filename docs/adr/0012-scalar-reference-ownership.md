@@ -48,6 +48,48 @@ ADR 0002's *reasoning* (runtime selection over compile-time `#[cfg]`, single
 portable binary, differential validation) stands unchanged. Only its crate
 topology and its oracle assignment are superseded.
 
+## Amendment 2026-08-26 — the ordering rule was violated, and repaired
+
+The rule above ("the scalar implementation of an operation lands before any
+optimized implementation of that operation") was **not** honoured for mesh
+booleans. `axiolid-boolmesh` was adopted under ADR 0014 while `axiolid-scalar`
+implemented no `MeshBoolean` at all. For a period, the single most consequential
+operation in the kernel had no oracle, and its only test suite bound the
+adopted provider's concrete type — so it could confirm that the provider agreed
+with itself, and nothing more.
+
+Two repairs were considered:
+
+| Option | Why not |
+| --- | --- |
+| Record a scoped exception naming `boolmesh` as a pre-oracle adoption | Cheap, and permanently exempts the operation that most needs the rule. An exception written once is a precedent: the next adoption cites it, and the rule decays into a preference. It also leaves the actual problem — no independent check on boolean geometry — unsolved. |
+| **Write the oracle (chosen)** | Restores the invariant instead of documenting its absence. Costs one `O(n·m)` reference implementation, which is exactly what the rule always asked for. |
+
+The exception was rejected because the rule's value is that it has no
+exceptions. A conformance suite validated against a single implementation
+cannot distinguish *correct* from *self-consistent*, and that distinction is
+the whole reason ADR 0012 exists.
+
+`axiolid_scalar::ScalarBoolean` now implements `MeshBoolean` (ADR 0017 §5). It
+is exact where it answers and refuses where it cannot, which preserves the
+oracle's defining property: it is never *approximately* right.
+
+### The rule, restated operationally
+
+An ordering rule that lives only in prose gets violated silently — as this one
+was. It is now enforced by construction:
+
+- `axiolid_kernel::conformance` is generic over `impl MeshBoolean`, so
+  obligations attach to the contract rather than to a provider.
+- `MeshBooleanRegistry::register_conformant` refuses a non-conformant provider
+  at registration, returning the failing report.
+- `axiolid-boolmesh/tests/conformance.rs` runs the oracle and the production
+  provider through the identical suite and compares their geometry directly.
+
+An operation that acquires an optimized provider without a scalar counterpart
+now has no way to demonstrate conformance, because there is nothing to be
+differentially tested against. The rule enforces itself.
+
 ## Alternatives considered
 
 | Option | Why not |

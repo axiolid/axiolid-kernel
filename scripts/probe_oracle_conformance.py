@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+"""Mutation probes for the oracle and conformance suite (ADR 0017 sections 5-6).
+
+The oracle is the thing everything else is judged against, so it needs the
+strictest proof that its own tests can fail. Each probe injects one semantic
+defect and asserts the suites FAIL. A surviving probe means the gate is blind.
+
+Sources are restored byte-identically afterwards.
+"""
+import hashlib
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path("/mnt/backup/build-cache/axiolid-solibri-spatial")
+
+SUITES = [
+    ["cargo", "test", "-p", "axiolid-scalar", "--all-features", "--test", "oracle"],
+    ["cargo", "test", "-p", "axiolid-boolmesh", "--all-features", "--test", "conformance"],
+]
+
+PROBES = [
+    # --- oracle correctness (ADR 0017 section 5) ---
+    (
+        "oracle-union-of-nested-returns-inner",
+        "crates/axiolid-scalar/src/boolean.rs",
+        "(BooleanOperator::Union, Arrangement::ToolInsideSubject) => subject.clone(),",
+        "(BooleanOperator::Union, Arrangement::ToolInsideSubject) => tool.clone(),",
+    ),
+    (
+        "oracle-difference-forgets-the-cavity",
+        "crates/axiolid-scalar/src/boolean.rs",
+        """            (
+                BooleanOperator::Difference | BooleanOperator::SymmetricDifference,
+                Arrangement::ToolInsideSubject,
+            ) => concatenate(subject, &reversed(tool)),""",
+        """            (
+                BooleanOperator::Difference | BooleanOperator::SymmetricDifference,
+                Arrangement::ToolInsideSubject,
+            ) => subject.clone(),""",
+    ),
+    (
+        "oracle-cavity-is-not-reversed",
+        "crates/axiolid-scalar/src/boolean.rs",
+        "    for triangle in indices.chunks_exact_mut(3) {\n        triangle.swap(0, 1);\n    }",
+        "    for _triangle in indices.chunks_exact_mut(3) {}",
+    ),
+    (
+        "oracle-self-difference-is-not-empty",
+        "crates/axiolid-scalar/src/boolean.rs",
+        """            (
+                BooleanOperator::Difference | BooleanOperator::SymmetricDifference,
+                Arrangement::Identical,
+            ) => empty(),""",
+        """            (
+                BooleanOperator::Difference | BooleanOperator::SymmetricDifference,
+                Arrangement::Identical,
+            ) => subject.clone(),""",
+    ),
+    (
+        "oracle-disjoint-intersection-is-not-empty",
+        "crates/axiolid-scalar/src/boolean.rs",
+        "(BooleanOperator::Intersection, Arrangement::Disjoint) => empty(),",
+        "(BooleanOperator::Intersection, Arrangement::Disjoint) => subject.clone(),",
+    ),
+    # --- oracle honesty: it must refuse what it cannot answer ---
+    (
+        "oracle-guesses-at-interpenetration",
+        "crates/axiolid-scalar/src/boolean.rs",
+        "    if surfaces_intersect(subject, tool, options)? {",
+        "    if false && surfaces_intersect(subject, tool, options)? {",
+    ),
+    (
+        "oracle-crossing-test-reopens-the-shared-edge-hole",
+        "crates/axiolid-scalar/src/boolean.rs",
+        "        if !(positive && negative) {\n            return true;\n        }",
+        "        if !(positive && negative)\n            && !signs.contains(&Sign::Zero)\n        {\n            return true;\n        }",
+    ),
+    (
+        "oracle-accepts-empty-operands",
+        "crates/axiolid-scalar/src/boolean.rs",
+        "        if mesh.positions.is_empty() || mesh.indices.is_empty() {",
+        "        if false {",
+    ),
+    # --- containment classification ---
+    (
+        "oracle-point-on-surface-counts-as-inside",
+        "crates/axiolid-scalar/src/boolean.rs",
+        "        if side_origin == Sign::Zero {\n            // The point is ON the surface: neither inside nor outside.\n            return Some(false);\n        }",
+        "        if side_origin == Sign::Zero {\n            return Some(true);\n        }",
+    ),
+    (
+        "oracle-parity-inverted",
+        "crates/axiolid-scalar/src/boolean.rs",
+        "    Some(crossings % 2 == 1)",
+        "    Some(crossings % 2 == 0)",
+    ),
+    # --- conformance suite must detect defects (ADR 0017 section 6) ---
+    (
+        "suite-treats-failure-as-conformant",
+        "crates/axiolid-kernel/src/conformance.rs",
+        "        !self\n            .checks\n            .iter()\n            .any(|check| matches!(check.outcome, Outcome::Failed { .. }))",
+        "        true",
+    ),
+    (
+        "suite-counts-skips-as-passes",
+        "crates/axiolid-kernel/src/conformance.rs",
+        "            .filter(|check| check.outcome == Outcome::Passed)\n            .count()",
+        "            .filter(|check| check.outcome != Outcome::Passed || true)\n            .count()",
+    ),
+    (
+        "suite-skips-the-disjoint-algebra-check",
+        "crates/axiolid-kernel/src/conformance.rs",
+        "    check_disjoint_algebra(provider, &mut report);",
+        "    let _ = check_disjoint_algebra;",
+    ),
+    (
+        "suite-ignores-a-wrong-union-volume",
+        "crates/axiolid-kernel/src/conformance.rs",
+        "        if (measured - 2.0).abs() < 1e-9 {",
+        "        if true {",
+    ),
+    (
+        "suite-accepts-an-unrefused-empty-operand",
+        "crates/axiolid-kernel/src/conformance.rs",
+        "            Ok(_) => Outcome::Failed {\n                detail: \"an empty mesh is not a solid and must be refused\".into(),\n            },",
+        "            Ok(_) => Outcome::Passed,",
+    ),
+    # --- registration gate ---
+    (
+        "registration-admits-non-conformant-providers",
+        "crates/axiolid-kernel/src/boolean.rs",
+        "        if !report.is_conformant() {\n            return Err(Box::new(report));\n        }",
+        "        if false {\n            return Err(Box::new(report));\n        }",
+    ),
+]
+
+
+def run(cmd):
+    return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True).returncode
+
+
+def suites_pass():
+    return all(run(cmd) == 0 for cmd in SUITES)
+
+
+def digest():
+    files = sorted({ROOT / path for _, path, _, _ in PROBES})
+    hasher = hashlib.sha256()
+    for path in files:
+        hasher.update(path.read_bytes())
+    return hasher.hexdigest()
+
+
+def main():
+    before = digest()
+    if not suites_pass():
+        print("baseline: FAIL -- fix the suites before probing")
+        return 1
+    print("baseline: PASS\n")
+
+    killed, leaked = [], []
+    for name, rel, find, repl in PROBES:
+        path = ROOT / rel
+        original = path.read_text()
+        if find not in original:
+            print(f"  !! {name}: anchor not found in {rel}")
+            leaked.append(name)
+            continue
+        if original.count(find) != 1:
+            print(f"  !! {name}: anchor not unique in {rel}")
+            leaked.append(name)
+            continue
+        try:
+            path.write_text(original.replace(find, repl))
+            if suites_pass():
+                print(f"  LEAK    {name}")
+                leaked.append(name)
+            else:
+                print(f"  killed  {name}")
+                killed.append(name)
+        finally:
+            path.write_text(original)
+
+    print(f"\nrestored byte-identical: {digest() == before}")
+    print(f"killed {len(killed)}/{len(PROBES)}")
+    if leaked:
+        print("LEAKED PROBES (gate is blind to these defects):")
+        for name in leaked:
+            print(f"  - {name}")
+        return 1
+    print("all probes killed")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

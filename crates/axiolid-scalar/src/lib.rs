@@ -7,6 +7,7 @@
 //! and obviously correct in preference to being fast.
 
 pub mod arithmetic;
+pub mod boolean;
 pub mod convex_hull;
 pub mod expansion;
 pub mod orient3;
@@ -18,6 +19,7 @@ pub mod sphere;
 pub mod static_filter;
 pub mod triangle_triangle;
 
+pub use boolean::ScalarBoolean;
 pub use convex_hull::{minimum_area_rectangle, strict_convex_hull, OrientedRectangle2};
 pub use expansion::{two_diff, two_product, two_sum};
 pub use orient3::{orient3d, orient3d_filter};

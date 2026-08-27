@@ -11,7 +11,8 @@ readme.workspace = true
 
 [dependencies]
 axiolid-core.workspace = true
-axiolid-kernel.workspace = true
+axiolid-kernel = { workspace = true, features = ["mesh-boolean"] }
+axiolid-mesh.workspace = true
 
 [[bench]]
 name = "predicates"

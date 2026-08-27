@@ -56,6 +56,7 @@ dependencies = [
  "axiolid-core",
  "axiolid-kernel",
  "axiolid-mesh",
+ "axiolid-scalar",
  "boolmesh",
 ]
 
@@ -171,6 +172,7 @@ version = "0.1.0"
 dependencies = [
  "axiolid-core",
  "axiolid-kernel",
+ "axiolid-mesh",
 ]
 
 [[package]]

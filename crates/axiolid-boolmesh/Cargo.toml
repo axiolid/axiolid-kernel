@@ -18,3 +18,9 @@ boolmesh = "0.1.9"
 [[bench]]
 name = "subtract_many"
 harness = false
+
+[dev-dependencies]
+# The scalar oracle, used only for differential testing (ADR 0012). A
+# dev-dependency deliberately: the production provider must never depend on the
+# reference implementation at runtime.
+axiolid-scalar.workspace = true

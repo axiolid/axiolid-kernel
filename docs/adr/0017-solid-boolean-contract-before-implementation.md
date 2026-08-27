@@ -1,6 +1,6 @@
 # 0017 — Solid boolean semantics are defined before an implementation is chosen
 
-- **Status:** Accepted (sections 1-4 landed; 5-6 outstanding)
+- **Status:** Accepted (all sections landed)
 - **Date:** 2026-08-26
 - **Deciders:** Friedrich, Hermes
 - **Supersedes:** — (extends [0003](./0003-pure-rust-mesh-boolean.md) and [0014](./0014-adopt-boolmesh-mesh-boolean.md))
@@ -148,8 +148,8 @@ Sections 1-4 landed on 2026-08-26; the table records what closed and how.
 | 3 | Boolean returns a bare mesh | **Closed** | `BooleanOutcome { mesh, evidence }` with `BooleanEvidence` counters, mirroring `OverlayEvidence` and `FieldEvidence`. |
 | 4 | Cancellation is fictional | **Closed** | `CancellationToken` + `ExecutionOptions::with_cancellation`; providers declare `CancellationGranularity` honestly rather than claiming responsiveness they lack. |
 | 5 | Provider declares `Unbounded` scratch | **Closed** | Measured with a counting allocator (`axiolid-boolmesh/src/bin/scratch_probe.rs`): linear, ~1.1 KiB/triangle asymptotically, 2,660 B/triangle worst at small N. Declared `PerElement { bytes_per_element: 4096 }`. |
-| 6 | No scalar boolean oracle | **Open** | Requires `axiolid-scalar` to implement `MeshBoolean`. Guarded by `csg_deferral::scalar_boolean_oracle_gap_is_still_open`. |
-| 7 | Provider tests bind the concrete type | **Open** | Requires an exported generic conformance suite. Guarded by `csg_deferral::provider_conformance_suite_gap_is_still_open`. |
+| 6 | No scalar boolean oracle | **Closed** | `axiolid_scalar::ScalarBoolean`: exact `orient3d` classification and ray parity, `O(n·m)`, no shared code path with `boolmesh`. Validated against analytic volumes in `axiolid-scalar/tests/oracle.rs`. |
+| 7 | Provider tests bind the concrete type | **Closed** | `axiolid_kernel::conformance` is generic over `impl MeshBoolean` and exported. `MeshBooleanRegistry::register_conformant` makes passing it a precondition of registration. |
 
 ### Consequences of the landed work
 
@@ -166,6 +166,54 @@ Sections 1-4 landed on 2026-08-26; the table records what closed and how.
   because it probed for the name `SolidValidation` while the landed type is
   `SolidRequirements` — a false negative, and precisely why guards are
   mutation-probed rather than trusted.
+
+### Closing sections 5 and 6
+
+**The oracle is a separate algorithm, not a second boolean.** It classifies
+whole operands by exact containment rather than cutting along intersection
+curves. That makes it genuinely independent of `boolmesh` — the point of a
+differential reference — at the cost of only answering non-interpenetrating
+cases. It returns `Unsupported` for the rest rather than guessing, because an
+oracle that approximates certifies wrong answers as correct.
+
+That limit is narrower than it sounds. Disjoint, nested, identical, and
+face-contact arrangements already pin identity, annihilation, idempotence,
+commutativity, and containment across all four operations. The provider is
+checked against the oracle on 16+ operation/arrangement pairs, and separately
+required to handle the interpenetrating case the oracle refuses — so the
+oracle's gap is exactly where the provider must earn its place.
+
+**Conformance is enforced at registration.** A suite that must be remembered
+is a suite that will be forgotten, so `register_conformant` returns the failing
+report instead of admitting the provider. `register` remains for tests and
+deliberately partial providers.
+
+**Skips are reported, never counted as passes.** A provider cannot reach
+"conformant" by declining everything: `ConformanceReport::exercised()` reports
+what was actually proven, and the suite's own tests assert a minimum.
+
+### Two bugs found by doing this
+
+1. The oracle initially tested the *open* triangle interior for ray crossings,
+   so a hit landing exactly on the diagonal shared by two triangles of a quad
+   was missed by both — and interpenetration went undetected. Fixed by testing
+   the closed triangle. This is the same shared-edge degeneracy the field
+   sampler hit; it is the characteristic failure of this geometry family.
+2. The oracle panicked on an empty operand by indexing `positions[0]`. A
+   reference implementation that crashes takes down the harness meant to be
+   judging correctness, so it now refuses with `InvalidInput`.
+
+Both were found by the conformance suite running against the oracle — the
+suite earning its keep before it ever judged a production provider.
+
+### Retiring the deferral guard
+
+`csg_deferral.rs` and `probe_csg_deferral.py` are deleted. Every gap they
+tracked is closed, and a guard asserting "this is still missing" would now
+assert the opposite of reality. The one durable rule they carried — no native
+CSG backend — was always enforced more broadly by
+`layering.rs::geometry_crates_do_not_declare_native_cpp_bridges`, which covers
+`bindgen`, `cmake`, `cxx`, `manifold3d`, and `opencascade`.
 
 ## Alternatives considered
 

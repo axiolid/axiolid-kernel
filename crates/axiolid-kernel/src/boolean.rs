@@ -167,6 +167,36 @@ impl MeshBooleanRegistry {
         self.register_arc(priority, Arc::new(provider));
     }
 
+    /// Register only if the provider passes the shared conformance suite.
+    ///
+    /// ADR 0017 §6 makes conformance a *precondition* of registration rather
+    /// than a test someone might remember to run. A provider that violates the
+    /// contract is rejected here, with the failing report, instead of being
+    /// discovered later by a caller receiving wrong geometry.
+    ///
+    /// [`Self::register`] remains available for tests and for deliberately
+    /// partial providers; this is the door production code should use.
+    ///
+    /// # Errors
+    ///
+    /// Returns the report when the provider violates any obligation.
+    #[cfg(feature = "mesh-boolean")]
+    pub fn register_conformant<B>(
+        &mut self,
+        priority: i32,
+        provider: B,
+    ) -> Result<(), Box<crate::conformance::ConformanceReport>>
+    where
+        B: MeshBoolean + 'static,
+    {
+        let report = crate::conformance::run(&provider);
+        if !report.is_conformant() {
+            return Err(Box::new(report));
+        }
+        self.register_arc(priority, Arc::new(provider));
+        Ok(())
+    }
+
     /// Register a shared trait object.
     pub fn register_arc(&mut self, priority: i32, provider: Arc<dyn MeshBoolean>) {
         self.providers

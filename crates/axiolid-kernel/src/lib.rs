@@ -14,6 +14,8 @@ pub mod capability;
 pub mod certainty;
 #[cfg(feature = "model")]
 pub mod compile;
+#[cfg(feature = "mesh-boolean")]
+pub mod conformance;
 pub mod error;
 #[cfg(feature = "mesh-boolean")]
 pub mod evidence;
