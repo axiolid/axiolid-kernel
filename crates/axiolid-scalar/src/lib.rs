@@ -9,6 +9,7 @@
 pub mod arithmetic;
 pub mod boolean;
 pub mod convex_hull;
+pub mod curve;
 pub mod expansion;
 pub mod orient3;
 pub mod orientation;
@@ -21,6 +22,7 @@ pub mod triangle_triangle;
 
 pub use boolean::ScalarBoolean;
 pub use convex_hull::{minimum_area_rectangle, strict_convex_hull, OrientedRectangle2};
+pub use curve::{derivative2, derivative3, evaluate2, evaluate3, flatten2, ScalarCurve};
 pub use expansion::{two_diff, two_product, two_sum};
 pub use orient3::{orient3d, orient3d_filter};
 pub use orientation::{orient2d, orient2d_filter};

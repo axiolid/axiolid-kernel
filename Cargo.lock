@@ -171,6 +171,7 @@ name = "axiolid-scalar"
 version = "0.1.0"
 dependencies = [
  "axiolid-core",
+ "axiolid-curve",
  "axiolid-kernel",
  "axiolid-mesh",
 ]

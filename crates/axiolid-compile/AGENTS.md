@@ -20,6 +20,17 @@ downstream quantity.
 No default tolerance or chord budget. The caller supplies both, because
 acceptable error depends on source units and downstream use.
 
+Curve flattening is **not owned here**. `segment_points`, `circle_rings`, and
+`ellipse_rings` all delegate to `axiolid_scalar::curve::flatten2` (ADR 0018),
+which subdivides adaptively on measured sagitta. The old private
+`circle_segments`/`circle_ring` pair is gone — do not reintroduce a
+closed-form segment count, it only models circles and cannot express an
+ellipse or a rational spline.
+
+`tests/extrusion_volume.rs` pins the identity `volume == area * depth` for
+every supported profile family, and asserts the chord budget actually bounds
+the volume error (measured: error is O(chord), constant under 5).
+
 ## Adopted dependencies
 
 `earcut` (ADR 0015) is named in `src/profile.rs` and nowhere else, and is not

@@ -11,8 +11,8 @@
 //! the hole-free case, so the adopted implementation is audited, not trusted.
 
 use axiolid_core::{Point2, Scalar, Tolerance};
-use axiolid_kernel::{GeomError, GeomResult, Operation};
-use axiolid_profile::{CircleProfile, Profile, RectangleProfile};
+use axiolid_kernel::{GeomError, GeomResult};
+use axiolid_profile::{CircleProfile, EllipseProfile, Profile, RectangleProfile};
 
 /// Outer ring plus holes, all CCW/CW normalised by the caller's contract:
 /// outer counter-clockwise, holes clockwise.
@@ -22,34 +22,6 @@ pub struct Rings {
     pub outer: Vec<Point2>,
     /// Inner boundaries, clockwise.
     pub holes: Vec<Vec<Point2>>,
-}
-
-/// Number of chord segments needed to approximate a full circle of `radius`
-/// within `chord_error`.
-///
-/// From the sagitta relation `e = r (1 - cos(pi/n))`. Clamped to [8, 512]: a
-/// coarse budget must still produce a recognisable disk, and an absurdly tight
-/// one must not explode the mesh.
-fn circle_segments(radius: Scalar, chord_error: Scalar) -> usize {
-    if radius <= 0.0 || chord_error <= 0.0 {
-        return 8;
-    }
-    let ratio = 1.0 - (chord_error / radius);
-    if ratio <= -1.0 {
-        return 8;
-    }
-    let n = core::f64::consts::PI / ratio.clamp(-1.0, 1.0).acos();
-    (n.ceil() as usize).clamp(8, 512)
-}
-
-/// Sample a circle counter-clockwise.
-fn circle_ring(cx: Scalar, cy: Scalar, radius: Scalar, segments: usize) -> Vec<Point2> {
-    (0..segments)
-        .map(|i| {
-            let t = (i as Scalar) * core::f64::consts::TAU / (segments as Scalar);
-            Point2::new(cx + radius * t.cos(), cy + radius * t.sin())
-        })
-        .collect()
 }
 
 /// Flatten a profile into rings under an explicit chord budget.
@@ -65,6 +37,10 @@ pub fn profile_rings(
     match profile {
         Profile::Rectangle(r) => rectangle_rings(r, chord_error, tolerance),
         Profile::Circle(c) => circle_rings(c, chord_error),
+        // Reachable only since curve evaluation moved into `axiolid-scalar`:
+        // an ellipse has no closed-form segment count, so the old fixed-count
+        // flattener could not express it at all.
+        Profile::Ellipse(e) => ellipse_rings(e, chord_error),
         Profile::Contour(c) => {
             let outer = contour_points(&c.outer, chord_error, tolerance)?;
             let mut holes = Vec::with_capacity(c.holes.len());
@@ -149,8 +125,9 @@ fn circle_rings(c: &CircleProfile, chord_error: Scalar) -> GeomResult<Rings> {
             c.radius
         )));
     }
-    let segments = circle_segments(c.radius, chord_error);
-    let outer = circle_ring(0.0, 0.0, c.radius, segments);
+    // Flattened by the scalar evaluator so a parameterized circle and a
+    // contour-declared circular arc obey exactly the same chord budget.
+    let outer = flatten_circle(c.radius, chord_error)?;
     let mut holes = Vec::new();
     if let Some(t) = c.thickness {
         if t <= 0.0 || t >= c.radius {
@@ -160,11 +137,84 @@ fn circle_rings(c: &CircleProfile, chord_error: Scalar) -> GeomResult<Rings> {
             )));
         }
         let inner = c.radius - t;
-        let mut ring = circle_ring(0.0, 0.0, inner, circle_segments(inner, chord_error));
+        let mut ring = flatten_circle(inner, chord_error)?;
         ring.reverse(); // clockwise
         holes.push(ring);
     }
     Ok(Rings { outer, holes })
+}
+
+/// Ellipse profile, flattened under the chord budget.
+fn ellipse_rings(e: &EllipseProfile, chord_error: Scalar) -> GeomResult<Rings> {
+    if !e.semi_axis_x.is_finite() || e.semi_axis_x <= 0.0 {
+        return Err(GeomError::InvalidInput(format!(
+            "ellipse semi-axis x must be positive and finite, got {}",
+            e.semi_axis_x
+        )));
+    }
+    if !e.semi_axis_y.is_finite() || e.semi_axis_y <= 0.0 {
+        return Err(GeomError::InvalidInput(format!(
+            "ellipse semi-axis y must be positive and finite, got {}",
+            e.semi_axis_y
+        )));
+    }
+    use axiolid_core::{Frame2, Interval, Vec2};
+    use axiolid_curve::{Curve2, Ellipse2};
+
+    let curve = Curve2::Ellipse(Ellipse2 {
+        frame: Frame2 {
+            origin: Point2::new(0.0, 0.0),
+            x: Vec2::new(1.0, 0.0),
+            y: Vec2::new(0.0, 1.0),
+        },
+        semi_axis_x: e.semi_axis_x,
+        semi_axis_y: e.semi_axis_y,
+    });
+    let mut ring = axiolid_scalar::curve::flatten2(
+        &curve,
+        Interval {
+            start: 0.0,
+            end: core::f64::consts::TAU,
+        },
+        chord_error,
+        MAX_SUBDIVISION_DEPTH,
+    )?;
+    // Drop the duplicate closing vertex; a ring is implicitly closed.
+    ring.pop();
+    Ok(Rings {
+        outer: ring,
+        holes: Vec::new(),
+    })
+}
+
+/// Flatten a full circle of `radius` under the chord budget.
+///
+/// The closing duplicate of the start point is dropped: a ring is implicitly
+/// closed, and a repeated vertex would create a zero-length edge that the
+/// extruder would turn into a degenerate side quad.
+fn flatten_circle(radius: Scalar, chord_error: Scalar) -> GeomResult<Vec<Point2>> {
+    use axiolid_core::{Frame2, Interval, Vec2};
+    use axiolid_curve::{Circle2, Curve2};
+
+    let curve = Curve2::Circle(Circle2 {
+        frame: Frame2 {
+            origin: Point2::new(0.0, 0.0),
+            x: Vec2::new(1.0, 0.0),
+            y: Vec2::new(0.0, 1.0),
+        },
+        radius,
+    });
+    let mut ring = axiolid_scalar::curve::flatten2(
+        &curve,
+        Interval {
+            start: 0.0,
+            end: core::f64::consts::TAU,
+        },
+        chord_error,
+        MAX_SUBDIVISION_DEPTH,
+    )?;
+    ring.pop();
+    Ok(ring)
 }
 
 /// Triangulate rings into a flat index buffer over a single vertex list.
@@ -261,49 +311,28 @@ fn near2(a: Point2, b: Point2, linear: Scalar) -> bool {
 }
 
 /// Sample one bounded segment, flattening curves under the chord budget.
+///
+/// Delegates to `axiolid-scalar`'s curve evaluator (ADR 0012). This crate used
+/// to carry a private circle flattener with a closed-form segment count, and
+/// refused ellipses and B-splines outright. Both limits are gone: the scalar
+/// evaluator subdivides adaptively on measured sagitta, so every declared
+/// `Curve2` family flattens under the same tolerance contract.
+///
+/// `MAX_SUBDIVISION_DEPTH` bounds the work. 24 levels is 16M potential
+/// segments -- far beyond any real tolerance -- so it is a runaway guard, not
+/// a quality knob.
+const MAX_SUBDIVISION_DEPTH: u32 = 24;
+
 fn segment_points(
     segment: &axiolid_profile::ProfileSegment,
     chord_error: Scalar,
 ) -> GeomResult<Vec<Point2>> {
-    use axiolid_curve::Curve2;
-    let (t0, t1) = (segment.domain.start, segment.domain.end);
-    match &segment.curve {
-        Curve2::Line(l) => Ok(vec![
-            Point2::new(
-                l.origin.x + l.direction.x * t0,
-                l.origin.y + l.direction.y * t0,
-            ),
-            Point2::new(
-                l.origin.x + l.direction.x * t1,
-                l.origin.y + l.direction.y * t1,
-            ),
-        ]),
-        Curve2::Polyline(p) => Ok(p.points.clone()),
-        Curve2::Circle(c) => {
-            let sweep = (t1 - t0).abs();
-            let full = circle_segments(c.radius, chord_error);
-            // Scale the full-circle budget to the swept fraction, never below
-            // one segment: a short arc must not inherit a whole circle's cost.
-            let n = ((full as Scalar) * sweep / core::f64::consts::TAU)
-                .ceil()
-                .max(1.0) as usize;
-            let mut out = Vec::with_capacity(n + 1);
-            for i in 0..=n {
-                let t = t0 + (t1 - t0) * (i as Scalar) / (n as Scalar);
-                let (s, co) = t.sin_cos();
-                out.push(Point2::new(
-                    c.frame.origin.x + c.radius * (co * c.frame.x.x + s * c.frame.y.x),
-                    c.frame.origin.y + c.radius * (co * c.frame.x.y + s * c.frame.y.y),
-                ));
-            }
-            Ok(out)
-        }
-        other => Err(GeomError::Unsupported {
-            backend: crate::BACKEND_ID,
-            operation: Operation::CurveEvaluation,
-        })
-        .inspect_err(|_| debug_assert!(matches!(other, Curve2::Ellipse(_) | Curve2::BSpline(_)))),
-    }
+    axiolid_scalar::curve::flatten2(
+        &segment.curve,
+        segment.domain,
+        chord_error,
+        MAX_SUBDIVISION_DEPTH,
+    )
 }
 
 /// Force the ring-orientation convention earcut and the extruder expect:

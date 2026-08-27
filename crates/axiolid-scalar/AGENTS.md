@@ -2,12 +2,15 @@
 
 Purpose: portable scalar reference implementation and correctness oracle (ADR 0012).
 
-Allowed internal dependencies: axiolid-core, axiolid-kernel. Follow parent `../AGENTS.md`. Do not read
+Allowed internal dependencies: axiolid-core, axiolid-kernel, axiolid-mesh,
+axiolid-curve. Follow parent `../AGENTS.md`. Do not read
 `PLAN.md` unless assigned implementation or roadmap work.
 
 ## Module ownership
 
-expansion.rs; orientation.rs. Split a module before unrelated data, validation, and algorithms grow
+expansion.rs; orientation.rs; boolean.rs (solid boolean oracle, ADR 0017);
+curve.rs (curve evaluation and adaptive flattening, ADR 0018). Split a module
+before unrelated data, validation, and algorithms grow
 together. Add no empty placeholder files.
 
 ## Invariants

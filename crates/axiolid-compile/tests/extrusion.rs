@@ -178,12 +178,17 @@ mod contour_and_mirror {
 
     /// One closed polyline segment covering a whole ring.
     fn ring(points: Vec<Point2>) -> Contour {
+        // A polyline's parameter is one unit per segment, so the domain of a
+        // closed n-point ring is (0, n). The fixture previously declared
+        // (0, 1) and the old flattener ignored the domain entirely; the
+        // scalar evaluator honours it, so the declared domain must be right.
+        let segments = points.len() as Scalar;
         Contour::new(vec![ProfileSegment {
             curve: Curve2::Polyline(Polyline2 {
                 points,
                 closed: true,
             }),
-            domain: axiolid_core::Interval::new(0.0, 1.0),
+            domain: axiolid_core::Interval::new(0.0, segments),
             same_sense: true,
         }])
     }
