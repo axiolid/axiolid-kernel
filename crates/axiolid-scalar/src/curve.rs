@@ -306,6 +306,56 @@ where
     Ok(points[j] - points[i])
 }
 
+// --- reusable de Boor core (shared with `crate::surface`) -------------------
+
+/// Locate the knot span for `u` in a validated flat knot vector.
+///
+/// Extracted from [`spline_span`] so a tensor-product surface can reuse the
+/// exact same span logic per axis. `n` is the control-point count, `d` the
+/// degree; the caller has already checked `knots.len() == n + d + 1`.
+pub(crate) fn span_in(knots: &[Scalar], n: usize, d: usize, u: Scalar) -> usize {
+    let mut span = d;
+    for (k, knot) in knots.iter().enumerate().take(n).skip(d) {
+        if *knot <= u {
+            span = k;
+        } else {
+            break;
+        }
+    }
+    span
+}
+
+/// One de Boor recurrence over homogeneous coordinates.
+///
+/// `points` holds the `d+1` premultiplied control points influencing `span`,
+/// `weights` their weights. Both are consumed in place. This is the numerical
+/// heart shared by curve and surface evaluation: keeping one copy means a fix
+/// to the recurrence cannot land in one and not the other.
+pub(crate) fn de_boor_recurrence<const N: usize>(
+    knots: &[Scalar],
+    span: usize,
+    d: usize,
+    u: Scalar,
+    points: &mut [[Scalar; N]],
+    weights: &mut [Scalar],
+) {
+    for r in 1..=d {
+        for j in (r..=d).rev() {
+            let i = span - d + j;
+            let denom = knots[i + d + 1 - r] - knots[i];
+            let alpha = if denom.abs() > 0.0 {
+                (u - knots[i]) / denom
+            } else {
+                0.0
+            };
+            for k in 0..N {
+                points[j][k] = points[j - 1][k] * (1.0 - alpha) + points[j][k] * alpha;
+            }
+            weights[j] = weights[j - 1] * (1.0 - alpha) + weights[j] * alpha;
+        }
+    }
+}
+
 // --- de Boor ----------------------------------------------------------------
 
 /// Shared setup: validated flat knots, degree, and the knot span for `t`.
@@ -341,14 +391,7 @@ fn spline_span<P>(b: &BSplineCurve<P>, t: Scalar) -> GeomResult<(Vec<Scalar>, us
     }
     let u = t.clamp(lo, hi);
     // Find span: largest k with knots[k] <= u, restricted to [d, n-1].
-    let mut span = d;
-    for (k, knot) in knots.iter().enumerate().take(n).skip(d) {
-        if *knot <= u {
-            span = k;
-        } else {
-            break;
-        }
-    }
+    let span = span_in(&knots, n, d, u);
     Ok((knots, span, d))
 }
 
@@ -384,23 +427,9 @@ where
         weights.push(w);
     }
 
-    for r in 1..=d {
-        for j in (r..=d).rev() {
-            let i = span - d + j;
-            let denom = knots[i + d + 1 - r] - knots[i];
-            // A repeated knot makes the interval empty; the left value is
-            // already the answer there, so alpha = 0 is the correct limit.
-            let alpha = if denom.abs() > 0.0 {
-                (u - knots[i]) / denom
-            } else {
-                0.0
-            };
-            for k in 0..N {
-                work[j][k] = work[j - 1][k] * (1.0 - alpha) + work[j][k] * alpha;
-            }
-            weights[j] = weights[j - 1] * (1.0 - alpha) + weights[j] * alpha;
-        }
-    }
+    // A repeated knot makes an interval empty; the shared recurrence treats
+    // that as alpha = 0, which is the correct limit.
+    de_boor_recurrence(&knots, span, d, u, &mut work, &mut weights);
 
     let w = weights[d];
     if w.abs() <= 0.0 {

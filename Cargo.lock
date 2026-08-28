@@ -175,6 +175,7 @@ dependencies = [
  "axiolid-curve",
  "axiolid-kernel",
  "axiolid-mesh",
+ "axiolid-surface",
 ]
 
 [[package]]
