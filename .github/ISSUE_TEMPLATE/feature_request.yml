@@ -1,0 +1,36 @@
+name: Feature / enhancement
+description: Propose new capability, an API change, or an ergonomics improvement.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: What real use case or downstream consumer needs this? Link the consuming code/repo if you have it.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Sketch the API, behavior, or design. Doesn't need to be final — enough to review.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Why not solve this downstream / with an existing crate / a workaround?
+  - type: dropdown
+    id: size
+    attributes:
+      label: Size
+      description: >
+        Best guess at scope. `small` = a self-contained addition, no public
+        API break. `big` = touches the public API, spans multiple
+        crates/files, needs a design decision, or is a breaking change.
+      options:
+        - small
+        - big
+    validations:
+      required: true
