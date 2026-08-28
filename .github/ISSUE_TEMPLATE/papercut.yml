@@ -1,0 +1,26 @@
+name: Papercut / ergonomics
+description: Small friction — naming, visibility, missing helper, awkward API — not a correctness bug.
+labels: ["papercut"]
+body:
+  - type: textarea
+    id: friction
+    attributes:
+      label: What's awkward
+      description: What did you have to work around, and how?
+    validations:
+      required: true
+  - type: textarea
+    id: fix
+    attributes:
+      label: Suggested fix
+      description: Concrete rename/helper/visibility change, if you have one in mind.
+  - type: dropdown
+    id: size
+    attributes:
+      label: Size
+      description: Papercuts are almost always `small`; flag `big` only if fixing it cascades into a public API change.
+      options:
+        - small
+        - big
+    validations:
+      required: true
