@@ -1,0 +1,45 @@
+name: Bug report
+description: Something in this crate behaves incorrectly or doesn't compile/build as expected.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One or two sentences. What's broken?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: >
+        Minimal repro (code, IFC/STEP/XML snippet, command), and the exact
+        commit/version/HEAD you tested against. Claims without evidence get
+        bounced back.
+      placeholder: |
+        Repo @ commit <sha>
+        cargo test / command run:
+        Actual output:
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+      description: What should have happened instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: size
+    attributes:
+      label: Size
+      description: >
+        Best guess at scope. `small` = a self-contained fix, one file/module,
+        no public API break. `big` = touches the public API, spans multiple
+        crates/files, needs a design decision, or is a breaking change.
+      options:
+        - small
+        - big
+    validations:
+      required: true
