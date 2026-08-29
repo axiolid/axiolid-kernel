@@ -271,6 +271,11 @@ fn point_to_segment(m: Point3, a: Point3, b: Point3) -> Scalar {
     if len2 <= 0.0 {
         return (m - a).length();
     }
+    // Clamped because this measures distance to a finite SEGMENT, not to its
+    // infinite line. `tessellate_patch` only ever passes a chord midpoint,
+    // whose foot is always interior, so the clamp is unreachable from there
+    // and no mutation probe can kill it. It is kept for callers that pass an
+    // arbitrary point, where dropping it would silently under-report.
     let t = ((m - a).dot(ab) / len2).clamp(0.0, 1.0);
     (m - (a + ab * t)).length()
 }

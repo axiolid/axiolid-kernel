@@ -247,11 +247,15 @@ fn a_single_sample_cannot_span_a_patch() {
 fn cells_split_along_the_shorter_diagonal() {
     // A cylinder band sampled coarsely in v and finely in u: cells are long
     // and thin, which is exactly where the diagonal choice matters.
-    let s = Surface::Cylinder(Cylinder {
+    // A cone, not a cylinder: on a cylinder the two candidate diagonals are
+    // exactly equal by symmetry, so the choice is unobservable and the test
+    // proves nothing. A cone's radius varies along v, breaking the tie.
+    let s = Surface::Cone(axiolid_surface::Cone {
         frame: frame(),
         radius: 1.0,
+        semi_angle: 0.6,
     });
-    let patch = Patch::new(0.0, TAU, 0.0, 8.0).expect("patch");
+    let patch = Patch::new(0.0, TAU, 0.0, 4.0).expect("patch");
     let out = tessellate_patch(&s, patch, budget(0.05)).expect("tessellate");
 
     let mut worst_ratio: Scalar = 0.0;
@@ -329,6 +333,16 @@ fn refinement_reaches_a_tight_tolerance_within_the_budget() {
     assert!(
         out.max_sagitta.expect("curved surface has a sagitta") <= 1e-4,
         "claimed tolerance was not met"
+    );
+    // Doubling lands on 2, 3, 5, 9, ... 2^k+1, so the accepted count is one
+    // more than a power of two. Incrementing by one instead would satisfy the
+    // tolerance too -- just after hundreds of passes -- so only the count
+    // distinguishes the two strategies. Anything else measures nothing.
+    let steps = out.u_samples - 1;
+    assert!(
+        steps.is_power_of_two(),
+        "doubling must land on 2^k+1 samples, got {}",
+        out.u_samples
     );
 }
 

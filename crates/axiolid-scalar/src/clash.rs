@@ -298,7 +298,7 @@ fn sign_of(c: axiolid_kernel::Certified) -> i32 {
 /// A point ON the boundary has winding near 1/2 and is deliberately NOT
 /// inside: two slabs sharing a face are in contact, not overlapping. That
 /// single decision is what keeps every abutting wall out of a clash report.
-fn point_inside(point: Point3, solid: &TriMesh, tolerance: Tolerance) -> Option<bool> {
+pub fn point_inside(point: Point3, solid: &TriMesh, tolerance: Tolerance) -> Option<bool> {
     let winding = WindingMesh::prepare(solid, tolerance).ok()?;
     let w = winding.winding_number(point).ok()?.value;
     // Interior is ~1, exterior ~0, boundary ~0.5. Require a clear interior so

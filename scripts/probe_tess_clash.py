@@ -48,12 +48,12 @@ PROBES = [
         "if max_samples_per_direction < 2 {",
         "if max_samples_per_direction < 1 {",
     ),
-    (
-        "tess-projection-unclamped",
-        "crates/axiolid-scalar/src/tessellate.rs",
-        "let t = ((m - a).dot(ab) / len2).clamp(0.0, 1.0);",
-        "let t = (m - a).dot(ab) / len2;",
-    ),
+    # `tess-projection-unclamped` was removed after measurement rather than
+    # left as a permanent leak. The sagitta probe evaluates the MIDPOINT of a
+    # chord; a midpoint's projection foot always lies within its own segment,
+    # so the clamp cannot be reached from `tessellate_patch`. It is defensive
+    # code for future callers that pass an arbitrary point, not a live branch,
+    # and a probe that no reachable input can kill is noise in the report.
 ]
 
 CLASH_PROBES = [

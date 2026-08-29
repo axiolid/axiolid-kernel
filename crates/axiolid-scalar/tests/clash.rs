@@ -8,7 +8,7 @@
 
 use axiolid_core::{Point3, Tolerance};
 use axiolid_mesh::TriMesh;
-use axiolid_scalar::clash::{interference, Interference};
+use axiolid_scalar::clash::{interference, point_inside, Interference};
 
 /// Axis-aligned box as a closed, outward-oriented triangle mesh.
 fn box_mesh(min: Point3, max: Point3) -> TriMesh {
@@ -243,6 +243,14 @@ fn a_transversal_crossing_is_penetration() {
         "a transversal crossing must be named by the surface test, not \
          inferred only from containment"
     );
+    // The blade passes clean through: every one of its vertices is outside
+    // the block, so containment cannot reach this verdict and the surface
+    // test is the only thing that can. Without this the surface branch is
+    // masked by the containment fallback and its mutation survives.
+    assert!(
+        !report.containment,
+        "the blade's vertices are all outside the block: {report:?}"
+    );
 }
 
 /// Contact must not be silently downgraded to `Clear`.
@@ -294,4 +302,88 @@ fn coplanar_faces_are_decided_by_shared_area() {
         Interference::Clear,
         "coplanar faces that share no area are not contact"
     );
+}
+
+// The interior threshold is the single number separating contact from
+// overlap, so it gets a direct test rather than only being exercised
+// through `interference`.
+#[test]
+fn the_interior_threshold_rejects_a_surface_point() {
+    let cube = box_mesh(Point3::new(0.0, 0.0, 0.0), Point3::new(2.0, 2.0, 2.0));
+    let t = Tolerance::ZERO;
+    let deep = Point3::new(1.0, 1.0, 1.0);
+    let face = Point3::new(1.0, 1.0, 2.0);
+    let outside = Point3::new(1.0, 1.0, 3.0);
+    assert_eq!(point_inside(deep, &cube, t), Some(true), "centre is inside");
+    assert_eq!(
+        point_inside(face, &cube, t),
+        Some(false),
+        "a point ON the face must not count as inside"
+    );
+    assert_eq!(
+        point_inside(outside, &cube, t),
+        Some(false),
+        "a point beyond the face is outside"
+    );
+}
+
+// Two boxes meeting on a shared face plane, offset so their faces overlap
+// partially. The only interaction is coplanar: no vertex of either lies
+// inside the other, and no edge pierces a triangle interior. This is the
+// only arrangement that reaches the coplanar branch, so it is what pins it.
+#[test]
+fn a_partial_face_overlap_is_contact_not_clearance() {
+    let lower = box_mesh(Point3::new(0.0, 0.0, 0.0), Point3::new(2.0, 2.0, 1.0));
+    let upper = box_mesh(Point3::new(1.0, 1.0, 1.0), Point3::new(3.0, 3.0, 2.0));
+    let report = interference(&lower, &upper, Tolerance::ZERO).expect("interference");
+    assert_eq!(
+        report.kind,
+        Interference::Touching,
+        "overlapping coplanar faces are contact"
+    );
+    assert!(
+        !report.containment,
+        "neither solid is inside the other: {report:?}"
+    );
+    assert!(
+        report.penetrating_pairs.is_empty(),
+        "no volume is shared, so nothing penetrates"
+    );
+    // Asserting only the verdict cannot see the coplanar branch: the 10
+    // edge-contact pairs already set `Touching`. The 4 coplanar face pairs
+    // add their own entries, so pinning the exact count is what makes
+    // suppressing or over-firing that branch observable.
+    assert_eq!(
+        report.touching_pairs.len(),
+        18,
+        "coplanar overlap must contribute pairs beyond edge contact"
+    );
+}
+
+// Two boxes at the same height, side by side with a gap. Their top and
+// bottom faces are coplanar but share no area, and nothing else touches.
+// Over-firing the coplanar branch (treating every coplanar pair as overlap)
+// turns this clear case into contact, so it is what pins that direction.
+#[test]
+fn coplanar_faces_that_share_no_area_stay_clear() {
+    // Offset in EVERY axis. Sharing even one coordinate plane makes the side
+    // faces coplanar, and coplanar faces of boxes at the same height really
+    // do meet along their shared planes -- that is contact, not a bug. Only a
+    // fully offset pair isolates "coplanar but sharing no area".
+    let left = box_mesh(Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 1.0, 1.0));
+    let right = box_mesh(Point3::new(3.0, 0.5, 0.25), Point3::new(4.0, 1.5, 1.25));
+    // A tolerance wide enough that the padded boxes overlap, so the pairs
+    // genuinely reach the narrow phase and the coplanar branch is consulted.
+    let t = Tolerance::new(3.0, 1e-9).expect("tolerance");
+    let report = interference(&left, &right, t).expect("interference");
+    assert!(
+        report.narrow_phase_tests > 0,
+        "the pairs must actually reach the narrow phase"
+    );
+    assert_eq!(
+        report.kind,
+        Interference::Clear,
+        "coplanar faces 2m apart share no area and are not contact"
+    );
+    assert!(report.touching_pairs.is_empty(), "nothing touches");
 }
