@@ -8,6 +8,7 @@
 
 pub mod arithmetic;
 pub mod boolean;
+pub mod clash;
 pub mod convex_hull;
 pub mod curve;
 pub mod expansion;
@@ -19,6 +20,7 @@ pub mod segment_triangle;
 pub mod sphere;
 pub mod static_filter;
 pub mod surface;
+pub mod tessellate;
 pub mod triangle_triangle;
 
 pub use boolean::ScalarBoolean;
