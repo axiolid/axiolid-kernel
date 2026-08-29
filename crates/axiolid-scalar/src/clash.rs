@@ -162,8 +162,8 @@ pub fn interference(
     // A solid entirely inside another produces no triangle intersections at
     // all. Without this the worst possible interference reports as `Clear`.
     if report.kind != Interference::Penetrating && !a.indices.is_empty() && !b.indices.is_empty() {
-        let a_in_b = probe_points(a).any(|p| point_inside(p, b, tolerance).unwrap_or(false));
-        let b_in_a = probe_points(b).any(|p| point_inside(p, a, tolerance).unwrap_or(false));
+        let a_in_b = interior_probes(a).any(|p| point_inside(p, b, tolerance).unwrap_or(false));
+        let b_in_a = interior_probes(b).any(|p| point_inside(p, a, tolerance).unwrap_or(false));
         if a_in_b || b_in_a {
             report.kind = Interference::Penetrating;
             report.containment = true;
@@ -317,10 +317,41 @@ fn point_inside(point: Point3, solid: &TriMesh, tolerance: Tolerance) -> Option<
 /// false positives: a reported penetration is always real. A pathological
 /// sliver overlap smaller than a triangle is missed, which is why the exact
 /// surface-crossing test above runs first and independently.
-fn probe_points(mesh: &TriMesh) -> impl Iterator<Item = Point3> + '_ {
-    let centroids = (0..mesh.indices.len() / 3).map(move |i| {
-        let [a, b, c] = triangle(mesh, i);
-        (a + b + c) / 3.0
-    });
-    mesh.positions.iter().copied().chain(centroids)
+fn interior_probes(mesh: &TriMesh) -> impl Iterator<Item = Point3> + '_ {
+    // Centre of the mesh's own bounding box: a convex solid always contains
+    // it, and for a non-convex one the triangle-nudge probes below still fire.
+    let mut lo = Point3::splat(Scalar::INFINITY);
+    let mut hi = Point3::splat(Scalar::NEG_INFINITY);
+    for p in &mesh.positions {
+        lo = lo.min(*p);
+        hi = hi.max(*p);
+    }
+    let centre = (lo + hi) * 0.5;
+
+    // Each triangle centroid pulled a whisker toward the mesh centre. On the
+    // boundary the winding number is undefined -- measured as ~1.0 rather
+    // than 0.5 -- so a probe left exactly on a shared face reads as inside
+    // and turns face contact into a false penetration. The nudge is relative
+    // so it scales with the model.
+    let span = (hi - lo).length().max(1.0);
+    // The nudge must be small enough not to step over a real overlap. A 1e-9
+    // model-relative step is the same order as the smallest overlap worth
+    // reporting, so it would hide exactly the cases this function exists to
+    // catch. 1e-12 is far below any meaningful interference yet still clears
+    // the exact-arithmetic boundary where winding is undefined.
+    let nudge = span * 1e-12;
+
+    core::iter::once(centre).chain(mesh.indices.chunks_exact(3).map(move |t| {
+        let a = mesh.positions[t[0] as usize];
+        let b = mesh.positions[t[1] as usize];
+        let c = mesh.positions[t[2] as usize];
+        let m = (a + b + c) / 3.0;
+        let toward = centre - m;
+        let len = toward.length();
+        if len > 0.0 {
+            m + toward * (nudge / len)
+        } else {
+            m
+        }
+    }))
 }

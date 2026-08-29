@@ -218,3 +218,80 @@ fn a_solid_fully_inside_another_is_penetrating() {
         "no surfaces cross in this arrangement"
     );
 }
+
+// --- gaps found by mutation probes ------------------------------------------
+
+/// A transversal crossing must be penetration, not contact.
+///
+/// Two triangles that pierce each other's interiors share volume in any solid
+/// built from them. Nothing in the suite forced `Proper` to mean penetration,
+/// so demoting it to `Touching` was invisible.
+#[test]
+fn a_transversal_crossing_is_penetration() {
+    // A thin blade driven through the middle of a box face: the blade's
+    // edges pierce triangle interiors rather than meeting edge-to-edge.
+    let block = box_mesh(Point3::new(0.0, 0.0, 0.0), Point3::new(2.0, 2.0, 2.0));
+    let blade = box_mesh(Point3::new(0.73, -1.0, 0.61), Point3::new(1.31, 3.0, 1.17));
+    let report = interference(&block, &blade, Tolerance::ZERO).expect("interference");
+    assert_eq!(
+        report.kind,
+        Interference::Penetrating,
+        "a blade through a block penetrates"
+    );
+    assert!(
+        !report.penetrating_pairs.is_empty(),
+        "a transversal crossing must be named by the surface test, not \
+         inferred only from containment"
+    );
+}
+
+/// Contact must not be silently downgraded to `Clear`.
+///
+/// Every abutting wall in a model is contact. If the promotion from `Clear`
+/// to `Touching` is suppressed, a checker reports nothing at all.
+#[test]
+fn contact_is_reported_as_touching_not_clear() {
+    let a = unit_box_at(0.0);
+    let b = unit_box_at(1.0);
+    let report = interference(&a, &b, Tolerance::ZERO).expect("interference");
+    assert_eq!(report.kind, Interference::Touching);
+    assert!(
+        !report.is_clear(),
+        "face contact must not read as no interference"
+    );
+    assert!(
+        !report.touching_pairs.is_empty(),
+        "contact must name its pairs"
+    );
+}
+
+/// Coplanar faces must be judged by whether they actually share area.
+///
+/// `Coplanar` short-circuits the predicate before any edge test, so it means
+/// "six vertices in one plane" and nothing more. Treating it as automatic
+/// contact reports separated parallel faces as clashes; treating it as
+/// automatic non-contact drops real face-on-face contact.
+#[test]
+fn coplanar_faces_are_decided_by_shared_area() {
+    // Two boxes sharing the z = 1 plane, offset in x so their top and bottom
+    // faces are coplanar AND overlapping.
+    let lower = box_mesh(Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 1.0, 1.0));
+    let upper = box_mesh(Point3::new(0.5, 0.0, 1.0), Point3::new(1.5, 1.0, 2.0));
+    // Shares the z = 1 plane over x in [0.5, 1.0]: coplanar with real
+    // shared area, and no shared volume because z ranges only meet.
+    let overlapping = interference(&lower, &upper, Tolerance::ZERO).expect("interference");
+    assert_eq!(
+        overlapping.kind,
+        Interference::Touching,
+        "coplanar faces that share area are contact"
+    );
+
+    // Same shared plane, but slid clear in x: coplanar, no shared area.
+    let apart = box_mesh(Point3::new(5.0, 0.0, 1.0), Point3::new(6.0, 1.0, 2.0));
+    let separated = interference(&lower, &apart, Tolerance::ZERO).expect("interference");
+    assert_eq!(
+        separated.kind,
+        Interference::Clear,
+        "coplanar faces that share no area are not contact"
+    );
+}

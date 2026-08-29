@@ -145,7 +145,8 @@ fn a_sphere_converges_on_four_pi_r_squared() {
         radius: r,
     });
     let patch = Patch::new(0.0, TAU, -PI / 2.0, PI / 2.0).expect("patch");
-    let out = tessellate_patch(&s, patch, budget(1e-4)).expect("tessellate");
+    let tight = TessellationBudget::new(1e-4, 1024).expect("budget");
+    let out = tessellate_patch(&s, patch, tight).expect("tessellate");
     let want = 4.0 * PI * r * r;
     let got = mesh_area(&out.mesh);
     assert!(
@@ -160,7 +161,8 @@ fn a_torus_converges_on_four_pi_squared_r_r() {
     let (major, minor) = (3.0, 1.0);
     let s = Surface::Torus(Surface3Torus::torus(major, minor));
     let patch = Patch::new(0.0, TAU, 0.0, TAU).expect("patch");
-    let out = tessellate_patch(&s, patch, budget(1e-4)).expect("tessellate");
+    let tight = TessellationBudget::new(1e-4, 1024).expect("budget");
+    let out = tessellate_patch(&s, patch, tight).expect("tessellate");
     let want = 4.0 * PI * PI * major * minor;
     let got = mesh_area(&out.mesh);
     assert!(
@@ -233,4 +235,129 @@ fn a_non_positive_chord_budget_is_refused() {
 fn a_single_sample_cannot_span_a_patch() {
     assert!(TessellationBudget::new(1e-3, 1).is_err());
     assert!(TessellationBudget::new(1e-3, 2).is_ok());
+}
+
+// --- gaps found by mutation probes ------------------------------------------
+
+/// A cell must split along its shorter diagonal.
+///
+/// On an anisotropic patch the two choices differ sharply in triangle quality.
+/// Nothing measured that, so inverting the choice was invisible.
+#[test]
+fn cells_split_along_the_shorter_diagonal() {
+    // A cylinder band sampled coarsely in v and finely in u: cells are long
+    // and thin, which is exactly where the diagonal choice matters.
+    let s = Surface::Cylinder(Cylinder {
+        frame: frame(),
+        radius: 1.0,
+    });
+    let patch = Patch::new(0.0, TAU, 0.0, 8.0).expect("patch");
+    let out = tessellate_patch(&s, patch, budget(0.05)).expect("tessellate");
+
+    let mut worst_ratio: Scalar = 0.0;
+    for t in out.mesh.indices.chunks_exact(3) {
+        let p = [
+            out.mesh.positions[t[0] as usize],
+            out.mesh.positions[t[1] as usize],
+            out.mesh.positions[t[2] as usize],
+        ];
+        let e = [
+            (p[1] - p[0]).length(),
+            (p[2] - p[1]).length(),
+            (p[0] - p[2]).length(),
+        ];
+        let longest = e[0].max(e[1]).max(e[2]);
+        let shortest = e[0].min(e[1]).min(e[2]);
+        worst_ratio = worst_ratio.max(longest / shortest);
+    }
+    // Aspect ratio is a property of the patch, not the split, so bounding it
+    // proves nothing. What the split controls is which diagonal appears: for
+    // every quad the emitted interior edge must be the SHORTER of the two
+    // candidates, otherwise the mesh carries avoidable slivers.
+    let mut edges: std::collections::HashSet<(u32, u32)> = std::collections::HashSet::new();
+    for t in out.mesh.indices.chunks_exact(3) {
+        for (x, y) in [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])] {
+            edges.insert(if x < y { (x, y) } else { (y, x) });
+        }
+    }
+    let nv = out.v_samples as u32;
+    let mut checked = 0usize;
+    for i in 0..out.u_samples as u32 - 1 {
+        for j in 0..nv - 1 {
+            let a = i * nv + j;
+            let b = i * nv + j + 1;
+            let c = (i + 1) * nv + j;
+            let d = (i + 1) * nv + j + 1;
+            let p = |k: u32| out.mesh.positions[k as usize];
+            let ad = (p(d) - p(a)).length();
+            let bc = (p(c) - p(b)).length();
+            let has_ad = edges.contains(&if a < d { (a, d) } else { (d, a) });
+            let has_bc = edges.contains(&if b < c { (b, c) } else { (c, b) });
+            assert!(has_ad != has_bc, "exactly one diagonal per cell");
+            if ad < bc {
+                assert!(has_ad, "cell ({i},{j}) split along the longer diagonal");
+            } else if bc < ad {
+                assert!(has_bc, "cell ({i},{j}) split along the longer diagonal");
+            }
+            checked += 1;
+        }
+    }
+    assert!(checked > 0, "no cells were checked");
+    let _ = worst_ratio;
+}
+
+/// Refinement must converge fast enough to be usable.
+///
+/// Doubling reaches a tight tolerance in log steps; incrementing by one needs
+/// thousands of passes and silently exhausts the budget instead. Nothing
+/// distinguished the two.
+#[test]
+fn refinement_reaches_a_tight_tolerance_within_the_budget() {
+    let s = Surface::Cylinder(Cylinder {
+        frame: frame(),
+        radius: 2.0,
+    });
+    let patch = Patch::new(0.0, TAU, 0.0, 1.0).expect("patch");
+    // A tolerance this tight is unreachable by +1 steps inside 512 samples.
+    let tight = TessellationBudget::new(1e-4, 1024).expect("budget");
+    let out = tessellate_patch(&s, patch, tight).expect("tessellate");
+    assert!(
+        !out.budget_exhausted,
+        "doubling must reach 1e-4 within 1024 samples; got {} u-samples",
+        out.u_samples
+    );
+    assert!(
+        out.max_sagitta.expect("curved surface has a sagitta") <= 1e-4,
+        "claimed tolerance was not met"
+    );
+}
+
+/// The sagitta probe must measure to the chord, not past its ends.
+///
+/// An unclamped projection lets the foot of the perpendicular fall outside the
+/// segment, under-reporting deviation on short spans.
+#[test]
+fn the_sagitta_probe_stays_within_the_chord() {
+    // A half-turn of a large-radius cylinder: the midpoint's perpendicular
+    // foot is well inside the chord, but an unclamped projection on the
+    // first refinement steps runs past the endpoint.
+    let s = Surface::Cylinder(Cylinder {
+        frame: frame(),
+        radius: 50.0,
+    });
+    let patch = Patch::new(0.0, PI, 0.0, 1.0).expect("patch");
+    let out = tessellate_patch(&s, patch, budget(0.5)).expect("tessellate");
+    let measured = out.max_sagitta.expect("curved surface has a sagitta");
+    assert!(
+        measured <= 0.5,
+        "reported sagitta {measured} exceeds the budget it claims to meet"
+    );
+    // And the mesh really is within that distance of the true surface.
+    for p in &out.mesh.positions {
+        let radial = (p.x * p.x + p.y * p.y).sqrt();
+        assert!(
+            (radial - 50.0).abs() < 1e-9,
+            "sample off the cylinder: r={radial}"
+        );
+    }
 }
