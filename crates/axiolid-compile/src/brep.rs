@@ -17,7 +17,10 @@ use axiolid_topology::{BRep, Orientation};
 /// Only the outer shell contributes surface; void shells are interior
 /// boundaries whose removal is a boolean, not a tessellation, so emitting
 /// them here would produce a mesh with stray inside-out geometry.
-pub fn tessellate(brep: &BRep<NodeId>) -> GeomResult<TriMesh> {
+pub fn tessellate(
+    brep: &BRep<NodeId>,
+    graph: &axiolid_model::GeometryGraph,
+) -> GeomResult<TriMesh> {
     let solid = brep
         .solids()
         .first()
@@ -37,7 +40,7 @@ pub fn tessellate(brep: &BRep<NodeId>) -> GeomResult<TriMesh> {
             .ok_or_else(|| GeomError::InvalidInput("face missing".to_string()))?;
         let flip =
             (shell_sense == Orientation::Reversed) ^ (face.orientation == Orientation::Reversed);
-        append_face(&mut mesh, brep, face, flip, &mut welded)?;
+        append_face(&mut mesh, brep, face, graph, flip, &mut welded)?;
     }
     Ok(mesh)
 }
@@ -47,9 +50,23 @@ fn append_face(
     mesh: &mut TriMesh,
     brep: &BRep<NodeId>,
     face: &axiolid_topology::Face<NodeId>,
+    graph: &axiolid_model::GeometryGraph,
     flip: bool,
     welded: &mut std::collections::HashMap<axiolid_topology::VertexId, u32>,
 ) -> GeomResult<()> {
+    // A face carrying a curved support surface cannot be tessellated by
+    // projecting its boundary onto a plane: the interior curves away from
+    // that plane and the error is invisible in the output. Refuse instead.
+    // `axiolid-compile/AGENTS.md`: a missing wall is cheap, a wrong wall
+    // corrupts every downstream quantity.
+    if let Some(surface) = face_surface(graph, face)? {
+        if !surface_is_planar(surface) {
+            return Err(GeomError::Unsupported {
+                backend: crate::BACKEND_ID,
+                operation: axiolid_kernel::Operation::Tessellation,
+            });
+        }
+    }
     let mut rings: Vec<Vec<(axiolid_topology::VertexId, Vec3)>> = Vec::new();
     let mut outer_index = None;
     for bound in &face.bounds {
@@ -196,4 +213,37 @@ fn plane_axes(normal: Vec3) -> Option<(Vec3, Vec3)> {
     let u = n.cross(helper).normalize();
     let v = n.cross(u);
     Some((u, v))
+}
+
+/// Whether an exact support surface is planar.
+///
+/// A planar support adds nothing the boundary polygon does not already say,
+/// so those faces stay on the fast path. Every other surface family
+/// curves away from the boundary plane, and projecting it there is a
+/// silent modelling error.
+fn surface_is_planar(surface: &axiolid_surface::Surface) -> bool {
+    matches!(surface, axiolid_surface::Surface::Plane(_))
+}
+
+/// Resolve a face's support surface from the graph, if it declares one.
+///
+/// A face may legitimately omit its surface: a planar polygon's boundary
+/// already determines its plane. A declared handle that does not resolve to
+/// a Surface node is a graph error, not an absent surface.
+fn face_surface<'g>(
+    graph: &'g axiolid_model::GeometryGraph,
+    face: &axiolid_topology::Face<NodeId>,
+) -> GeomResult<Option<&'g axiolid_surface::Surface>> {
+    let Some(id) = face.surface else {
+        return Ok(None);
+    };
+    match graph.get(id) {
+        Some(axiolid_model::GeometryNode::Surface(s)) => Ok(Some(s)),
+        Some(_) => Err(GeomError::InvalidInput(format!(
+            "face support {id:?} is not a Surface node"
+        ))),
+        None => Err(GeomError::InvalidInput(format!(
+            "face support {id:?} does not belong to this graph"
+        ))),
+    }
 }

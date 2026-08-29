@@ -6,10 +6,12 @@
 //! model can use its own handle type as `BRep<G>`, which makes this crate usable
 //! by exact kernels, mesh converters, and foreign format adapters alike.
 
+pub mod audit;
 pub mod brep;
 pub mod entity;
 pub mod id;
 
+pub use audit::{audit_brep, BRepHealth};
 pub use brep::BRep;
 pub use entity::{Edge, EdgeUse, Face, FaceBound, Loop, Orientation, Shell, Solid, Vertex};
 pub use id::{EdgeId, FaceId, LoopId, ShellId, SolidId, VertexId};

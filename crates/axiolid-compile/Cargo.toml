@@ -19,6 +19,7 @@ axiolid-profile.workspace = true
 axiolid-curve.workspace = true
 axiolid-kernel = { workspace = true, features = ["mesh-boolean", "model"] }
 axiolid-scalar.workspace = true
+axiolid-surface.workspace = true
 earcut = "0.4"
 
 [dev-dependencies]

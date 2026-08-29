@@ -5,6 +5,7 @@ use axiolid_compile::ScalarCompiler;
 use axiolid_core::Vec3;
 use axiolid_kernel::{ExecutionOptions, GeometryCompiler};
 use axiolid_model::{GeometryGraphBuilder, GeometryNode};
+use axiolid_topology::audit_brep;
 use axiolid_topology::{
     BRep, Edge, EdgeUse, Face, FaceBound, Loop, Orientation, Shell, Solid, Vertex,
 };
@@ -387,5 +388,78 @@ fn a_reversed_bound_reverses_the_loop() {
     assert!(
         reversed < 0.0,
         "reversed bound must flip the normal, got {reversed}"
+    );
+}
+
+// --- curved support surfaces ------------------------------------------------
+
+/// A face with a curved support must be refused, not silently faceted.
+///
+/// Projecting a cylindrical face onto the plane of its boundary yields a mesh
+/// that looks valid and is wrong everywhere between the vertices.
+#[test]
+fn a_curved_face_is_refused_not_flattened() {
+    let brep = cube();
+    let mut builder = GeometryGraphBuilder::new();
+    let cyl = builder
+        .push(GeometryNode::Surface(axiolid_surface::Surface::Cylinder(
+            axiolid_surface::Cylinder {
+                frame: axiolid_core::Frame3 {
+                    origin: axiolid_core::Point3::ZERO,
+                    x: axiolid_core::Vec3::X,
+                    y: axiolid_core::Vec3::Y,
+                    z: axiolid_core::Vec3::Z,
+                },
+                radius: 1.0,
+            },
+        )))
+        .expect("push surface");
+    // Attach the curved support to the first face.
+    let mut faces: Vec<_> = brep.faces().to_vec();
+    faces[0].surface = Some(cyl);
+    let mut rebuilt = BRep::default();
+    for v in brep.vertices() {
+        rebuilt.add_vertex(*v);
+    }
+    for e in brep.edges() {
+        rebuilt.add_edge(e.clone());
+    }
+    for l in brep.loops() {
+        rebuilt.add_loop(l.clone());
+    }
+    for f in faces {
+        rebuilt.add_face(f);
+    }
+    for s in brep.shells() {
+        rebuilt.add_shell(s.clone());
+    }
+    for s in brep.solids() {
+        rebuilt.add_solid(s.clone());
+    }
+    let root = builder
+        .push(GeometryNode::BRep(rebuilt))
+        .expect("push brep");
+    let graph = builder.finish(vec![root]).expect("finish");
+    let compiler = ScalarCompiler::new(BoolmeshBoolean::new());
+    let outcome = compiler.compile(
+        &graph,
+        root,
+        &ExecutionOptions::new(axiolid_core::Tolerance::METRE),
+    );
+    assert!(
+        outcome.is_err(),
+        "a cylindrical face must be refused, not flattened: {outcome:?}"
+    );
+}
+
+/// The cube the tessellator actually consumes must audit as a closed
+/// manifold. If it does not, either the audit or the fixture is wrong, and
+/// every downstream volume claim rests on the answer.
+#[test]
+fn the_tessellation_cube_is_a_closed_manifold() {
+    let health = audit_brep(&cube());
+    assert!(
+        health.is_closed_manifold(),
+        "the cube used for tessellation must be sound: {health:?}"
     );
 }
