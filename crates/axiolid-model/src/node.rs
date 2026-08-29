@@ -113,6 +113,15 @@ impl GeometryNode {
             Self::SolidOperation(value) => value.references(&mut references),
             Self::BRep(value) => {
                 references.extend(value.edges().iter().filter_map(|edge| edge.curve));
+                // Pcurves are graph references too: omitting them here would
+                // let a referenced trim curve be pruned as unreachable.
+                references.extend(
+                    value
+                        .loops()
+                        .iter()
+                        .flat_map(|wire| wire.edges.iter())
+                        .filter_map(|use_| use_.pcurve),
+                );
                 references.extend(value.faces().iter().filter_map(|face| face.surface));
             }
             Self::Instance(value) => references.push(value.source),

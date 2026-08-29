@@ -20,7 +20,18 @@ use axiolid_topology::{BRep, Orientation};
 pub fn tessellate(
     brep: &BRep<NodeId>,
     graph: &axiolid_model::GeometryGraph,
+    tolerance: axiolid_core::Tolerance,
 ) -> GeomResult<TriMesh> {
+    // Structure before geometry. A dangling handle or an open loop
+    // produces a mesh that looks plausible and is wrong, so the
+    // topology is audited before a single triangle is emitted.
+    let health = axiolid_topology::audit_brep(brep);
+    if !health.is_tessellable() {
+        return Err(GeomError::InvalidInput(format!(
+            "brep topology is not tessellable: {health:?}"
+        )));
+    }
+
     let solid = brep
         .solids()
         .first()
@@ -40,7 +51,7 @@ pub fn tessellate(
             .ok_or_else(|| GeomError::InvalidInput("face missing".to_string()))?;
         let flip =
             (shell_sense == Orientation::Reversed) ^ (face.orientation == Orientation::Reversed);
-        append_face(&mut mesh, brep, face, graph, flip, &mut welded)?;
+        append_face(&mut mesh, brep, face, graph, flip, tolerance, &mut welded)?;
     }
     Ok(mesh)
 }
@@ -52,6 +63,7 @@ fn append_face(
     face: &axiolid_topology::Face<NodeId>,
     graph: &axiolid_model::GeometryGraph,
     flip: bool,
+    tolerance: axiolid_core::Tolerance,
     welded: &mut std::collections::HashMap<axiolid_topology::VertexId, u32>,
 ) -> GeomResult<()> {
     // A face carrying a curved support surface cannot be tessellated by
@@ -59,12 +71,13 @@ fn append_face(
     // that plane and the error is invisible in the output. Refuse instead.
     // `axiolid-compile/AGENTS.md`: a missing wall is cheap, a wrong wall
     // corrupts every downstream quantity.
+    // A curved support cannot be tessellated by projecting the boundary onto
+    // a plane: the interior curves away from it and the error is invisible in
+    // the output. Sample the surface itself when the face states its boundary
+    // in surface parameters, and refuse when it does not.
     if let Some(surface) = face_surface(graph, face)? {
         if !surface_is_planar(surface) {
-            return Err(GeomError::Unsupported {
-                backend: crate::BACKEND_ID,
-                operation: axiolid_kernel::Operation::Tessellation,
-            });
+            return append_curved_face(mesh, brep, face, surface, graph, flip, tolerance);
         }
     }
     let mut rings: Vec<Vec<(axiolid_topology::VertexId, Vec3)>> = Vec::new();
@@ -246,4 +259,92 @@ fn face_surface<'g>(
             "face support {id:?} does not belong to this graph"
         ))),
     }
+}
+
+/// Tessellate a face whose support surface is curved.
+///
+/// The face's boundary must be stated in the surface's parameter domain:
+/// every edge use needs a pcurve. Without them the trim is unknown, and
+/// guessing it by inverting the surface is not generally solvable. A
+/// missing pcurve is therefore refused, not approximated.
+///
+/// The parameter-space boundary gives a `(u, v)` polygon. Its bounding box
+/// is the patch actually sampled, so a half-cylinder costs half a cylinder
+/// rather than a full revolution clipped afterwards.
+fn append_curved_face(
+    mesh: &mut TriMesh,
+    brep: &BRep<NodeId>,
+    face: &axiolid_topology::Face<NodeId>,
+    surface: &axiolid_surface::Surface,
+    graph: &axiolid_model::GeometryGraph,
+    flip: bool,
+    tolerance: axiolid_core::Tolerance,
+) -> GeomResult<()> {
+    let mut uv: Vec<axiolid_core::Point2> = Vec::new();
+    for bound in &face.bounds {
+        let wire = brep
+            .loops()
+            .get(bound.loop_id.index())
+            .ok_or_else(|| GeomError::InvalidInput("loop missing".to_string()))?;
+        for use_ in &wire.edges {
+            let Some(pcurve) = use_.pcurve else {
+                // The face is curved and its trim is not stated. Refusing is
+                // the only honest answer: a wrong wall costs more than a
+                // missing one.
+                return Err(GeomError::Unsupported {
+                    backend: crate::BACKEND_ID,
+                    operation: axiolid_kernel::Operation::Tessellation,
+                });
+            };
+            uv.extend(pcurve_points(graph, pcurve, tolerance)?);
+        }
+    }
+    if uv.len() < 3 {
+        return Ok(());
+    }
+    // The trim's parameter bounds are the patch worth sampling.
+    let (mut u0, mut u1) = (Scalar::INFINITY, Scalar::NEG_INFINITY);
+    let (mut v0, mut v1) = (Scalar::INFINITY, Scalar::NEG_INFINITY);
+    for p in &uv {
+        u0 = u0.min(p.x);
+        u1 = u1.max(p.x);
+        v0 = v0.min(p.y);
+        v1 = v1.max(p.y);
+    }
+    let patch = axiolid_scalar::surface::Patch::new(u0, u1, v0, v1)
+        .map_err(|_| GeomError::Degenerate("curved face has an empty parameter patch".into()))?;
+    let budget = axiolid_scalar::tessellate::TessellationBudget::new(tolerance.linear(), 512)?;
+    let out = axiolid_scalar::tessellate::tessellate_patch(surface, patch, budget)?;
+    // Append the sampled patch. Vertices are new geometry, not topology
+    // vertices, so they are not welded into the shared table: two curved
+    // faces meeting at an edge sample it independently.
+    let base = mesh.positions.len() as u32;
+    mesh.positions.extend_from_slice(&out.mesh.positions);
+    for t in out.mesh.indices.chunks_exact(3) {
+        let (a, b, c) = (t[0] + base, t[1] + base, t[2] + base);
+        if flip {
+            mesh.indices.extend_from_slice(&[a, c, b]);
+        } else {
+            mesh.indices.extend_from_slice(&[a, b, c]);
+        }
+    }
+    Ok(())
+}
+
+/// Flatten a 2D trim curve into parameter-space points.
+fn pcurve_points(
+    graph: &axiolid_model::GeometryGraph,
+    id: NodeId,
+    tolerance: axiolid_core::Tolerance,
+) -> GeomResult<Vec<axiolid_core::Point2>> {
+    let node = graph
+        .get(id)
+        .ok_or_else(|| GeomError::InvalidInput(format!("pcurve {id:?} is not in this graph")))?;
+    let axiolid_model::GeometryNode::Curve2(curve) = node else {
+        return Err(GeomError::InvalidInput(format!(
+            "pcurve {id:?} must be a Curve2 node"
+        )));
+    };
+    let domain = axiolid_scalar::curve::domain2(curve);
+    axiolid_scalar::curve::flatten2(curve, domain, tolerance.linear(), 20)
 }

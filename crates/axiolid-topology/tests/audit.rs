@@ -33,6 +33,7 @@ fn square() -> BRep<u32> {
             .map(|&edge| EdgeUse {
                 edge,
                 orientation: Orientation::Forward,
+                pcurve: None,
             })
             .collect(),
     });
@@ -104,10 +105,12 @@ fn a_disconnected_loop_is_reported_open() {
             EdgeUse {
                 edge: e0,
                 orientation: Orientation::Forward,
+                pcurve: None,
             },
             EdgeUse {
                 edge: e1,
                 orientation: Orientation::Forward,
+                pcurve: None,
             },
         ],
     });
@@ -143,6 +146,7 @@ fn a_false_closure_claim_is_caught() {
             .map(|&edge| EdgeUse {
                 edge,
                 orientation: Orientation::Forward,
+                pcurve: None,
             })
             .collect(),
     });

@@ -78,6 +78,7 @@ fn cube_shell(sense: Orientation) -> (BRep<axiolid_model::NodeId>, axiolid_topol
             uses.push(EdgeUse {
                 edge: id,
                 orientation,
+                pcurve: None,
             });
         }
         let wire = brep.add_loop(Loop { edges: uses });
@@ -200,6 +201,7 @@ fn void_shells_do_not_add_surface() {
         uses.push(EdgeUse {
             edge,
             orientation: Orientation::Forward,
+            pcurve: None,
         });
     }
     let wire = brep.add_loop(Loop { edges: uses });
@@ -292,6 +294,7 @@ fn a_concave_face_keeps_its_true_area() {
         uses.push(EdgeUse {
             edge,
             orientation: Orientation::Forward,
+            pcurve: None,
         });
     }
     let wire = brep.add_loop(Loop { edges: uses });
@@ -351,6 +354,7 @@ fn a_reversed_bound_reverses_the_loop() {
             uses.push(EdgeUse {
                 edge,
                 orientation: Orientation::Forward,
+                pcurve: None,
             });
         }
         let wire = brep.add_loop(Loop { edges: uses });
@@ -461,5 +465,191 @@ fn the_tessellation_cube_is_a_closed_manifold() {
     assert!(
         health.is_closed_manifold(),
         "the cube used for tessellation must be sound: {health:?}"
+    );
+}
+
+/// A curved face WITH a pcurve is sampled on its surface, not flattened.
+///
+/// The trim states the face boundary in `(u, v)`, so the sampler knows which
+/// part of the cylinder to emit. Radius is the check that it really sampled
+/// the surface: every vertex must sit `r` from the axis, which a planar
+/// projection through the boundary could not achieve.
+#[test]
+fn a_curved_face_with_a_pcurve_is_sampled_on_its_surface() {
+    let radius = 2.0;
+    let mut builder = GeometryGraphBuilder::new();
+    let surface = builder
+        .push(GeometryNode::Surface(axiolid_surface::Surface::Cylinder(
+            axiolid_surface::Cylinder {
+                frame: axiolid_core::Frame3 {
+                    origin: axiolid_core::Point3::ZERO,
+                    x: axiolid_core::Vec3::X,
+                    y: axiolid_core::Vec3::Y,
+                    z: axiolid_core::Vec3::Z,
+                },
+                radius,
+            },
+        )))
+        .expect("surface");
+    // A rectangle in parameter space: a quarter turn, two metres tall.
+    let quarter = std::f64::consts::FRAC_PI_2;
+    let trim = builder
+        .push(GeometryNode::Curve2(axiolid_curve::Curve2::Polyline(
+            axiolid_curve::Polyline2 {
+                points: vec![
+                    axiolid_core::Point2::new(0.0, 0.0),
+                    axiolid_core::Point2::new(quarter, 0.0),
+                    axiolid_core::Point2::new(quarter, 2.0),
+                    axiolid_core::Point2::new(0.0, 2.0),
+                ],
+                closed: true,
+            },
+        )))
+        .expect("trim");
+
+    let mut brep: BRep<axiolid_model::NodeId> = BRep::default();
+    let v: Vec<_> = (0..4)
+        .map(|i| {
+            let a = quarter * f64::from(i % 2);
+            brep.add_vertex(Vertex {
+                position: axiolid_core::Point3::new(radius * a.cos(), radius * a.sin(), 0.0),
+            })
+        })
+        .collect();
+    let e: Vec<_> = (0..4)
+        .map(|i| {
+            brep.add_edge(Edge {
+                start: v[i],
+                end: v[(i + 1) % 4],
+                curve: None,
+            })
+        })
+        .collect();
+    let wire = brep.add_loop(Loop {
+        edges: e
+            .iter()
+            .map(|&edge| EdgeUse {
+                edge,
+                orientation: Orientation::Forward,
+                pcurve: Some(trim),
+            })
+            .collect(),
+    });
+    let face = brep.add_face(Face {
+        surface: Some(surface),
+        bounds: vec![FaceBound {
+            loop_id: wire,
+            orientation: Orientation::Forward,
+            outer: true,
+        }],
+        orientation: Orientation::Forward,
+    });
+    let shell = brep.add_shell(Shell {
+        faces: vec![(face, Orientation::Forward)],
+        closed: false,
+    });
+    brep.add_solid(Solid {
+        outer: shell,
+        voids: Vec::new(),
+    });
+
+    let root = builder.push(GeometryNode::BRep(brep)).expect("brep");
+    let graph = builder.finish(vec![root]).expect("finish");
+    let compiler = ScalarCompiler::new(BoolmeshBoolean::new());
+    let mesh = compiler
+        .compile(
+            &graph,
+            root,
+            &ExecutionOptions::new(axiolid_core::Tolerance::MILLIMETRE),
+        )
+        .expect("a curved face with a trim must tessellate");
+
+    assert!(
+        mesh.positions.len() > 8,
+        "a sampled cylinder needs more than the boundary vertices, got {}",
+        mesh.positions.len()
+    );
+    for p in &mesh.positions {
+        let r = (p.x * p.x + p.y * p.y).sqrt();
+        assert!(
+            (r - radius).abs() < 1e-9,
+            "vertex {p:?} is {r} from the axis, not {radius}: the face was \
+             flattened rather than sampled"
+        );
+    }
+}
+
+/// Broken topology is refused before any triangle is emitted.
+///
+/// An open loop cannot bound a face, but the planar path would happily
+/// project its points and return a plausible-looking mesh. The audit runs
+/// first precisely so that never reaches geometry.
+#[test]
+fn unsound_topology_is_refused_before_tessellation() {
+    let mut brep: BRep<axiolid_model::NodeId> = BRep::default();
+    let v: Vec<_> = [
+        axiolid_core::Point3::new(0.0, 0.0, 0.0),
+        axiolid_core::Point3::new(1.0, 0.0, 0.0),
+        axiolid_core::Point3::new(1.0, 1.0, 0.0),
+        axiolid_core::Point3::new(0.0, 1.0, 0.0),
+    ]
+    .into_iter()
+    .map(|position| brep.add_vertex(Vertex { position }))
+    .collect();
+    // Three disjoint edges: the loop cannot close.
+    let e0 = brep.add_edge(Edge {
+        start: v[0],
+        end: v[1],
+        curve: None,
+    });
+    let e1 = brep.add_edge(Edge {
+        start: v[2],
+        end: v[3],
+        curve: None,
+    });
+    let wire = brep.add_loop(Loop {
+        edges: vec![
+            EdgeUse {
+                edge: e0,
+                orientation: Orientation::Forward,
+                pcurve: None,
+            },
+            EdgeUse {
+                edge: e1,
+                orientation: Orientation::Forward,
+                pcurve: None,
+            },
+        ],
+    });
+    let face = brep.add_face(Face {
+        surface: None,
+        bounds: vec![FaceBound {
+            loop_id: wire,
+            orientation: Orientation::Forward,
+            outer: true,
+        }],
+        orientation: Orientation::Forward,
+    });
+    let shell = brep.add_shell(Shell {
+        faces: vec![(face, Orientation::Forward)],
+        closed: false,
+    });
+    brep.add_solid(Solid {
+        outer: shell,
+        voids: Vec::new(),
+    });
+
+    let mut builder = GeometryGraphBuilder::new();
+    let root = builder.push(GeometryNode::BRep(brep)).expect("push");
+    let graph = builder.finish(vec![root]).expect("finish");
+    let compiler = ScalarCompiler::new(BoolmeshBoolean::new());
+    let result = compiler.compile(
+        &graph,
+        root,
+        &ExecutionOptions::new(axiolid_core::Tolerance::METRE),
+    );
+    assert!(
+        result.is_err(),
+        "an open loop must be refused, not tessellated into a plausible mesh"
     );
 }

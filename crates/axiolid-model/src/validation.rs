@@ -149,6 +149,16 @@ pub(crate) fn validate_reference_types(
                     expect_reference(nodes, surface, ExpectedReference::Surface)?;
                 }
             }
+            // A pcurve is a 2D curve in a surface's parameter domain, so it
+            // must resolve to a Curve2 node. Accepting a Curve3 here would
+            // let a model claim a trim it cannot supply.
+            for wire in value.loops() {
+                for use_ in &wire.edges {
+                    if let Some(pcurve) = use_.pcurve {
+                        expect_reference(nodes, pcurve, ExpectedReference::Curve)?;
+                    }
+                }
+            }
             Ok(())
         }
         GeometryNode::Point2(_)

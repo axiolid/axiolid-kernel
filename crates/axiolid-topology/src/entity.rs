@@ -33,19 +33,32 @@ pub struct Edge<G> {
 }
 
 /// One oriented use of an edge in a loop.
+///
+/// The `pcurve` is the edge's image in the parameter space of the face this
+/// use belongs to. A 3D edge curve says where a boundary sits in model
+/// space; it does not say where that boundary lies in a surface's `(u, v)`
+/// domain, and inverting a surface to recover it is not generally solvable
+/// in closed form. Trimming a curved face therefore needs it stated, which
+/// is what exchange formats carry alongside the 3D edge curve.
+///
+/// It belongs to the USE rather than the edge: one edge bounds two faces
+/// with different support surfaces, so it has a different parameter image
+/// in each.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct EdgeUse {
+pub struct EdgeUse<G> {
     /// Referenced edge.
     pub edge: EdgeId,
     /// Traversal direction.
     pub orientation: Orientation,
+    /// Optional 2D curve handle in the owning face's surface parameters.
+    pub pcurve: Option<G>,
 }
 
 /// Closed boundary wire.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct Loop {
+pub struct Loop<G> {
     /// Consecutive oriented edges.
-    pub edges: Vec<EdgeUse>,
+    pub edges: Vec<EdgeUse<G>>,
 }
 
 /// One oriented loop use on a face.

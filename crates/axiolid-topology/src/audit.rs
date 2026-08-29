@@ -158,7 +158,7 @@ pub fn audit_brep<G>(brep: &BRep<G>) -> BRepHealth {
 }
 
 /// Ordered endpoints of one oriented edge use.
-fn endpoints<G>(brep: &BRep<G>, use_: &crate::EdgeUse) -> (crate::VertexId, crate::VertexId) {
+fn endpoints<G>(brep: &BRep<G>, use_: &crate::EdgeUse<G>) -> (crate::VertexId, crate::VertexId) {
     let edge = &brep.edges()[use_.edge.index()];
     match use_.orientation {
         Orientation::Forward => (edge.start, edge.end),

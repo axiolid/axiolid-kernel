@@ -10,7 +10,7 @@ use crate::{
 pub struct BRep<G> {
     vertices: Vec<Vertex>,
     edges: Vec<Edge<G>>,
-    loops: Vec<Loop>,
+    loops: Vec<Loop<G>>,
     faces: Vec<Face<G>>,
     shells: Vec<Shell>,
     solids: Vec<Solid>,
@@ -45,7 +45,7 @@ impl<G> BRep<G> {
     }
 
     /// Add a loop and return its typed handle.
-    pub fn add_loop(&mut self, value: Loop) -> LoopId {
+    pub fn add_loop(&mut self, value: Loop<G>) -> LoopId {
         let id = LoopId::from_index(self.loops.len());
         self.loops.push(value);
         id
@@ -83,7 +83,7 @@ impl<G> BRep<G> {
     }
 
     /// Loops in stable insertion order.
-    pub fn loops(&self) -> &[Loop] {
+    pub fn loops(&self) -> &[Loop<G>] {
         &self.loops
     }
 
