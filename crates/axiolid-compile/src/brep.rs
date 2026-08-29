@@ -42,6 +42,12 @@ pub fn tessellate(
         .ok_or_else(|| GeomError::InvalidInput("outer shell missing".to_string()))?;
 
     let mut mesh = TriMesh::default();
+    let ctx = FaceContext {
+        brep,
+        graph,
+        tolerance,
+    };
+    let mut edge_cache: EdgeSamples = EdgeSamples::new();
     let mut welded: std::collections::HashMap<axiolid_topology::VertexId, u32> =
         std::collections::HashMap::new();
     for &(face_id, shell_sense) in &shell.faces {
@@ -51,21 +57,28 @@ pub fn tessellate(
             .ok_or_else(|| GeomError::InvalidInput("face missing".to_string()))?;
         let flip =
             (shell_sense == Orientation::Reversed) ^ (face.orientation == Orientation::Reversed);
-        append_face(&mut mesh, brep, face, graph, flip, tolerance, &mut welded)?;
+        append_face(&mut mesh, &ctx, face, flip, &mut welded, &mut edge_cache)?;
     }
     Ok(mesh)
 }
 
 /// Triangulate one face and append it to the mesh.
+/// Everything a face needs that does not vary within one shell.
+struct FaceContext<'a> {
+    brep: &'a BRep<NodeId>,
+    graph: &'a axiolid_model::GeometryGraph,
+    tolerance: axiolid_core::Tolerance,
+}
+
 fn append_face(
     mesh: &mut TriMesh,
-    brep: &BRep<NodeId>,
+    ctx: &FaceContext<'_>,
     face: &axiolid_topology::Face<NodeId>,
-    graph: &axiolid_model::GeometryGraph,
     flip: bool,
-    tolerance: axiolid_core::Tolerance,
     welded: &mut std::collections::HashMap<axiolid_topology::VertexId, u32>,
+    cache: &mut EdgeSamples,
 ) -> GeomResult<()> {
+    let (brep, graph) = (ctx.brep, ctx.graph);
     // A face carrying a curved support surface cannot be tessellated by
     // projecting its boundary onto a plane: the interior curves away from
     // that plane and the error is invisible in the output. Refuse instead.
@@ -77,7 +90,7 @@ fn append_face(
     // in surface parameters, and refuse when it does not.
     if let Some(surface) = face_surface(graph, face)? {
         if !surface_is_planar(surface) {
-            return append_curved_face(mesh, brep, face, surface, graph, flip, tolerance);
+            return append_curved_face(mesh, ctx, face, surface, cache, flip);
         }
     }
     let mut rings: Vec<Vec<(axiolid_topology::VertexId, Vec3)>> = Vec::new();
@@ -271,61 +284,170 @@ fn face_surface<'g>(
 /// The parameter-space boundary gives a `(u, v)` polygon. Its bounding box
 /// is the patch actually sampled, so a half-cylinder costs half a cylinder
 /// rather than a full revolution clipped afterwards.
-fn append_curved_face(
+// Shared edge samples, keyed canonically in the edge's start->end direction.
+type EdgeSamples = std::collections::HashMap<axiolid_topology::EdgeId, (Vec<u32>, Orientation)>;
+
+/// Sample a 2D trim curve at `n` uniform parameters.
+///
+/// Used when an edge is already interned: the second face must produce the
+/// same NUMBER of boundary points as the first, so its (u, v) values pair
+/// one-to-one with the shared 3D indices.
+fn pcurve_points_n(
+    graph: &axiolid_model::GeometryGraph,
+    id: NodeId,
+    n: usize,
+) -> GeomResult<Vec<axiolid_core::Point2>> {
+    let Some(axiolid_model::GeometryNode::Curve2(curve)) = graph.get(id) else {
+        return Err(GeomError::InvalidInput(
+            "edge pcurve must reference a Curve2 node".to_string(),
+        ));
+    };
+    let domain = axiolid_scalar::curve::domain2(curve);
+    let mut out = Vec::with_capacity(n);
+    for i in 0..n {
+        let t = domain.start + (domain.end - domain.start) * (i as Scalar) / (n as Scalar);
+        out.push(axiolid_scalar::curve::evaluate2(curve, t)?);
+    }
+    Ok(out)
+}
+
+/// Boundary of a curved face in parameter space, paired with the shared 3D
+/// vertex index for each point.
+///
+/// The pairing is what makes a seam watertight: (u, v) drives triangulation,
+/// and the index says which already-created vertex to emit.
+struct CurvedBoundary {
+    uv: Vec<axiolid_core::Point2>,
+    shared: Vec<u32>,
+    hole_starts: Vec<usize>,
+}
+
+/// Collect a curved face's boundary, sampling each edge exactly once across
+/// the whole shell.
+fn curved_boundary(
     mesh: &mut TriMesh,
-    brep: &BRep<NodeId>,
+    ctx: &FaceContext<'_>,
     face: &axiolid_topology::Face<NodeId>,
     surface: &axiolid_surface::Surface,
-    graph: &axiolid_model::GeometryGraph,
-    flip: bool,
-    tolerance: axiolid_core::Tolerance,
-) -> GeomResult<()> {
-    let mut uv: Vec<axiolid_core::Point2> = Vec::new();
-    for bound in &face.bounds {
+    cache: &mut EdgeSamples,
+) -> GeomResult<CurvedBoundary> {
+    let (brep, graph, tolerance) = (ctx.brep, ctx.graph, ctx.tolerance);
+    let mut out = CurvedBoundary {
+        uv: Vec::new(),
+        shared: Vec::new(),
+        hole_starts: Vec::new(),
+    };
+    for (index, bound) in face.bounds.iter().enumerate() {
+        if index > 0 {
+            out.hole_starts.push(out.uv.len());
+        }
         let wire = brep
             .loops()
             .get(bound.loop_id.index())
             .ok_or_else(|| GeomError::InvalidInput("loop missing".to_string()))?;
         for use_ in &wire.edges {
             let Some(pcurve) = use_.pcurve else {
-                // The face is curved and its trim is not stated. Refusing is
-                // the only honest answer: a wrong wall costs more than a
-                // missing one.
                 return Err(GeomError::Unsupported {
                     backend: crate::BACKEND_ID,
                     operation: axiolid_kernel::Operation::Tessellation,
                 });
             };
-            uv.extend(pcurve_points(graph, pcurve, tolerance)?);
+            let cached = cache.get(&use_.edge).map(|(v, _)| v.len());
+            // First face to reach this edge chooses the sample count from
+            // its own chord budget. A later face must match that count so
+            // its (u, v) points pair one-to-one with the shared vertices.
+            let params = match cached {
+                Some(n) => pcurve_points_n(graph, pcurve, n)?,
+                None => {
+                    let mut p = pcurve_points(graph, pcurve, tolerance)?;
+                    p.pop();
+                    p
+                }
+            };
+            // Evaluate the trim on the surface: these are the seam's
+            // 3D points, and they are interned under the edge.
+            let points: Vec<Vec3> = params
+                .iter()
+                .map(|p| axiolid_scalar::surface::evaluate(surface, p.x, p.y))
+                .collect::<GeomResult<_>>()?;
+            let shared = edge_samples(mesh, cache, use_.edge, use_.orientation, &points);
+            out.uv.extend(params);
+            out.shared.extend(shared);
         }
     }
-    if uv.len() < 3 {
+    Ok(out)
+}
+
+/// Intern one edge's 3D samples, or return the existing ones.
+///
+/// Interning is keyed by EDGE, not by face. Whichever face reaches a seam
+/// first creates the vertices; every later face reuses the identical
+/// indices, so the seam is shared rather than merely coincident.
+fn edge_samples(
+    mesh: &mut TriMesh,
+    cache: &mut EdgeSamples,
+    edge: axiolid_topology::EdgeId,
+    sense: Orientation,
+    points: &[Vec3],
+) -> Vec<u32> {
+    if let Some((existing, stored)) = cache.get(&edge) {
+        let mut out = existing.clone();
+        // Walk the shared vertices in this use's direction.
+        if *stored != sense {
+            out.reverse();
+        }
+        return out;
+    }
+    let indices: Vec<u32> = points
+        .iter()
+        .map(|p| {
+            let next = mesh.positions.len() as u32;
+            mesh.positions.push(*p);
+            next
+        })
+        .collect();
+    cache.insert(edge, (indices.clone(), sense));
+    indices
+}
+
+/// Tessellate a face whose support surface is curved.
+///
+/// The boundary comes from shared edge samples, so a seam between two curved
+/// faces uses one set of vertices. Interior detail still comes from the
+/// surface: the boundary alone would flatten the patch.
+fn append_curved_face(
+    mesh: &mut TriMesh,
+    ctx: &FaceContext<'_>,
+    face: &axiolid_topology::Face<NodeId>,
+    surface: &axiolid_surface::Surface,
+    cache: &mut EdgeSamples,
+    flip: bool,
+) -> GeomResult<()> {
+    let boundary = curved_boundary(mesh, ctx, face, surface, cache)?;
+    if boundary.uv.len() < 3 {
         return Ok(());
     }
-    // The trim's parameter bounds are the patch worth sampling.
-    let (mut u0, mut u1) = (Scalar::INFINITY, Scalar::NEG_INFINITY);
-    let (mut v0, mut v1) = (Scalar::INFINITY, Scalar::NEG_INFINITY);
-    for p in &uv {
-        u0 = u0.min(p.x);
-        u1 = u1.max(p.x);
-        v0 = v0.min(p.y);
-        v1 = v1.max(p.y);
+    let flat: Vec<[Scalar; 2]> = boundary.uv.iter().map(|p| [p.x, p.y]).collect();
+    let mut earcutter = earcut::Earcut::new();
+    let mut indices: Vec<usize> = Vec::new();
+    earcutter.earcut(flat.iter().copied(), &boundary.hole_starts, &mut indices);
+    if indices.is_empty() || indices.len() % 3 != 0 {
+        return Err(GeomError::Degenerate(format!(
+            "curved face trim triangulation produced {} indices for {} points",
+            indices.len(),
+            flat.len()
+        )));
     }
-    let patch = axiolid_scalar::surface::Patch::new(u0, u1, v0, v1)
-        .map_err(|_| GeomError::Degenerate("curved face has an empty parameter patch".into()))?;
-    let budget = axiolid_scalar::tessellate::TessellationBudget::new(tolerance.linear(), 512)?;
-    let out = axiolid_scalar::tessellate::tessellate_patch(surface, patch, budget)?;
-    // Append the sampled patch. Vertices are new geometry, not topology
-    // vertices, so they are not welded into the shared table: two curved
-    // faces meeting at an edge sample it independently.
-    let base = mesh.positions.len() as u32;
-    mesh.positions.extend_from_slice(&out.mesh.positions);
-    for t in out.mesh.indices.chunks_exact(3) {
-        let (a, b, c) = (t[0] + base, t[1] + base, t[2] + base);
+    for t in indices.chunks_exact(3) {
+        let (a, b, c) = (
+            boundary.shared[t[0]],
+            boundary.shared[t[1]],
+            boundary.shared[t[2]],
+        );
         if flip {
-            mesh.indices.extend_from_slice(&[a, c, b]);
+            mesh.indices.extend([a, c, b]);
         } else {
-            mesh.indices.extend_from_slice(&[a, b, c]);
+            mesh.indices.extend([a, b, c]);
         }
     }
     Ok(())

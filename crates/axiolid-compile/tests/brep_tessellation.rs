@@ -653,3 +653,226 @@ fn unsound_topology_is_refused_before_tessellation() {
         "an open loop must be refused, not tessellated into a plausible mesh"
     );
 }
+
+/// Two curved faces meeting at a seam must share its vertices.
+///
+/// Each face owns its own pcurve. Evaluating both independently lands on the
+/// same 3D curve at different parameters, so the seam looks closed and is
+/// not. Sampling each edge once and reusing the indices is what closes it.
+#[test]
+fn two_curved_faces_share_their_seam_vertices() {
+    use axiolid_core::{Point2, Point3, Scalar, Vec3};
+    use axiolid_curve::{Curve2, Polyline2};
+    use axiolid_surface::{Cylinder, Surface};
+
+    let mut builder = GeometryGraphBuilder::new();
+    let radius = 2.0;
+    let frame = axiolid_core::Frame3 {
+        origin: Point3::ZERO,
+        x: Vec3::X,
+        y: Vec3::Y,
+        z: Vec3::Z,
+    };
+    let surface = builder
+        .push(GeometryNode::Surface(Surface::Cylinder(Cylinder {
+            frame,
+            radius,
+        })))
+        .expect("surface");
+
+    // Half-cylinder split at u = PI. Both faces use the same seam EDGE,
+    // each with its own pcurve node.
+    let pi = core::f64::consts::PI;
+    let line = |b: &mut GeometryGraphBuilder, a: Point2, c: Point2| {
+        b.push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+            points: vec![a, c],
+            closed: false,
+        })))
+        .expect("pcurve")
+    };
+
+    let mut brep: BRep<axiolid_model::NodeId> = BRep::default();
+    let p = |u: Scalar, v: Scalar| Point3::new(radius * u.cos(), radius * u.sin(), v);
+    let v00 = brep.add_vertex(Vertex {
+        position: p(0.0, 0.0),
+    });
+    let v01 = brep.add_vertex(Vertex {
+        position: p(0.0, 3.0),
+    });
+    let v10 = brep.add_vertex(Vertex {
+        position: p(pi, 0.0),
+    });
+    let v11 = brep.add_vertex(Vertex {
+        position: p(pi, 3.0),
+    });
+
+    // The shared seam edge, plus the three others bounding face A.
+    let seam = brep.add_edge(Edge {
+        start: v10,
+        end: v11,
+        curve: None,
+    });
+    let bottom = brep.add_edge(Edge {
+        start: v00,
+        end: v10,
+        curve: None,
+    });
+    let top = brep.add_edge(Edge {
+        start: v01,
+        end: v11,
+        curve: None,
+    });
+    let start = brep.add_edge(Edge {
+        start: v00,
+        end: v01,
+        curve: None,
+    });
+
+    // Face A trims: u from 0 to PI.
+    let a_bottom = line(&mut builder, Point2::new(0.0, 0.0), Point2::new(pi, 0.0));
+    let a_seam = line(&mut builder, Point2::new(pi, 0.0), Point2::new(pi, 3.0));
+    let a_top = line(&mut builder, Point2::new(pi, 3.0), Point2::new(0.0, 3.0));
+    let a_start = line(&mut builder, Point2::new(0.0, 3.0), Point2::new(0.0, 0.0));
+
+    let loop_a = brep.add_loop(Loop {
+        edges: vec![
+            EdgeUse {
+                edge: bottom,
+                orientation: Orientation::Forward,
+                pcurve: Some(a_bottom),
+            },
+            EdgeUse {
+                edge: seam,
+                orientation: Orientation::Forward,
+                pcurve: Some(a_seam),
+            },
+            EdgeUse {
+                edge: top,
+                orientation: Orientation::Reversed,
+                pcurve: Some(a_top),
+            },
+            EdgeUse {
+                edge: start,
+                orientation: Orientation::Reversed,
+                pcurve: Some(a_start),
+            },
+        ],
+    });
+    let face_a = brep.add_face(Face {
+        surface: Some(surface),
+        bounds: vec![FaceBound {
+            loop_id: loop_a,
+            orientation: Orientation::Forward,
+            outer: true,
+        }],
+        orientation: Orientation::Forward,
+    });
+
+    // Face B covers u from PI to TAU and walks the SAME seam edge backwards.
+    let tau = core::f64::consts::TAU;
+    let v20 = brep.add_vertex(Vertex {
+        position: p(tau, 0.0),
+    });
+    let v21 = brep.add_vertex(Vertex {
+        position: p(tau, 3.0),
+    });
+    let b_bottom_e = brep.add_edge(Edge {
+        start: v10,
+        end: v20,
+        curve: None,
+    });
+    let b_top_e = brep.add_edge(Edge {
+        start: v11,
+        end: v21,
+        curve: None,
+    });
+    let b_end_e = brep.add_edge(Edge {
+        start: v20,
+        end: v21,
+        curve: None,
+    });
+
+    let b_seam = line(&mut builder, Point2::new(pi, 3.0), Point2::new(pi, 0.0));
+    let b_bottom = line(&mut builder, Point2::new(pi, 0.0), Point2::new(tau, 0.0));
+    let b_end = line(&mut builder, Point2::new(tau, 0.0), Point2::new(tau, 3.0));
+    let b_top = line(&mut builder, Point2::new(tau, 3.0), Point2::new(pi, 3.0));
+
+    let loop_b = brep.add_loop(Loop {
+        edges: vec![
+            EdgeUse {
+                edge: seam,
+                orientation: Orientation::Reversed,
+                pcurve: Some(b_seam),
+            },
+            EdgeUse {
+                edge: b_bottom_e,
+                orientation: Orientation::Forward,
+                pcurve: Some(b_bottom),
+            },
+            EdgeUse {
+                edge: b_end_e,
+                orientation: Orientation::Forward,
+                pcurve: Some(b_end),
+            },
+            EdgeUse {
+                edge: b_top_e,
+                orientation: Orientation::Reversed,
+                pcurve: Some(b_top),
+            },
+        ],
+    });
+    let face_b = brep.add_face(Face {
+        surface: Some(surface),
+        bounds: vec![FaceBound {
+            loop_id: loop_b,
+            orientation: Orientation::Forward,
+            outer: true,
+        }],
+        orientation: Orientation::Forward,
+    });
+
+    let shell = brep.add_shell(Shell {
+        faces: vec![
+            (face_a, Orientation::Forward),
+            (face_b, Orientation::Forward),
+        ],
+        closed: false,
+    });
+    let _ = brep.add_solid(Solid {
+        outer: shell,
+        voids: Vec::new(),
+    });
+
+    let root = builder.push(GeometryNode::BRep(brep)).expect("push");
+    let graph = builder.finish(vec![root]).expect("finish");
+    let compiler = ScalarCompiler::new(BoolmeshBoolean::new());
+    let mesh = compiler
+        .compile(
+            &graph,
+            root,
+            &ExecutionOptions::new(axiolid_core::Tolerance::MILLIMETRE),
+        )
+        .expect("two curved faces compile");
+
+    // Every vertex is on the cylinder.
+    for q in &mesh.positions {
+        let r = (q.x * q.x + q.y * q.y).sqrt();
+        assert!((r - radius).abs() < 1e-9, "vertex off the cylinder: {r}");
+    }
+
+    // The seam is shared: the interior edge along u = PI must be used by
+    // exactly two triangles, one from each face. Duplicated seam vertices
+    // would make it two separate boundary edges instead.
+    let mut edges: std::collections::HashMap<(u32, u32), i32> = std::collections::HashMap::new();
+    for t in mesh.indices.chunks_exact(3) {
+        for (a, b) in [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])] {
+            let key = if a < b { (a, b) } else { (b, a) };
+            *edges.entry(key).or_default() += if a < b { 1 } else { -1 };
+        }
+    }
+    let interior = edges.values().filter(|v| **v == 0).count();
+    assert!(
+        interior > 0,
+        "no interior edge is shared: the seam was duplicated"
+    );
+}
