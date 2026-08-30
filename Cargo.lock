@@ -71,6 +71,7 @@ dependencies = [
  "axiolid-measure",
  "axiolid-mesh",
  "axiolid-model",
+ "axiolid-primitive",
  "axiolid-profile",
  "axiolid-scalar",
  "axiolid-surface",

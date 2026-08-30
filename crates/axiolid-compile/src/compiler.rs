@@ -65,6 +65,47 @@ type Cache = std::collections::HashMap<usize, TriMesh>;
 
 impl<B: MeshBoolean> ScalarCompiler<B> {
     /// Resolve a node handle, blaming the graph rather than panicking.
+    /// Resolve a closed 2D boundary curve into rings.
+    ///
+    /// Only a closed polyline boundary is handled: its points ARE the ring.
+    /// An analytic boundary needs the curve evaluator, and an open one does
+    /// not bound anything, so both are refused rather than guessed at.
+    fn boundary_rings(
+        &self,
+        graph: &GeometryGraph,
+        id: NodeId,
+    ) -> GeomResult<crate::profile::Rings> {
+        let node = self.node(graph, id)?;
+        let GeometryNode::Curve2(curve) = node else {
+            return Err(GeomError::InvalidInput(format!(
+                "half-space boundary {id:?} is not a Curve2 node"
+            )));
+        };
+        match curve {
+            axiolid_curve::Curve2::Polyline(p) => {
+                let mut pts = p.points.clone();
+                // A closed polyline may or may not repeat its first point.
+                // Dropping the duplicate keeps the ring's edge count honest.
+                if pts.len() >= 2 && pts[0] == pts[pts.len() - 1] {
+                    pts.pop();
+                }
+                if pts.len() < 3 {
+                    return Err(GeomError::InvalidInput(
+                        "half-space boundary needs at least 3 distinct points".to_owned(),
+                    ));
+                }
+                Ok(crate::profile::Rings {
+                    outer: pts,
+                    holes: Vec::new(),
+                })
+            }
+            _ => Err(GeomError::Unsupported {
+                backend: self.descriptor().id,
+                operation: Operation::CurveEvaluation,
+            }),
+        }
+    }
+
     /// Resolve a node that must be a profile, into flattened rings.
     fn rings_of(
         &self,
@@ -374,6 +415,31 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                     placed.push((rings, pts));
                 }
                 crate::sweep::sectioned_spine(&placed)
+            }
+            SolidOperation::BoundedHalfSpace {
+                half_space,
+                boundary,
+                placement,
+            } => {
+                let node = self.node(graph, *half_space)?;
+                let GeometryNode::HalfSpace(hs) = node else {
+                    return Err(GeomError::InvalidInput(format!(
+                        "half-space {half_space:?} is not a HalfSpace node"
+                    )));
+                };
+                let rings = self.boundary_rings(graph, *boundary)?;
+                // The declared margin is the contract's own knob for how far
+                // an unbounded half-space extends before it can be meshed.
+                let margin = axiolid_primitive::ClipMargin::new(2.0)
+                    .expect("2.0 is a valid positive clip margin");
+                let mesh = crate::half_space::bounded_half_space(
+                    &rings,
+                    hs.boundary,
+                    hs.agreement,
+                    margin,
+                    options.tolerance(),
+                )?;
+                Ok(transform_mesh(&mesh, *placement))
             }
             SolidOperation::Boolean {
                 left,

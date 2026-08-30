@@ -4,6 +4,7 @@
 
 mod brep;
 pub mod extrude;
+pub mod half_space;
 pub mod loft;
 pub mod profile;
 pub mod revolve;
