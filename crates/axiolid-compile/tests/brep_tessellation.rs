@@ -876,3 +876,165 @@ fn two_curved_faces_share_their_seam_vertices() {
         "no interior edge is shared: the seam was duplicated"
     );
 }
+
+/// A full cylinder closes across its periodic seam.
+///
+/// The seam edge appears TWICE in one loop: once at u = 0 and once at
+/// u = TAU. Both uses name the same EdgeId, so both must resolve to the
+/// same 3D vertices or the tube is split down its length.
+#[test]
+fn a_periodic_seam_closes_the_tube() {
+    use axiolid_core::{Point2, Vec3};
+    use axiolid_curve::{Curve2, Polyline2};
+    use axiolid_surface::{Cylinder, Surface};
+    use core::f64::consts::TAU;
+
+    let radius = 2.0;
+    let height = 3.0;
+    let mut builder = GeometryGraphBuilder::new();
+    let surface = builder
+        .push(GeometryNode::Surface(Surface::Cylinder(Cylinder {
+            frame: axiolid_core::Frame3 {
+                origin: axiolid_core::Point3::ZERO,
+                x: Vec3::X,
+                y: Vec3::Y,
+                z: Vec3::Z,
+            },
+            radius,
+        })))
+        .expect("surface");
+    // Trims in (u, v). The loop walks: bottom rim u 0->TAU, seam up at
+    // u = TAU, top rim back TAU->0, seam down at u = 0. The two seam uses
+    // name ONE edge, so the tube closes only if both resolve alike.
+    let bottom = builder
+        .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+            points: vec![Point2::new(0.0, 0.0), Point2::new(TAU, 0.0)],
+            closed: false,
+        })))
+        .expect("bottom");
+    let top = builder
+        .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+            points: vec![Point2::new(TAU, height), Point2::new(0.0, height)],
+            closed: false,
+        })))
+        .expect("top");
+    // The seam's two uses have DIFFERENT pcurves -- u = TAU going up and
+    // u = 0 coming down -- but name the same topological edge.
+    let seam_up = builder
+        .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+            points: vec![Point2::new(TAU, 0.0), Point2::new(TAU, height)],
+            closed: false,
+        })))
+        .expect("seam up");
+    let seam_down = builder
+        .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+            points: vec![Point2::new(0.0, height), Point2::new(0.0, 0.0)],
+            closed: false,
+        })))
+        .expect("seam down");
+    let mut brep: BRep<axiolid_model::NodeId> = BRep::default();
+    let p = |u: f64, v: f64| axiolid_core::Point3::new(radius * u.cos(), radius * u.sin(), v);
+    let v00 = brep.add_vertex(Vertex {
+        position: p(0.0, 0.0),
+    });
+    let v01 = brep.add_vertex(Vertex {
+        position: p(0.0, height),
+    });
+    // Rims start and end at the seam vertices: a periodic loop has no
+    // other corners.
+    let e_bottom = brep.add_edge(Edge {
+        start: v00,
+        end: v00,
+        curve: None,
+    });
+    let e_seam = brep.add_edge(Edge {
+        start: v00,
+        end: v01,
+        curve: None,
+    });
+    let e_top = brep.add_edge(Edge {
+        start: v01,
+        end: v01,
+        curve: None,
+    });
+    let wire = brep.add_loop(Loop {
+        edges: vec![
+            EdgeUse {
+                edge: e_bottom,
+                orientation: Orientation::Forward,
+                pcurve: Some(bottom),
+            },
+            EdgeUse {
+                edge: e_seam,
+                orientation: Orientation::Forward,
+                pcurve: Some(seam_up),
+            },
+            EdgeUse {
+                edge: e_top,
+                orientation: Orientation::Forward,
+                pcurve: Some(top),
+            },
+            EdgeUse {
+                edge: e_seam,
+                orientation: Orientation::Reversed,
+                pcurve: Some(seam_down),
+            },
+        ],
+    });
+    let face = brep.add_face(Face {
+        surface: Some(surface),
+        bounds: vec![FaceBound {
+            loop_id: wire,
+            orientation: Orientation::Forward,
+            outer: true,
+        }],
+        orientation: Orientation::Forward,
+    });
+    let shell = brep.add_shell(Shell {
+        faces: vec![(face, Orientation::Forward)],
+        closed: false,
+    });
+    brep.add_solid(Solid {
+        outer: shell,
+        voids: Vec::new(),
+    });
+
+    let root = builder.push(GeometryNode::BRep(brep)).expect("brep");
+    let graph = builder.finish(vec![root]).expect("finish");
+    let mesh = ScalarCompiler::new(BoolmeshBoolean::new())
+        .compile(
+            &graph,
+            root,
+            &ExecutionOptions::new(axiolid_core::Tolerance::MILLIMETRE),
+        )
+        .expect("periodic cylinder tessellates");
+
+    // Every vertex sits on the cylinder.
+    for p in &mesh.positions {
+        let r = (p.x * p.x + p.y * p.y).sqrt();
+        assert!(
+            (r - radius).abs() < 1e-6,
+            "vertex off the cylinder: r = {r}"
+        );
+    }
+    // The seam must be interior: no vertical run of boundary edges at u = 0.
+    let mut edges: std::collections::HashMap<(u32, u32), i32> = Default::default();
+    for t in mesh.indices.chunks_exact(3) {
+        for (a, b) in [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])] {
+            let key = if a < b { (a, b) } else { (b, a) };
+            *edges.entry(key).or_default() += if a < b { 1 } else { -1 };
+        }
+    }
+    let seam_open = edges
+        .iter()
+        .filter(|(_, &bal)| bal != 0)
+        .filter(|((a, b), _)| {
+            let (pa, pb) = (mesh.positions[*a as usize], mesh.positions[*b as usize]);
+            (pa.z - pb.z).abs() > 1e-9 && pa.y.abs() < 1e-6 && pb.y.abs() < 1e-6 && pa.x > 0.0
+        })
+        .count();
+    assert_eq!(
+        seam_open, 0,
+        "the periodic seam is split: {seam_open} open edges at u = 0"
+    );
+}
