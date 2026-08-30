@@ -7,6 +7,7 @@ Axiolid is an early geometry kernel. This roadmap orders work; it is not a promi
 - Format-neutral values, meshes, profiles, curves, surfaces, topology, and an immutable geometry graph.
 - Feature-gated facade with a portable scalar reference path and separate CPU/GPU provider seams.
 - Architecture, feature-isolation, and layering gates that keep IFC, source formats, and concrete providers out of the kernel.
+- Validated scalar polynomial/rational B-spline evaluation with analytic first derivatives and bounded conforming pcurve-trimmed curved-face tessellation, including oriented/reordered bounds, holes, guarded structured-grid/Earcut seeds, elementary periodic face charts, and aggregate work budgets; this is a reader/reference capability, not NURBS authoring.
 
 ## Next: trustworthy discrete geometry
 

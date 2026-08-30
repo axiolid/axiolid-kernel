@@ -38,6 +38,8 @@ use axiolid_curve::{
 };
 use axiolid_kernel::{GeomError, GeomResult};
 
+use crate::nurbs::SplineAxis;
+
 /// Portable scalar curve evaluator.
 ///
 /// Stateless: every method is a pure function of its arguments, so one instance
@@ -108,35 +110,26 @@ fn polyline_domain(count: usize, closed: bool) -> Interval {
     }
 }
 
-/// A clamped B-spline is defined on `[knot[degree], knot[n]]` of the expanded
-/// vector; outside that range fewer than `degree + 1` basis functions are
-/// non-zero and the curve is not defined.
+/// Domain of a validated B-spline axis. Invalid imported data reports an empty
+/// domain through the infallible evaluator trait and is rejected by evaluation.
 fn spline_domain<P>(b: &BSplineCurve<P>) -> Interval {
-    let knots = expand_knots(b);
-    let d = b.degree as usize;
-    if knots.len() < 2 * (d + 1) {
-        // Not enough knots to define any span; report an empty domain rather
-        // than inventing one.
-        return Interval {
+    SplineAxis::new(
+        &b.knots,
+        &b.multiplicities,
+        b.degree,
+        b.control_points.len(),
+        "B-spline curve",
+    )
+    .map_or(
+        Interval {
             start: 0.0,
             end: 0.0,
-        };
-    }
-    Interval {
-        start: knots[d],
-        end: knots[knots.len() - 1 - d],
-    }
-}
-
-/// Expand `(knots, multiplicities)` into the flat knot vector de Boor needs.
-fn expand_knots<P>(b: &BSplineCurve<P>) -> Vec<Scalar> {
-    let mut out = Vec::new();
-    for (value, multiplicity) in b.knots.iter().zip(b.multiplicities.iter()) {
-        for _ in 0..*multiplicity {
-            out.push(*value);
-        }
-    }
-    out
+        },
+        |axis| {
+            let (start, end) = axis.domain();
+            Interval { start, end }
+        },
+    )
 }
 
 // --- 2D evaluation ----------------------------------------------------------
@@ -144,7 +137,7 @@ fn expand_knots<P>(b: &BSplineCurve<P>) -> Vec<Scalar> {
 /// Position on a 2D curve.
 pub fn evaluate2(curve: &Curve2, t: Scalar) -> GeomResult<Point2> {
     finite(t)?;
-    match curve {
+    let value = match curve {
         Curve2::Line(l) => Ok(line_point(l.origin, l.direction, t)),
         Curve2::Circle(c) => Ok(conic_point2(&c.frame, c.radius, c.radius, t)),
         Curve2::Ellipse(e) => Ok(conic_point2(&e.frame, e.semi_axis_x, e.semi_axis_y, t)),
@@ -156,13 +149,14 @@ pub fn evaluate2(curve: &Curve2, t: Scalar) -> GeomResult<Point2> {
             backend: axiolid_kernel::BackendId::new("axiolid-scalar"),
             operation: axiolid_kernel::Operation::CurveEvaluation,
         }),
-    }
+    }?;
+    finite2(value, "curve point")
 }
 
 /// First derivative of a 2D curve.
 pub fn derivative2(curve: &Curve2, t: Scalar) -> GeomResult<Vec2> {
     finite(t)?;
-    match curve {
+    let value = match curve {
         Curve2::Line(l) => Ok(l.direction),
         Curve2::Circle(c) => Ok(conic_tangent2(&c.frame, c.radius, c.radius, t)),
         Curve2::Ellipse(e) => Ok(conic_tangent2(&e.frame, e.semi_axis_x, e.semi_axis_y, t)),
@@ -174,7 +168,8 @@ pub fn derivative2(curve: &Curve2, t: Scalar) -> GeomResult<Vec2> {
             backend: axiolid_kernel::BackendId::new("axiolid-scalar"),
             operation: axiolid_kernel::Operation::CurveEvaluation,
         }),
-    }
+    }?;
+    finite2(value, "curve derivative")
 }
 
 // --- 3D evaluation ----------------------------------------------------------
@@ -182,7 +177,7 @@ pub fn derivative2(curve: &Curve2, t: Scalar) -> GeomResult<Vec2> {
 /// Position on a 3D curve.
 pub fn evaluate3(curve: &Curve3, t: Scalar) -> GeomResult<Point3> {
     finite(t)?;
-    match curve {
+    let value = match curve {
         Curve3::Line(l) => Ok(line_point(l.origin, l.direction, t)),
         Curve3::Circle(c) => Ok(conic_point3(&c.frame, c.radius, c.radius, t)),
         Curve3::Ellipse(e) => Ok(conic_point3(&e.frame, e.semi_axis_x, e.semi_axis_y, t)),
@@ -194,13 +189,14 @@ pub fn evaluate3(curve: &Curve3, t: Scalar) -> GeomResult<Point3> {
             backend: axiolid_kernel::BackendId::new("axiolid-scalar"),
             operation: axiolid_kernel::Operation::CurveEvaluation,
         }),
-    }
+    }?;
+    finite3(value, "curve point")
 }
 
 /// First derivative of a 3D curve.
 pub fn derivative3(curve: &Curve3, t: Scalar) -> GeomResult<Vec3> {
     finite(t)?;
-    match curve {
+    let value = match curve {
         Curve3::Line(l) => Ok(l.direction),
         Curve3::Circle(c) => Ok(conic_tangent3(&c.frame, c.radius, c.radius, t)),
         Curve3::Ellipse(e) => Ok(conic_tangent3(&e.frame, e.semi_axis_x, e.semi_axis_y, t)),
@@ -214,7 +210,8 @@ pub fn derivative3(curve: &Curve3, t: Scalar) -> GeomResult<Vec3> {
             backend: axiolid_kernel::BackendId::new("axiolid-scalar"),
             operation: axiolid_kernel::Operation::CurveEvaluation,
         }),
-    }
+    }?;
+    finite3(value, "curve derivative")
 }
 
 // --- family kernels ---------------------------------------------------------
@@ -226,6 +223,22 @@ fn finite(t: Scalar) -> GeomResult<()> {
         Err(GeomError::InvalidInput(format!(
             "curve parameter must be finite, got {t}"
         )))
+    }
+}
+
+fn finite2(value: Vec2, what: &str) -> GeomResult<Vec2> {
+    if value.is_finite() {
+        Ok(value)
+    } else {
+        Err(GeomError::Degenerate(format!("{what} is non-finite")))
+    }
+}
+
+fn finite3(value: Vec3, what: &str) -> GeomResult<Vec3> {
+    if value.is_finite() {
+        Ok(value)
+    } else {
+        Err(GeomError::Degenerate(format!("{what} is non-finite")))
     }
 }
 
@@ -360,39 +373,56 @@ pub(crate) fn de_boor_recurrence<const N: usize>(
 
 /// Shared setup: validated flat knots, degree, and the knot span for `t`.
 fn spline_span<P>(b: &BSplineCurve<P>, t: Scalar) -> GeomResult<(Vec<Scalar>, usize, usize)> {
-    let d = b.degree as usize;
-    let n = b.control_points.len();
-    if d == 0 {
-        return Err(GeomError::InvalidInput(
-            "B-spline degree must be at least 1".to_owned(),
-        ));
-    }
-    if let Some(w) = &b.weights {
-        if w.len() != n {
+    let axis = SplineAxis::new(
+        &b.knots,
+        &b.multiplicities,
+        b.degree,
+        b.control_points.len(),
+        "B-spline curve",
+    )?;
+    if let Some(weights) = &b.weights {
+        if weights.len() != b.control_points.len() {
             return Err(GeomError::InvalidInput(format!(
-                "B-spline has {n} control points but {} weights",
-                w.len()
+                "B-spline has {} weights for {} control points",
+                weights.len(),
+                b.control_points.len()
             )));
         }
+        if weights
+            .iter()
+            .any(|weight| !weight.is_finite() || *weight <= 0.0)
+        {
+            return Err(GeomError::InvalidInput(
+                "B-spline weights must be finite and strictly positive".to_owned(),
+            ));
+        }
     }
-    let knots = expand_knots(b);
-    if knots.len() != n + d + 1 {
-        return Err(GeomError::InvalidInput(format!(
-            "B-spline knot vector has {} entries, expected {}",
-            knots.len(),
-            n + d + 1
-        )));
+    let t = axis.clamp(t);
+    let span = span_in(&axis.knots, axis.count, axis.degree, t);
+    Ok((axis.knots, span, axis.degree))
+}
+
+/// Convert and validate every control point before selecting a knot span.
+/// Imported NaN/Inf coordinates must not be hidden in currently uninfluential
+/// spans and surface later when the parameter changes.
+fn finite_control_points<P, const N: usize, F>(
+    control_points: &[P],
+    to: &F,
+) -> GeomResult<Vec<[Scalar; N]>>
+where
+    F: Fn(&P) -> [Scalar; N],
+{
+    let points: Vec<[Scalar; N]> = control_points.iter().map(to).collect();
+    if points
+        .iter()
+        .flatten()
+        .any(|coordinate| !coordinate.is_finite())
+    {
+        return Err(GeomError::InvalidInput(
+            "B-spline control points must be finite".to_owned(),
+        ));
     }
-    // Domain is [knots[d], knots[n]]; clamp so the closed endpoint evaluates.
-    let lo = knots[d];
-    let hi = knots[n];
-    if !matches!(hi.partial_cmp(&lo), Some(core::cmp::Ordering::Greater)) {
-        return Err(GeomError::Degenerate("B-spline domain is empty".to_owned()));
-    }
-    let u = t.clamp(lo, hi);
-    // Find span: largest k with knots[k] <= u, restricted to [d, n-1].
-    let span = span_in(&knots, n, d, u);
-    Ok((knots, span, d))
+    Ok(points)
 }
 
 /// Position via de Boor's algorithm.
@@ -411,6 +441,7 @@ where
     G: Fn([Scalar; N]) -> Q,
 {
     let (knots, span, d) = spline_span(b, t)?;
+    let control_points = finite_control_points(&b.control_points, &to)?;
     let u = t.clamp(knots[d], knots[b.control_points.len()]);
 
     // Working set: the d+1 control points influencing this span, in homogeneous
@@ -420,10 +451,16 @@ where
     for j in 0..=d {
         let idx = span - d + j;
         let w = b.weights.as_ref().map_or(1.0, |ws| ws[idx]);
-        let c = to(&b.control_points[idx]);
+        let c = control_points[idx];
         // Premultiply by w: interpolating in homogeneous space is what makes
         // rational curves correct. Projecting first would be plain averaging.
-        work.push(core::array::from_fn(|k| c[k] * w));
+        let homogeneous = core::array::from_fn(|k| c[k] * w);
+        if homogeneous.iter().any(|value| !value.is_finite()) {
+            return Err(GeomError::Degenerate(
+                "B-spline homogeneous control point overflowed".to_owned(),
+            ));
+        }
+        work.push(homogeneous);
         weights.push(w);
     }
 
@@ -432,7 +469,7 @@ where
     de_boor_recurrence(&knots, span, d, u, &mut work, &mut weights);
 
     let w = weights[d];
-    if w.abs() <= 0.0 {
+    if !w.is_finite() || w == 0.0 {
         return Err(GeomError::Degenerate(
             "B-spline weight collapsed to zero".to_owned(),
         ));
@@ -459,6 +496,7 @@ where
     G: Fn([Scalar; N]) -> Q,
 {
     let (knots, _, d) = spline_span(b, t)?;
+    let control_points = finite_control_points(&b.control_points, &to)?;
     let n = b.control_points.len();
     let u = t.clamp(knots[d], knots[n]);
 
@@ -466,10 +504,15 @@ where
     let hom: Vec<[Scalar; N]> = (0..n)
         .map(|i| {
             let w = b.weights.as_ref().map_or(1.0, |ws| ws[i]);
-            let c = to(&b.control_points[i]);
+            let c = control_points[i];
             core::array::from_fn(|k| c[k] * w)
         })
         .collect();
+    if hom.iter().flatten().any(|value| !value.is_finite()) {
+        return Err(GeomError::Degenerate(
+            "B-spline homogeneous control point overflowed".to_owned(),
+        ));
+    }
     let hw: Vec<Scalar> = (0..n)
         .map(|i| b.weights.as_ref().map_or(1.0, |ws| ws[i]))
         .collect();
@@ -494,7 +537,7 @@ where
     // Evaluate the curve itself for the quotient rule.
     let (a, w) = eval_homogeneous(&knots, d, &hom, &hw, u);
 
-    if w.abs() <= 0.0 {
+    if !w.is_finite() || w == 0.0 {
         return Err(GeomError::Degenerate(
             "B-spline weight collapsed to zero".to_owned(),
         ));
@@ -506,7 +549,7 @@ where
 }
 
 /// de Boor over explicit homogeneous arrays; returns `(numerator, weight)`.
-fn eval_homogeneous<const N: usize>(
+pub(crate) fn eval_homogeneous<const N: usize>(
     knots: &[Scalar],
     d: usize,
     hom: &[[Scalar; N]],
@@ -660,20 +703,21 @@ fn subdivide2(
     // `mid` equals `a` or `b` in floating point and the recursion would not
     // terminate on its own.
     if !(mid > a && mid < b) {
-        return Ok(());
+        return Err(GeomError::Degenerate(format!(
+            "curve flattening cannot bisect parameter interval [{a}, {b}] before meeting chord tolerance {tol}"
+        )));
     }
     let pa = evaluate2(curve, a)?;
     let pb = evaluate2(curve, b)?;
     let pm = evaluate2(curve, mid)?;
-    if depth == 0 || sagitta2(pa, pb, pm) <= tol {
-        if depth > 0 {
-            // Within tolerance: the chord a->b stands, no interior point.
-            return Ok(());
-        }
-        // Depth exhausted: keep the midpoint so the result is still the best
-        // approximation available at the permitted budget.
-        out.push(pm);
+    if sagitta2(pa, pb, pm) <= tol {
+        // Within tolerance: the chord a->b stands, no interior point.
         return Ok(());
+    }
+    if depth == 0 {
+        return Err(GeomError::BudgetExceeded {
+            resource: "curve flattening depth",
+        });
     }
     subdivide2(curve, a, mid, tol, depth - 1, budget, out)?;
     out.push(pm);

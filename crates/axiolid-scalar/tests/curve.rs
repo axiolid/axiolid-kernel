@@ -10,7 +10,8 @@ use axiolid_core::{Frame2, Frame3, Interval, Point2, Point3, Scalar, Vec2, Vec3}
 use axiolid_curve::{
     BSplineCurve2, Circle2, Circle3, Curve2, Curve3, Ellipse2, KnotSpec, Line2, Polyline2,
 };
-use axiolid_scalar::curve::{derivative2, derivative3, evaluate2, evaluate3, flatten2};
+use axiolid_kernel::GeomError;
+use axiolid_scalar::curve::{derivative2, derivative3, domain2, evaluate2, evaluate3, flatten2};
 
 const TAU: Scalar = core::f64::consts::TAU;
 
@@ -376,6 +377,94 @@ fn a_multi_span_bspline_is_continuous_across_its_interior_knot() {
         "discontinuous below the knot"
     );
     assert!((after - at).length() < 1e-7, "discontinuous above the knot");
+}
+
+#[test]
+fn mismatched_compact_knots_are_refused_instead_of_truncated() {
+    let mut spline = cubic_bezier([
+        Point2::ZERO,
+        Point2::new(1.0, 0.0),
+        Point2::new(1.0, 1.0),
+        Point2::new(2.0, 1.0),
+    ]);
+    // `zip` used to ignore this extra distinct knot and evaluate a different
+    // curve whenever the truncated multiplicities happened to sum correctly.
+    spline.knots.push(2.0);
+    assert!(evaluate2(&Curve2::BSpline(spline), 0.5).is_err());
+}
+
+#[test]
+fn hostile_multiplicities_are_bounded_before_expansion() {
+    let mut spline = cubic_bezier([
+        Point2::ZERO,
+        Point2::new(1.0, 0.0),
+        Point2::new(1.0, 1.0),
+        Point2::new(2.0, 1.0),
+    ]);
+    spline.multiplicities[0] = u32::MAX;
+    let curve = Curve2::BSpline(spline);
+    assert_eq!(
+        domain2(&curve),
+        Interval {
+            start: 0.0,
+            end: 0.0
+        }
+    );
+    assert!(evaluate2(&curve, 0.5).is_err());
+}
+
+#[test]
+fn zero_knot_multiplicity_is_refused() {
+    let spline = Curve2::BSpline(BSplineCurve2 {
+        degree: 1,
+        control_points: vec![Point2::ZERO, Point2::new(1.0, 0.0)],
+        knots: vec![0.0, 0.5, 1.0],
+        multiplicities: vec![2, 0, 2],
+        weights: None,
+        closed: false,
+        self_intersect: None,
+        knot_spec: KnotSpec::Unspecified,
+    });
+    assert!(evaluate2(&spline, 0.5).is_err());
+}
+
+#[test]
+fn non_monotone_compact_knots_are_refused() {
+    let spline = Curve2::BSpline(BSplineCurve2 {
+        degree: 1,
+        control_points: vec![Point2::ZERO, Point2::new(1.0, 0.0), Point2::new(2.0, 0.0)],
+        knots: vec![0.0, 2.0, 1.0],
+        multiplicities: vec![2, 1, 1],
+        weights: None,
+        closed: false,
+        self_intersect: None,
+        knot_spec: KnotSpec::Unspecified,
+    });
+    assert!(evaluate2(&spline, 0.5).is_err());
+}
+
+#[test]
+fn non_positive_rational_weights_are_refused() {
+    let mut spline = cubic_bezier([
+        Point2::ZERO,
+        Point2::new(1.0, 0.0),
+        Point2::new(1.0, 1.0),
+        Point2::new(2.0, 1.0),
+    ]);
+    spline.weights = Some(vec![1.0, 0.0, 1.0, 1.0]);
+    assert!(evaluate2(&Curve2::BSpline(spline), 0.5).is_err());
+}
+
+#[test]
+fn non_finite_bspline_control_points_are_refused() {
+    let mut spline = cubic_bezier([
+        Point2::ZERO,
+        Point2::new(1.0, 0.0),
+        Point2::new(1.0, 1.0),
+        Point2::new(2.0, 1.0),
+    ]);
+    spline.control_points[1].x = Scalar::NAN;
+    assert!(evaluate2(&Curve2::BSpline(spline), 0.5).is_err());
 }
 
 #[test]
@@ -768,4 +857,40 @@ fn a_demanding_but_satisfiable_tolerance_still_flattens() {
         pts.len()
     );
     assert!(pts.len() < 65_536, "must stay inside the budget");
+}
+
+#[test]
+fn flattening_fails_closed_when_depth_is_exhausted() {
+    let curve = Curve2::Circle(Circle2 {
+        frame: frame2(),
+        radius: 1.0,
+    });
+    let error = flatten2(&curve, Interval::UNIT, 1.0e-12, 0)
+        .expect_err("depth exhaustion must not return an unverified chord");
+    assert!(matches!(error, GeomError::BudgetExceeded { .. }));
+}
+
+#[test]
+fn flattening_fails_closed_when_the_parameter_midpoint_collapses() {
+    let curve = Curve2::Circle(Circle2 {
+        frame: frame2(),
+        radius: 1.0,
+    });
+    let start = 2_f64.powi(53);
+    let domain = Interval {
+        start,
+        end: start + 2.0,
+    };
+    let error = flatten2(&curve, domain, 1.0e-12, 20)
+        .expect_err("an unbisectable curved interval must fail closed");
+    assert!(matches!(error, GeomError::Degenerate(_)));
+}
+
+#[test]
+fn rational_curve_overflow_is_refused() {
+    let mut spline = cubic_bezier([Point2::splat(Scalar::MAX); 4]);
+    spline.weights = Some(vec![Scalar::MAX; 4]);
+    let curve = Curve2::BSpline(spline);
+    assert!(evaluate2(&curve, 0.5).is_err());
+    assert!(derivative2(&curve, 0.5).is_err());
 }

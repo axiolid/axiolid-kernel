@@ -6,7 +6,7 @@
 
 use axiolid_core::{Frame3, Point3, Scalar, Vec3};
 use axiolid_curve::KnotSpec;
-use axiolid_scalar::surface::{evaluate, normal, Patch};
+use axiolid_scalar::surface::{evaluate, normal, partials, Patch};
 use axiolid_surface::{BSplineSurface, Cone, Cylinder, Plane, Sphere, Surface, Torus};
 
 const TAU: Scalar = core::f64::consts::TAU;
@@ -404,6 +404,98 @@ fn a_rational_bspline_surface_is_exactly_a_quarter_cylinder() {
 }
 
 #[test]
+fn rational_bspline_partials_match_the_quarter_cylinder_hodographs() {
+    let w = 1.0 / (2.0 as Scalar).sqrt();
+    let surface = Surface::BSpline(BSplineSurface {
+        u_degree: 2,
+        v_degree: 1,
+        control_points: vec![
+            vec![Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 0.0, 2.0)],
+            vec![Point3::new(1.0, 1.0, 0.0), Point3::new(1.0, 1.0, 2.0)],
+            vec![Point3::new(0.0, 1.0, 0.0), Point3::new(0.0, 1.0, 2.0)],
+        ],
+        u_knots: vec![0.0, 1.0],
+        u_multiplicities: vec![3, 3],
+        v_knots: vec![0.0, 1.0],
+        v_multiplicities: vec![2, 2],
+        weights: Some(vec![vec![1.0, 1.0], vec![w, w], vec![1.0, 1.0]]),
+        u_closed: false,
+        v_closed: false,
+        knot_spec: KnotSpec::PiecewiseBezier,
+        self_intersect: None,
+    });
+
+    let (du, dv) = partials(&surface, 0.5, 0.25).expect("analytic partials");
+    let tangent = 2.0 / (1.0 + w);
+    let expected_du = Vec3::new(-tangent, tangent, 0.0);
+    let expected_dv = Vec3::new(0.0, 0.0, 2.0);
+    assert!(
+        (du - expected_du).length() < 1e-12,
+        "du {du:?} vs {expected_du:?}"
+    );
+    assert!(
+        (dv - expected_dv).length() < 1e-12,
+        "dv {dv:?} vs {expected_dv:?}"
+    );
+
+    // Off symmetry the homogeneous weight derivative is non-zero. This pins
+    // the quotient-rule correction rather than only the polynomial hodograph.
+    let u = 0.25;
+    let b0 = (1.0 - u) * (1.0 - u);
+    let b1 = 2.0 * u * (1.0 - u);
+    let b2 = u * u;
+    let db0 = -2.0 * (1.0 - u);
+    let db1 = 2.0 - 4.0 * u;
+    let db2 = 2.0 * u;
+    let weight = b0 + b1 * w + b2;
+    let dweight = db0 + db1 * w + db2;
+    let point_h = Vec3::new(b0 + b1 * w, b1 * w + b2, 0.5 * weight);
+    let derivative_h = Vec3::new(db0 + db1 * w, db1 * w + db2, 0.5 * dweight);
+    let expected = (derivative_h - point_h * (dweight / weight)) / weight;
+    let (du, _) = partials(&surface, u, 0.25).expect("off-symmetry analytic partials");
+    assert!(
+        (du - expected).length() < 1e-12,
+        "off-symmetry du {du:?} vs {expected:?}"
+    );
+}
+
+#[test]
+fn a_bspline_normal_survives_a_large_parameter_offset() {
+    // CAD exchange files often retain large native knot origins. At 1e12 the
+    // old `(domain width) * 1e-6` finite-difference step rounds to zero, even
+    // though this is the same regular quarter cylinder as the unit-domain case.
+    let w = 1.0 / (2.0 as Scalar).sqrt();
+    let start = 1.0e12;
+    let end = start + 1.0e-3;
+    let surface = Surface::BSpline(BSplineSurface {
+        u_degree: 2,
+        v_degree: 1,
+        control_points: vec![
+            vec![Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 0.0, 2.0)],
+            vec![Point3::new(1.0, 1.0, 0.0), Point3::new(1.0, 1.0, 2.0)],
+            vec![Point3::new(0.0, 1.0, 0.0), Point3::new(0.0, 1.0, 2.0)],
+        ],
+        u_knots: vec![start, end],
+        u_multiplicities: vec![3, 3],
+        v_knots: vec![0.0, 1.0],
+        v_multiplicities: vec![2, 2],
+        weights: Some(vec![vec![1.0, 1.0], vec![w, w], vec![1.0, 1.0]]),
+        u_closed: false,
+        v_closed: false,
+        knot_spec: KnotSpec::PiecewiseBezier,
+        self_intersect: None,
+    });
+
+    let u = start + (end - start) * 0.5;
+    let n = normal(&surface, u, 0.5).expect("regular normal at large knot origin");
+    let expected = Vec3::new(1.0, 1.0, 0.0).normalize();
+    assert!(
+        (n - expected).length() < 1e-12,
+        "normal {n:?} vs {expected:?}"
+    );
+}
+
+#[test]
 fn a_bspline_normal_is_perpendicular_to_the_surface() {
     let net = [
         [Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 1.0, 0.0)],
@@ -419,6 +511,49 @@ fn a_bspline_normal_is_perpendicular_to_the_surface() {
 }
 
 // --- refusals ---------------------------------------------------------------
+
+#[test]
+fn mismatched_surface_knots_are_refused_instead_of_truncated() {
+    let mut b = bilinear([
+        [Point3::ZERO, Point3::new(0.0, 1.0, 0.0)],
+        [Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 1.0, 0.0)],
+    ]);
+    b.u_knots.push(2.0);
+    assert!(evaluate(&Surface::BSpline(b), 0.5, 0.5).is_err());
+}
+
+#[test]
+fn non_monotone_surface_knots_are_refused() {
+    let mut b = bilinear([
+        [Point3::ZERO, Point3::new(0.0, 1.0, 0.0)],
+        [Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 1.0, 0.0)],
+    ]);
+    b.u_knots = vec![0.0, 2.0, 1.0];
+    b.u_multiplicities = vec![2, 1, 1];
+    b.control_points
+        .push(vec![Point3::new(2.0, 0.0, 0.0), Point3::new(2.0, 1.0, 0.0)]);
+    assert!(evaluate(&Surface::BSpline(b), 0.5, 0.5).is_err());
+}
+
+#[test]
+fn non_positive_surface_weights_are_refused() {
+    let mut b = bilinear([
+        [Point3::ZERO, Point3::new(0.0, 1.0, 0.0)],
+        [Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 1.0, 0.0)],
+    ]);
+    b.weights = Some(vec![vec![1.0, 0.0], vec![1.0, 1.0]]);
+    assert!(evaluate(&Surface::BSpline(b), 0.5, 0.5).is_err());
+}
+
+#[test]
+fn non_finite_surface_control_points_are_refused() {
+    let mut b = bilinear([
+        [Point3::ZERO, Point3::new(0.0, 1.0, 0.0)],
+        [Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 1.0, 0.0)],
+    ]);
+    b.control_points[1][1].z = Scalar::INFINITY;
+    assert!(evaluate(&Surface::BSpline(b), 0.5, 0.5).is_err());
+}
 
 #[test]
 fn a_ragged_control_net_is_refused() {
@@ -476,4 +611,24 @@ fn an_empty_patch_is_refused() {
         Patch::new(Scalar::NAN, 1.0, 0.0, 1.0).is_err(),
         "non-finite"
     );
+}
+
+#[test]
+fn rational_surface_overflow_is_refused() {
+    let huge = Point3::splat(Scalar::MAX);
+    let mut spline = bilinear([[huge; 2]; 2]);
+    spline.weights = Some(vec![vec![Scalar::MAX; 2]; 2]);
+    let surface = Surface::BSpline(spline);
+    assert!(evaluate(&surface, 0.5, 0.5).is_err());
+    assert!(partials(&surface, 0.5, 0.5).is_err());
+}
+
+#[test]
+fn non_finite_surface_frames_are_refused() {
+    let mut invalid = frame();
+    invalid.origin.x = Scalar::INFINITY;
+    let surface = Surface::Plane(Plane { frame: invalid });
+    assert!(evaluate(&surface, 0.0, 0.0).is_err());
+    assert!(partials(&surface, 0.0, 0.0).is_err());
+    assert!(normal(&surface, 0.0, 0.0).is_err());
 }

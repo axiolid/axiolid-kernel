@@ -19,7 +19,9 @@ This page is deliberately conservative. **Implemented** means a focused crate or
 | --- | --- | --- |
 | Primitive solids and half-spaces | Represented | `axiolid-primitive` owns neutral values and validation |
 | Profiles / contours | Represented with validation | `axiolid-profile` |
-| Curves and surfaces | Represented | `axiolid-curve`, `axiolid-surface`; representation is not an evaluator claim |
+| Curves and surfaces | Represented | `axiolid-curve`, `axiolid-surface`; representation alone is not an evaluator claim |
+| Polynomial/rational B-spline evaluation | Implemented scalar read path | `axiolid-scalar`; validates compact knot/control/weight data, evaluates homogeneous curves/surfaces, and exposes analytic first derivatives/partials |
+| Trimmed curved-face tessellation | Implemented bounded reference path | `axiolid-compile`; endpoint-inclusive pcurve boundaries and holes, guarded structured-grid/Earcut seeds, topological seam reuse, explicit outer/bound orientation, face-level conforming support-surface refinement, periodic face charts, and fail-closed input/per-edge/per-face/aggregate/depth limits; see [ADR 0019](/adr/0019-validate-and-refine-nurbs-on-the-scalar-read-path) |
 | Topology / B-rep vocabulary | Represented | `axiolid-topology`; stored topology is distinct from geometry |
 | Immutable shared geometry DAG | Implemented structural model | `axiolid-model` uses typed IDs and backward references |
 | Sweeps, spatial, measures, healing | Focused crates / staged capability | Consult each crate’s `PLAN.md`; do not infer broad CAD coverage |
@@ -36,6 +38,7 @@ This page is deliberately conservative. **Implemented** means a focused crate or
 ## Explicit non-goals today
 
 - A complete CAD / B-rep modeling kernel.
+- General NURBS editing, knot/degree operations, intersections, projection, or closest-point inversion.
 - Source-format parsing or semantic interpretation.
 - A claim of OpenCascade compatibility or replacement coverage.
 - Bundled production CUDA, HIP, Metal, Vulkan, or WebGPU compute kernels.

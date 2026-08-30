@@ -17,3 +17,4 @@ These records capture durable choices that preserve Axiolid’s format-neutral, 
 | [0016](./0016-predicate-ownership-and-adopted-implementations.md) | Predicate ownership and adopted implementations |
 | [0017](./0017-solid-boolean-contract-before-implementation.md) | Solid boolean semantics defined before implementation |
 | [0018](./0018-curve-evaluation-in-the-scalar-reference.md) | Curve evaluation belongs to the scalar reference |
+| [0019](./0019-validate-and-refine-nurbs-on-the-scalar-read-path.md) | Validate and refine NURBS on the scalar read path |

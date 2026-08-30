@@ -1673,7 +1673,7 @@ fn a_slanted_trim_is_not_gridded() {
         surface: Some(surface),
         bounds: vec![FaceBound {
             loop_id: wire,
-            orientation: Orientation::Forward,
+            orientation: Orientation::Reversed,
             outer: true,
         }],
         orientation: Orientation::Forward,
@@ -1715,4 +1715,321 @@ fn a_slanted_trim_is_not_gridded() {
         "a slanted trim must not be squared off: area {area} vs rectangle {rectangle}"
     );
     assert!(area > 0.0, "the face must still be meshed");
+    for triangle in mesh.indices.chunks_exact(3) {
+        let a = mesh.positions[triangle[0] as usize];
+        let b = mesh.positions[triangle[1] as usize];
+        let c = mesh.positions[triangle[2] as usize];
+        let center = (a + b + c) / 3.0;
+        let radial = Vec3::new(center.x, center.y, 0.0);
+        assert!(
+            (b - a).cross(c - a).dot(radial) < 0.0,
+            "a reversed curved bound must reverse Earcut winding"
+        );
+    }
+}
+
+#[test]
+fn a_trimmed_rational_bspline_face_refines_its_support_surface() {
+    use axiolid_core::{Point2, Point3, Tolerance};
+    use axiolid_curve::{Curve2, KnotSpec, Polyline2};
+    use axiolid_surface::{BSplineSurface, Surface};
+
+    let radius = 2.0;
+    let height = 1.5;
+    let rational_weight = core::f64::consts::FRAC_1_SQRT_2;
+    let mut builder = GeometryGraphBuilder::new();
+    let surface = builder
+        .push(GeometryNode::Surface(Surface::BSpline(BSplineSurface {
+            u_degree: 2,
+            v_degree: 1,
+            control_points: vec![
+                vec![
+                    Point3::new(radius, 0.0, 0.0),
+                    Point3::new(radius, 0.0, height),
+                ],
+                vec![
+                    Point3::new(radius, radius, 0.0),
+                    Point3::new(radius, radius, height),
+                ],
+                vec![
+                    Point3::new(0.0, radius, 0.0),
+                    Point3::new(0.0, radius, height),
+                ],
+            ],
+            u_knots: vec![0.0, 1.0],
+            u_multiplicities: vec![3, 3],
+            v_knots: vec![0.0, height],
+            v_multiplicities: vec![2, 2],
+            weights: Some(vec![
+                vec![1.0, 1.0],
+                vec![rational_weight, rational_weight],
+                vec![1.0, 1.0],
+            ]),
+            u_closed: false,
+            v_closed: false,
+            knot_spec: KnotSpec::Unspecified,
+            self_intersect: None,
+        })))
+        .expect("NURBS surface");
+
+    let mut line = |a: Point2, b: Point2| {
+        builder
+            .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+                points: vec![a, b],
+                closed: false,
+            })))
+            .expect("pcurve")
+    };
+    let pcurves = [
+        line(Point2::new(0.0, 0.0), Point2::new(1.0, 0.0)),
+        line(Point2::new(1.0, 0.0), Point2::new(1.0, height)),
+        line(Point2::new(1.0, height), Point2::new(0.0, height)),
+        line(Point2::new(0.0, height), Point2::new(0.0, 0.0)),
+    ];
+
+    let mut brep: BRep<axiolid_model::NodeId> = BRep::default();
+    let vertices = [
+        brep.add_vertex(Vertex {
+            position: Point3::new(radius, 0.0, 0.0),
+        }),
+        brep.add_vertex(Vertex {
+            position: Point3::new(0.0, radius, 0.0),
+        }),
+        brep.add_vertex(Vertex {
+            position: Point3::new(0.0, radius, height),
+        }),
+        brep.add_vertex(Vertex {
+            position: Point3::new(radius, 0.0, height),
+        }),
+    ];
+    let edges = [
+        brep.add_edge(Edge {
+            start: vertices[0],
+            end: vertices[1],
+            curve: None,
+        }),
+        brep.add_edge(Edge {
+            start: vertices[1],
+            end: vertices[2],
+            curve: None,
+        }),
+        brep.add_edge(Edge {
+            start: vertices[2],
+            end: vertices[3],
+            curve: None,
+        }),
+        brep.add_edge(Edge {
+            start: vertices[3],
+            end: vertices[0],
+            curve: None,
+        }),
+    ];
+    let wire = brep.add_loop(Loop {
+        edges: edges
+            .into_iter()
+            .zip(pcurves)
+            .map(|(edge, pcurve)| EdgeUse {
+                edge,
+                orientation: Orientation::Forward,
+                pcurve: Some(pcurve),
+            })
+            .collect(),
+    });
+    let face = brep.add_face(Face {
+        surface: Some(surface),
+        bounds: vec![FaceBound {
+            loop_id: wire,
+            orientation: Orientation::Reversed,
+            outer: true,
+        }],
+        orientation: Orientation::Forward,
+    });
+    let shell = brep.add_shell(Shell {
+        faces: vec![(face, Orientation::Forward)],
+        closed: false,
+    });
+    brep.add_solid(Solid {
+        outer: shell,
+        voids: Vec::new(),
+    });
+
+    let root = builder.push(GeometryNode::BRep(brep)).expect("B-rep");
+    let graph = builder.finish(vec![root]).expect("graph");
+    let tolerance = Tolerance::MILLIMETRE;
+    let mesh = ScalarCompiler::new(BoolmeshBoolean::new())
+        .compile(&graph, root, &ExecutionOptions::new(tolerance))
+        .expect("trimmed rational B-spline face tessellates");
+
+    assert!(!mesh.indices.is_empty());
+    for point in &mesh.positions {
+        let radial_error = (point.x.hypot(point.y) - radius).abs();
+        assert!(radial_error <= 1e-9, "off-support NURBS vertex: {point:?}");
+    }
+    for triangle in mesh.indices.chunks_exact(3) {
+        let a = mesh.positions[triangle[0] as usize];
+        let b = mesh.positions[triangle[1] as usize];
+        let c = mesh.positions[triangle[2] as usize];
+        let center = (a + b + c) / 3.0;
+        let radial = Point3::new(center.x, center.y, 0.0);
+        assert!(
+            (b - a).cross(c - a).dot(radial) < 0.0,
+            "a reversed curved bound must reverse structured-grid winding"
+        );
+    }
+    let max_sagitta = mesh
+        .indices
+        .chunks_exact(3)
+        .flat_map(|triangle| {
+            [
+                (triangle[0], triangle[1]),
+                (triangle[1], triangle[2]),
+                (triangle[2], triangle[0]),
+            ]
+        })
+        .map(|(a, b)| {
+            let midpoint = (mesh.positions[a as usize] + mesh.positions[b as usize]) * 0.5;
+            radius - midpoint.x.hypot(midpoint.y)
+        })
+        .fold(0.0_f64, f64::max);
+    assert!(
+        max_sagitta <= tolerance.linear(),
+        "NURBS interior sagitta {max_sagitta} exceeded {}",
+        tolerance.linear()
+    );
+}
+
+#[test]
+fn a_curved_face_preserves_a_pcurve_hole_during_refinement() {
+    use axiolid_core::{Point2, Point3, Tolerance};
+    use axiolid_curve::{Curve2, Polyline2};
+    use axiolid_surface::{Cylinder, Surface};
+
+    fn add_ring(
+        builder: &mut GeometryGraphBuilder,
+        brep: &mut BRep<axiolid_model::NodeId>,
+        radius: f64,
+        points: [Point2; 4],
+    ) -> axiolid_topology::LoopId {
+        let vertices: Vec<_> = points
+            .iter()
+            .map(|point| {
+                brep.add_vertex(Vertex {
+                    position: Point3::new(radius * point.x.cos(), radius * point.x.sin(), point.y),
+                })
+            })
+            .collect();
+        let mut uses = Vec::new();
+        for index in 0..4 {
+            let next = (index + 1) % 4;
+            let pcurve = builder
+                .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+                    points: vec![points[index], points[next]],
+                    closed: false,
+                })))
+                .unwrap();
+            let edge = brep.add_edge(Edge {
+                start: vertices[index],
+                end: vertices[next],
+                curve: None,
+            });
+            uses.push(EdgeUse {
+                edge,
+                orientation: Orientation::Forward,
+                pcurve: Some(pcurve),
+            });
+        }
+        brep.add_loop(Loop { edges: uses })
+    }
+
+    let radius = 2.0;
+    let mut builder = GeometryGraphBuilder::new();
+    let surface = builder
+        .push(GeometryNode::Surface(Surface::Cylinder(Cylinder {
+            frame: axiolid_core::Frame3 {
+                origin: Point3::ZERO,
+                x: Vec3::X,
+                y: Vec3::Y,
+                z: Vec3::Z,
+            },
+            radius,
+        })))
+        .unwrap();
+    let mut brep: BRep<axiolid_model::NodeId> = BRep::default();
+    let outer = add_ring(
+        &mut builder,
+        &mut brep,
+        radius,
+        [
+            Point2::new(0.0, 0.0),
+            Point2::new(core::f64::consts::FRAC_PI_2, 0.0),
+            Point2::new(core::f64::consts::FRAC_PI_2, 3.0),
+            Point2::new(0.0, 3.0),
+        ],
+    );
+    // Clockwise parameter-space ring.
+    let hole = add_ring(
+        &mut builder,
+        &mut brep,
+        radius,
+        [
+            Point2::new(0.4, 1.0),
+            Point2::new(0.4, 2.0),
+            Point2::new(1.0, 2.0),
+            Point2::new(1.0, 1.0),
+        ],
+    );
+    let face = brep.add_face(Face {
+        surface: Some(surface),
+        bounds: vec![
+            FaceBound {
+                loop_id: hole,
+                orientation: Orientation::Forward,
+                outer: false,
+            },
+            FaceBound {
+                loop_id: outer,
+                orientation: Orientation::Forward,
+                outer: true,
+            },
+        ],
+        orientation: Orientation::Forward,
+    });
+    let shell = brep.add_shell(Shell {
+        faces: vec![(face, Orientation::Forward)],
+        closed: false,
+    });
+    brep.add_solid(Solid {
+        outer: shell,
+        voids: Vec::new(),
+    });
+
+    let root = builder.push(GeometryNode::BRep(brep)).unwrap();
+    let graph = builder.finish(vec![root]).unwrap();
+    let mesh = ScalarCompiler::new(BoolmeshBoolean::new())
+        .compile(&graph, root, &ExecutionOptions::new(Tolerance::MILLIMETRE))
+        .expect("curved face with a hole tessellates");
+
+    let parameter = |index: u32| {
+        let point = mesh.positions[index as usize];
+        Point2::new(point.y.atan2(point.x), point.z)
+    };
+    let mut parameter_area = 0.0;
+    for triangle in mesh.indices.chunks_exact(3) {
+        let [a, b, c] = [
+            parameter(triangle[0]),
+            parameter(triangle[1]),
+            parameter(triangle[2]),
+        ];
+        let centroid = (a + b + c) / 3.0;
+        assert!(
+            !(centroid.x > 0.4 && centroid.x < 1.0 && centroid.y > 1.0 && centroid.y < 2.0),
+            "triangle centroid entered the pcurve hole: {centroid:?}"
+        );
+        parameter_area += ((b - a).x * (c - a).y - (b - a).y * (c - a).x).abs() * 0.5;
+    }
+    let expected = core::f64::consts::FRAC_PI_2 * 3.0 - 0.6;
+    assert!(
+        (parameter_area - expected).abs() <= 1.0e-10,
+        "parameter area {parameter_area} did not preserve hole area {expected}"
+    );
 }

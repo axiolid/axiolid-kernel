@@ -39,7 +39,8 @@ use axiolid_kernel::BackendId;
 use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_surface::{BSplineSurface, Cone, Cylinder, Plane, Sphere, Surface, Torus};
 
-use crate::curve::{de_boor_recurrence, span_in};
+use crate::curve::{de_boor_recurrence, eval_homogeneous, span_in};
+use crate::nurbs::SplineAxis;
 
 /// A finite parameter rectangle for tessellation.
 ///
@@ -117,11 +118,35 @@ fn positive(value: Scalar, what: &str) -> GeomResult<()> {
     }
 }
 
+fn finite_surface_frame(surface: &Surface) -> GeomResult<()> {
+    let frame = match surface {
+        Surface::Plane(value) => Some(&value.frame),
+        Surface::Cylinder(value) => Some(&value.frame),
+        Surface::Cone(value) => Some(&value.frame),
+        Surface::Sphere(value) => Some(&value.frame),
+        Surface::Torus(value) => Some(&value.frame),
+        _ => None,
+    };
+    if frame.is_none_or(|frame| {
+        frame.origin.is_finite()
+            && frame.x.is_finite()
+            && frame.y.is_finite()
+            && frame.z.is_finite()
+    }) {
+        Ok(())
+    } else {
+        Err(GeomError::InvalidInput(
+            "surface frame must be finite".to_owned(),
+        ))
+    }
+}
+
 /// Position on a surface at `(u, v)`.
 pub fn evaluate(surface: &Surface, u: Scalar, v: Scalar) -> GeomResult<Point3> {
     finite(u, "surface parameter u")?;
     finite(v, "surface parameter v")?;
-    match surface {
+    finite_surface_frame(surface)?;
+    let point = match surface {
         Surface::Plane(p) => Ok(plane_point(p, u, v)),
         Surface::Cylinder(c) => cylinder_point(c, u, v),
         Surface::Cone(c) => cone_point(c, u, v),
@@ -132,6 +157,100 @@ pub fn evaluate(surface: &Surface, u: Scalar, v: Scalar) -> GeomResult<Point3> {
             backend: ScalarSurface::ID,
             operation: axiolid_kernel::Operation::SurfaceEvaluation,
         }),
+    }?;
+    if point.is_finite() {
+        Ok(point)
+    } else {
+        Err(GeomError::Degenerate(
+            "surface point is non-finite".to_owned(),
+        ))
+    }
+}
+
+/// Analytic first partial derivatives `(∂S/∂u, ∂S/∂v)` at `(u, v)`.
+///
+/// Rational B-spline derivatives are evaluated in homogeneous space and
+/// projected with the quotient rule. This remains stable when valid imported
+/// knot domains have large offsets that make finite-difference steps vanish.
+pub fn partials(surface: &Surface, u: Scalar, v: Scalar) -> GeomResult<(Vec3, Vec3)> {
+    finite(u, "surface parameter u")?;
+    finite(v, "surface parameter v")?;
+    finite_surface_frame(surface)?;
+    let value = match surface {
+        Surface::Plane(p) => Ok((p.frame.x, p.frame.y)),
+        Surface::Cylinder(c) => {
+            positive(c.radius, "cylinder radius")?;
+            let (s, co) = u.sin_cos();
+            Ok((
+                direct(&c.frame, Vec3::new(-c.radius * s, c.radius * co, 0.0)),
+                c.frame.z,
+            ))
+        }
+        Surface::Cone(c) => {
+            finite(c.radius, "cone radius")?;
+            finite(c.semi_angle, "cone semi-angle")?;
+            let slope = c.semi_angle.tan();
+            let radius = c.radius + v * slope;
+            if radius < 0.0 {
+                return Err(GeomError::Degenerate(format!(
+                    "cone radius is negative at v = {v}: the patch crosses the apex"
+                )));
+            }
+            let (s, co) = u.sin_cos();
+            Ok((
+                direct(&c.frame, Vec3::new(-radius * s, radius * co, 0.0)),
+                direct(&c.frame, Vec3::new(slope * co, slope * s, 1.0)),
+            ))
+        }
+        Surface::Sphere(sphere) => {
+            positive(sphere.radius, "sphere radius")?;
+            let (su, cu) = u.sin_cos();
+            let (sv, cv) = v.sin_cos();
+            Ok((
+                direct(
+                    &sphere.frame,
+                    Vec3::new(-sphere.radius * cv * su, sphere.radius * cv * cu, 0.0),
+                ),
+                direct(
+                    &sphere.frame,
+                    Vec3::new(
+                        -sphere.radius * sv * cu,
+                        -sphere.radius * sv * su,
+                        sphere.radius * cv,
+                    ),
+                ),
+            ))
+        }
+        Surface::Torus(torus) => {
+            positive(torus.major_radius, "torus major radius")?;
+            positive(torus.minor_radius, "torus minor radius")?;
+            let (su, cu) = u.sin_cos();
+            let (sv, cv) = v.sin_cos();
+            let ring = torus.major_radius + torus.minor_radius * cv;
+            Ok((
+                direct(&torus.frame, Vec3::new(-ring * su, ring * cu, 0.0)),
+                direct(
+                    &torus.frame,
+                    Vec3::new(
+                        -torus.minor_radius * sv * cu,
+                        -torus.minor_radius * sv * su,
+                        torus.minor_radius * cv,
+                    ),
+                ),
+            ))
+        }
+        Surface::BSpline(b) => bspline_partials(b, u, v),
+        _ => Err(GeomError::Unsupported {
+            backend: ScalarSurface::ID,
+            operation: axiolid_kernel::Operation::SurfaceEvaluation,
+        }),
+    }?;
+    if value.0.is_finite() && value.1.is_finite() {
+        Ok(value)
+    } else {
+        Err(GeomError::Degenerate(
+            "surface partial is non-finite".to_owned(),
+        ))
     }
 }
 
@@ -143,6 +262,7 @@ pub fn evaluate(surface: &Surface, u: Scalar, v: Scalar) -> GeomResult<Point3> {
 pub fn normal(surface: &Surface, u: Scalar, v: Scalar) -> GeomResult<Vec3> {
     finite(u, "surface parameter u")?;
     finite(v, "surface parameter v")?;
+    finite_surface_frame(surface)?;
     let n = match surface {
         Surface::Plane(p) => p.frame.z,
         Surface::Cylinder(c) => {
@@ -238,65 +358,7 @@ fn torus_point(t: &Torus, u: Scalar, v: Scalar) -> GeomResult<Point3> {
 
 // --- tensor-product B-spline ------------------------------------------------
 
-/// Flatten `(knots, multiplicities)` into the vector de Boor needs.
-fn expand(knots: &[Scalar], multiplicities: &[u32]) -> Vec<Scalar> {
-    let mut out = Vec::new();
-    for (value, count) in knots.iter().zip(multiplicities.iter()) {
-        for _ in 0..*count {
-            out.push(*value);
-        }
-    }
-    out
-}
-
-/// Validated per-axis setup: flat knots, control count, degree.
-struct Axis {
-    knots: Vec<Scalar>,
-    count: usize,
-    degree: usize,
-}
-
-impl Axis {
-    fn new(
-        knots: &[Scalar],
-        multiplicities: &[u32],
-        degree: u16,
-        count: usize,
-        label: &str,
-    ) -> GeomResult<Self> {
-        let degree = degree as usize;
-        if degree == 0 {
-            return Err(GeomError::InvalidInput(format!(
-                "B-spline surface {label} degree must be at least 1"
-            )));
-        }
-        let flat = expand(knots, multiplicities);
-        if flat.len() != count + degree + 1 {
-            return Err(GeomError::InvalidInput(format!(
-                "B-spline surface {label} knot vector has {} entries, expected {}",
-                flat.len(),
-                count + degree + 1
-            )));
-        }
-        if !matches!(
-            flat[count].partial_cmp(&flat[degree]),
-            Some(core::cmp::Ordering::Greater)
-        ) {
-            return Err(GeomError::Degenerate(format!(
-                "B-spline surface {label} domain is empty"
-            )));
-        }
-        Ok(Self {
-            knots: flat,
-            count,
-            degree,
-        })
-    }
-
-    fn clamp(&self, t: Scalar) -> Scalar {
-        t.clamp(self.knots[self.degree], self.knots[self.count])
-    }
-}
+type Axis = SplineAxis;
 
 /// Validate the control net and both axes together.
 fn bspline_axes(b: &BSplineSurface) -> GeomResult<(Axis, Axis)> {
@@ -319,10 +381,27 @@ fn bspline_axes(b: &BSplineSurface) -> GeomResult<(Axis, Axis)> {
             "B-spline surface control net is ragged".to_owned(),
         ));
     }
+    if b.control_points
+        .iter()
+        .flatten()
+        .any(|point| !point.is_finite())
+    {
+        return Err(GeomError::InvalidInput(
+            "B-spline surface control points must be finite".to_owned(),
+        ));
+    }
     if let Some(w) = &b.weights {
         if w.len() != rows || w.iter().any(|row| row.len() != cols) {
             return Err(GeomError::InvalidInput(
                 "B-spline surface weight net does not match the control net".to_owned(),
+            ));
+        }
+        if w.iter()
+            .flatten()
+            .any(|weight| !weight.is_finite() || *weight <= 0.0)
+        {
+            return Err(GeomError::InvalidInput(
+                "B-spline surface weights must be finite and strictly positive".to_owned(),
             ));
         }
     }
@@ -353,7 +432,13 @@ fn bspline_point(b: &BSplineSurface, u: Scalar, v: Scalar) -> GeomResult<Point3>
             let col = vspan - va.degree + j;
             let w = b.weights.as_ref().map_or(1.0, |ws| ws[row][col]);
             let p = b.control_points[row][col];
-            pts.push([p.x * w, p.y * w, p.z * w]);
+            let homogeneous = [p.x * w, p.y * w, p.z * w];
+            if homogeneous.iter().any(|value| !value.is_finite()) {
+                return Err(GeomError::Degenerate(
+                    "B-spline surface homogeneous control point overflowed".to_owned(),
+                ));
+            }
+            pts.push(homogeneous);
             wts.push(w);
         }
         de_boor_recurrence(&va.knots, vspan, va.degree, vc, &mut pts, &mut wts);
@@ -372,7 +457,7 @@ fn bspline_point(b: &BSplineSurface, u: Scalar, v: Scalar) -> GeomResult<Point3>
     );
 
     let w = row_weights[ua.degree];
-    if w.abs() <= 0.0 {
+    if !w.is_finite() || w == 0.0 {
         return Err(GeomError::Degenerate(
             "B-spline surface weight collapsed to zero".to_owned(),
         ));
@@ -381,23 +466,208 @@ fn bspline_point(b: &BSplineSurface, u: Scalar, v: Scalar) -> GeomResult<Point3>
     Ok(Point3::new(p[0] / w, p[1] / w, p[2] / w))
 }
 
-/// Normal from central differences of the tensor-product evaluation.
-///
-/// Unlike the elementary families there is no closed form here without a
-/// second de Boor pass for each partial; a symmetric difference at a step
-/// scaled to the domain is accurate to `O(h^2)` and cannot silently produce a
-/// wrong direction, because a collapsed cross product is reported as an error.
-fn bspline_normal(b: &BSplineSurface, u: Scalar, v: Scalar) -> GeomResult<Vec3> {
-    let (ua, va) = bspline_axes(b)?;
-    let (u0, u1) = (ua.knots[ua.degree], ua.knots[ua.count]);
-    let (v0, v1) = (va.knots[va.degree], va.knots[va.count]);
-    let hu = (u1 - u0) * 1e-6;
-    let hv = (v1 - v0) * 1e-6;
-    let uc = ua.clamp(u);
-    let vc = va.clamp(v);
+/// Borrowed knot axes for one homogeneous tensor-product evaluation.
+#[derive(Clone, Copy)]
+struct HomogeneousAxes<'a> {
+    u_knots: &'a [Scalar],
+    u_degree: usize,
+    v_knots: &'a [Scalar],
+    v_degree: usize,
+}
 
-    let du = bspline_point(b, (uc + hu).min(u1), vc)? - bspline_point(b, (uc - hu).max(u0), vc)?;
-    let dv = bspline_point(b, uc, (vc + hv).min(v1))? - bspline_point(b, uc, (vc - hv).max(v0))?;
+/// Evaluate one homogeneous tensor-product control net without projecting.
+fn eval_tensor_homogeneous(
+    axes: HomogeneousAxes<'_>,
+    points: &[Vec<[Scalar; 3]>],
+    weights: &[Vec<Scalar>],
+    u: Scalar,
+    v: Scalar,
+) -> ([Scalar; 3], Scalar) {
+    let mut row_points = Vec::with_capacity(points.len());
+    let mut row_weights = Vec::with_capacity(points.len());
+    for (row_points_h, row_weights_h) in points.iter().zip(weights) {
+        let (point, weight) =
+            eval_homogeneous(axes.v_knots, axes.v_degree, row_points_h, row_weights_h, v);
+        row_points.push(point);
+        row_weights.push(weight);
+    }
+    eval_homogeneous(axes.u_knots, axes.u_degree, &row_points, &row_weights, u)
+}
+
+type HomogeneousPointNet = Vec<Vec<[Scalar; 3]>>;
+type HomogeneousWeightNet = Vec<Vec<Scalar>>;
+
+/// Homogeneous point and weight control nets for a validated surface.
+fn homogeneous_control_net(
+    b: &BSplineSurface,
+) -> GeomResult<(HomogeneousPointNet, HomogeneousWeightNet)> {
+    let mut points = Vec::with_capacity(b.control_points.len());
+    let mut weights = Vec::with_capacity(b.control_points.len());
+    for (i, row) in b.control_points.iter().enumerate() {
+        let mut point_row = Vec::with_capacity(row.len());
+        let mut weight_row = Vec::with_capacity(row.len());
+        for (j, point) in row.iter().enumerate() {
+            let weight = b.weights.as_ref().map_or(1.0, |net| net[i][j]);
+            let homogeneous = [point.x * weight, point.y * weight, point.z * weight];
+            if homogeneous.iter().any(|value| !value.is_finite()) {
+                return Err(GeomError::Degenerate(
+                    "B-spline surface homogeneous control point overflowed".to_owned(),
+                ));
+            }
+            point_row.push(homogeneous);
+            weight_row.push(weight);
+        }
+        points.push(point_row);
+        weights.push(weight_row);
+    }
+    Ok((points, weights))
+}
+
+/// Differentiate a homogeneous control net along `u`.
+fn derivative_net_u(
+    points: &[Vec<[Scalar; 3]>],
+    weights: &[Vec<Scalar>],
+    knots: &[Scalar],
+    degree: usize,
+) -> (Vec<Vec<[Scalar; 3]>>, Vec<Vec<Scalar>>) {
+    let rows = points.len() - 1;
+    let cols = points[0].len();
+    let mut derivative_points = Vec::with_capacity(rows);
+    let mut derivative_weights = Vec::with_capacity(rows);
+    for i in 0..rows {
+        let denominator = knots[i + degree + 1] - knots[i + 1];
+        let factor = if denominator.abs() > 0.0 {
+            degree as Scalar / denominator
+        } else {
+            0.0
+        };
+        let mut point_row = Vec::with_capacity(cols);
+        let mut weight_row = Vec::with_capacity(cols);
+        for j in 0..cols {
+            point_row.push(core::array::from_fn(|k| {
+                factor * (points[i + 1][j][k] - points[i][j][k])
+            }));
+            weight_row.push(factor * (weights[i + 1][j] - weights[i][j]));
+        }
+        derivative_points.push(point_row);
+        derivative_weights.push(weight_row);
+    }
+    (derivative_points, derivative_weights)
+}
+
+/// Differentiate a homogeneous control net along `v`.
+fn derivative_net_v(
+    points: &[Vec<[Scalar; 3]>],
+    weights: &[Vec<Scalar>],
+    knots: &[Scalar],
+    degree: usize,
+) -> (Vec<Vec<[Scalar; 3]>>, Vec<Vec<Scalar>>) {
+    let rows = points.len();
+    let cols = points[0].len() - 1;
+    let mut derivative_points = Vec::with_capacity(rows);
+    let mut derivative_weights = Vec::with_capacity(rows);
+    for i in 0..rows {
+        let mut point_row = Vec::with_capacity(cols);
+        let mut weight_row = Vec::with_capacity(cols);
+        for j in 0..cols {
+            let denominator = knots[j + degree + 1] - knots[j + 1];
+            let factor = if denominator.abs() > 0.0 {
+                degree as Scalar / denominator
+            } else {
+                0.0
+            };
+            point_row.push(core::array::from_fn(|k| {
+                factor * (points[i][j + 1][k] - points[i][j][k])
+            }));
+            weight_row.push(factor * (weights[i][j + 1] - weights[i][j]));
+        }
+        derivative_points.push(point_row);
+        derivative_weights.push(weight_row);
+    }
+    (derivative_points, derivative_weights)
+}
+
+/// Project one homogeneous derivative with the rational quotient rule.
+fn project_derivative(
+    point: [Scalar; 3],
+    weight: Scalar,
+    derivative: [Scalar; 3],
+    derivative_weight: Scalar,
+    axis: &str,
+) -> GeomResult<Vec3> {
+    if !weight.is_finite() || weight == 0.0 {
+        return Err(GeomError::Degenerate(
+            "B-spline surface weight collapsed to a non-finite or zero value".to_owned(),
+        ));
+    }
+    let value = Vec3::new(
+        (derivative[0] - point[0] * derivative_weight / weight) / weight,
+        (derivative[1] - point[1] * derivative_weight / weight) / weight,
+        (derivative[2] - point[2] * derivative_weight / weight) / weight,
+    );
+    if !value.is_finite() {
+        return Err(GeomError::Degenerate(format!(
+            "B-spline surface {axis} derivative is non-finite"
+        )));
+    }
+    Ok(value)
+}
+
+/// Exact first partials of a rational tensor-product B-spline.
+fn bspline_partials(b: &BSplineSurface, u: Scalar, v: Scalar) -> GeomResult<(Vec3, Vec3)> {
+    let (ua, va) = bspline_axes(b)?;
+    let (uc, vc) = (ua.clamp(u), va.clamp(v));
+    let (points, weights) = homogeneous_control_net(b)?;
+    let (point, weight) = eval_tensor_homogeneous(
+        HomogeneousAxes {
+            u_knots: &ua.knots,
+            u_degree: ua.degree,
+            v_knots: &va.knots,
+            v_degree: va.degree,
+        },
+        &points,
+        &weights,
+        uc,
+        vc,
+    );
+
+    let (u_points, u_weights) = derivative_net_u(&points, &weights, &ua.knots, ua.degree);
+    let (du, du_weight) = eval_tensor_homogeneous(
+        HomogeneousAxes {
+            u_knots: &ua.knots[1..ua.knots.len() - 1],
+            u_degree: ua.degree - 1,
+            v_knots: &va.knots,
+            v_degree: va.degree,
+        },
+        &u_points,
+        &u_weights,
+        uc,
+        vc,
+    );
+
+    let (v_points, v_weights) = derivative_net_v(&points, &weights, &va.knots, va.degree);
+    let (dv, dv_weight) = eval_tensor_homogeneous(
+        HomogeneousAxes {
+            u_knots: &ua.knots,
+            u_degree: ua.degree,
+            v_knots: &va.knots[1..va.knots.len() - 1],
+            v_degree: va.degree - 1,
+        },
+        &v_points,
+        &v_weights,
+        uc,
+        vc,
+    );
+
+    Ok((
+        project_derivative(point, weight, du, du_weight, "u")?,
+        project_derivative(point, weight, dv, dv_weight, "v")?,
+    ))
+}
+
+/// Normal from analytic rational tensor-product partial derivatives.
+fn bspline_normal(b: &BSplineSurface, u: Scalar, v: Scalar) -> GeomResult<Vec3> {
+    let (du, dv) = bspline_partials(b, u, v)?;
     Ok(du.cross(dv))
 }
 
