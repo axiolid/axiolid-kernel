@@ -177,6 +177,7 @@ dependencies = [
  "axiolid-kernel",
  "axiolid-measure",
  "axiolid-mesh",
+ "axiolid-primitive",
  "axiolid-spatial",
  "axiolid-surface",
 ]

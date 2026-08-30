@@ -15,6 +15,7 @@ axiolid-kernel = { workspace = true, features = ["mesh-boolean"] }
 axiolid-curve.workspace = true
 axiolid-measure.workspace = true
 axiolid-mesh.workspace = true
+axiolid-primitive.workspace = true
 axiolid-surface.workspace = true
 axiolid-spatial.workspace = true
 

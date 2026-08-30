@@ -15,6 +15,7 @@ pub mod expansion;
 pub mod orient3;
 pub mod orientation;
 pub mod polygon;
+pub mod primitive;
 pub mod scene;
 pub mod segment_triangle;
 pub mod sphere;

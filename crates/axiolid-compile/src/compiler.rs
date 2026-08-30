@@ -153,6 +153,11 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                 self.build_solid(graph, operation, options, cache)
             }
             GeometryNode::BRep(brep) => crate::brep::tessellate(brep, graph, options.tolerance()),
+            // CSG primitives are analytic solids: no surface evaluation,
+            // no trim curves, just a closed mesh at the caller's tolerance.
+            GeometryNode::Primitive(primitive) => {
+                axiolid_scalar::primitive::tessellate_primitive(primitive, options.tolerance())
+            }
             other => Err(GeomError::Unsupported {
                 backend: self.descriptor().id,
                 operation: unsupported_operation(other),
