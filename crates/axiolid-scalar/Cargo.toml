@@ -16,6 +16,11 @@ axiolid-curve.workspace = true
 axiolid-measure.workspace = true
 axiolid-mesh.workspace = true
 axiolid-surface.workspace = true
+axiolid-spatial.workspace = true
+
+[[bench]]
+name = "clash"
+harness = false
 
 [[bench]]
 name = "predicates"

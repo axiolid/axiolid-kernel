@@ -387,3 +387,26 @@ fn coplanar_faces_that_share_no_area_stay_clear() {
     );
     assert!(report.touching_pairs.is_empty(), "nothing touches");
 }
+
+/// The broad phase must prune, not merely count.
+///
+/// Two adjacent boxes touch on one face: only the triangles near that face
+/// can interact. A quadratic scan tests all 144 pairs; the tree must
+/// test far fewer. Without this a regression to the nested loop passes
+/// every other test in this file while being unusable at model scale.
+#[test]
+fn the_broad_phase_prunes_most_triangle_pairs() {
+    let a = unit_box_at(0.0);
+    let b = unit_box_at(1.0);
+    let report = interference(&a, &b, Tolerance::ZERO).expect("interference");
+    // 12 triangles per box gives a BVH almost nothing to prune with; the
+    // measured figure is 84 of 144. The bound guards the mechanism being
+    // present at all -- the asymptotic win is pinned by benches/clash.rs,
+    // where 4608 triangles need 2528 tests instead of 21 million.
+    let total = 12 * 12;
+    assert!(
+        report.narrow_phase_tests <= 84,
+        "broad phase tested {} of {total} pairs: it is not pruning",
+        report.narrow_phase_tests
+    );
+}

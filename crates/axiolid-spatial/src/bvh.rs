@@ -167,6 +167,32 @@ impl<K: Clone> Bvh<K> {
     /// # Panics
     /// Panics when `min_penetration` is negative or non-finite; an invalid query
     /// must not masquerade as an evaluated empty result.
+    /// Keys whose bounds overlap `probe`.
+    ///
+    /// The existing pair queries are self-joins within one tree. A clash
+    /// test joins TWO meshes, so it probes one tree with the other's boxes.
+    /// Without this a caller has no option but a quadratic scan.
+    pub fn query_aabb(&self, probe: &Aabb, out: &mut Vec<usize>) {
+        out.clear();
+        let Some(root) = self.root else {
+            return;
+        };
+        let mut stack = vec![root];
+        while let Some(index) = stack.pop() {
+            let node = &self.nodes[index];
+            if !node.bounds.intersects(probe) {
+                continue;
+            }
+            match &node.kind {
+                NodeKind::Leaf(items) => out.extend_from_slice(items),
+                NodeKind::Branch { left, right } => {
+                    stack.push(*left);
+                    stack.push(*right);
+                }
+            }
+        }
+    }
+
     pub fn overlap_pairs(&self, min_penetration: Scalar) -> PairCandidates<K> {
         assert!(
             min_penetration.is_finite() && min_penetration >= 0.0,

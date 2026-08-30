@@ -111,8 +111,23 @@ pub fn interference(
         containment: false,
     };
 
+    // Build a BVH over B's triangles and probe it with A's boxes. The
+    // quadratic scan this replaces made `interference` unusable at model
+    // scale: two 4.6k-triangle solids cost 21M box tests.
+    let tree = axiolid_spatial::Bvh::build(
+        boxes_b
+            .iter()
+            .enumerate()
+            .map(|(j, bounds)| axiolid_spatial::SpatialItem::new(j, *bounds)),
+    );
+    let mut hits: Vec<usize> = Vec::new();
     for (i, box_a) in boxes_a.iter().enumerate() {
-        for (j, box_b) in boxes_b.iter().enumerate() {
+        tree.query_aabb(box_a, &mut hits);
+        // Everything the tree pruned would have been a rejected box test in
+        // the quadratic version; count it so the two are comparable.
+        report.broad_phase_rejections += boxes_b.len() - hits.len();
+        for &j in &hits {
+            let box_b = &boxes_b[j];
             if !box_a.intersects(box_b) {
                 report.broad_phase_rejections += 1;
                 continue;
