@@ -90,7 +90,7 @@ fn append_face(
     // in surface parameters, and refuse when it does not.
     if let Some(surface) = face_surface(graph, face)? {
         if !surface_is_planar(surface) {
-            return append_curved_face(mesh, ctx, face, surface, cache, flip);
+            return append_curved_face(mesh, ctx, welded, face, surface, cache, flip);
         }
     }
     let mut rings: Vec<Vec<(axiolid_topology::VertexId, Vec3)>> = Vec::new();
@@ -292,16 +292,53 @@ type EdgeSamples = std::collections::HashMap<axiolid_topology::EdgeId, (Vec<u32>
 /// Used when an edge is already interned: the second face must produce the
 /// same NUMBER of boundary points as the first, so its (u, v) values pair
 /// one-to-one with the shared 3D indices.
-fn pcurve_points_n(
-    graph: &axiolid_model::GeometryGraph,
-    id: NodeId,
-    n: usize,
-) -> GeomResult<Vec<axiolid_core::Point2>> {
-    let Some(axiolid_model::GeometryNode::Curve2(curve)) = graph.get(id) else {
-        return Err(GeomError::InvalidInput(
-            "edge pcurve must reference a Curve2 node".to_string(),
-        ));
+/// Samples an edge needs so its 3D image meets the chord budget.
+///
+/// The trim is flattened in PARAMETER space, but tolerance is a claim about
+/// 3D. A cylinder rim is the straight pcurve v = 0,
+/// u in [0, TAU]: two points in parameter space, a full circle in space.
+/// Subdivide until the mapped midpoint is within tolerance of the chord.
+fn edge_sample_count(
+    curve: &axiolid_curve::Curve2,
+    surface: &axiolid_surface::Surface,
+    tolerance: Scalar,
+) -> GeomResult<usize> {
+    let domain = axiolid_scalar::curve::domain2(curve);
+    let at = |t: Scalar| -> GeomResult<Vec3> {
+        let p = axiolid_scalar::curve::evaluate2(curve, t)?;
+        axiolid_scalar::surface::evaluate(surface, p.x, p.y)
     };
+    // Powers of two keep the count stable: a face arriving later computes
+    // the same value from the same inputs.
+    let mut n = 2usize;
+    while n < 4096 {
+        let mut worst: Scalar = 0.0;
+        for i in 0..n {
+            let t0 = domain.start + (domain.end - domain.start) * (i as Scalar) / (n as Scalar);
+            let t1 =
+                domain.start + (domain.end - domain.start) * ((i + 1) as Scalar) / (n as Scalar);
+            let (a, b) = (at(t0)?, at(t1)?);
+            let m = at(0.5 * (t0 + t1))?;
+            worst = worst.max((m - 0.5 * (a + b)).length());
+        }
+        if worst <= tolerance {
+            break;
+        }
+        n *= 2;
+    }
+    Ok(n)
+}
+
+/// Sample a trim at exactly `n` points, excluding the closing endpoint.
+///
+/// The next edge in the loop contributes the shared junction, so every edge
+/// Sample a trim at exactly `n` points, excluding the closing endpoint.
+///
+/// The next edge in the loop contributes the shared junction, so every edge
+/// omits its own end. This is the ONLY sampler: the earlier code had one
+/// path that excluded the endpoint and another that popped it afterwards,
+/// which differed by one and desynchronised the shared pairing.
+fn trim_samples(curve: &axiolid_curve::Curve2, n: usize) -> GeomResult<Vec<axiolid_core::Point2>> {
     let domain = axiolid_scalar::curve::domain2(curve);
     let mut out = Vec::with_capacity(n);
     for i in 0..n {
@@ -327,6 +364,7 @@ struct CurvedBoundary {
 fn curved_boundary(
     mesh: &mut TriMesh,
     ctx: &FaceContext<'_>,
+    welded: &mut std::collections::HashMap<axiolid_topology::VertexId, u32>,
     face: &axiolid_topology::Face<NodeId>,
     surface: &axiolid_surface::Surface,
     cache: &mut EdgeSamples,
@@ -352,25 +390,40 @@ fn curved_boundary(
                     operation: axiolid_kernel::Operation::Tessellation,
                 });
             };
-            let cached = cache.get(&use_.edge).map(|(v, _)| v.len());
-            // First face to reach this edge chooses the sample count from
-            // its own chord budget. A later face must match that count so
-            // its (u, v) points pair one-to-one with the shared vertices.
-            let params = match cached {
-                Some(n) => pcurve_points_n(graph, pcurve, n)?,
-                None => {
-                    let mut p = pcurve_points(graph, pcurve, tolerance)?;
-                    p.pop();
-                    p
-                }
+            let Some(axiolid_model::GeometryNode::Curve2(trim)) = graph.get(pcurve) else {
+                return Err(GeomError::InvalidInput(
+                    "edge pcurve must reference a Curve2 node".to_string(),
+                ));
             };
+            let n = match cache.get(&use_.edge) {
+                Some((v, _)) => v.len(),
+                None => edge_sample_count(trim, surface, tolerance.linear())?,
+            };
+            let params = trim_samples(trim, n)?;
             // Evaluate the trim on the surface: these are the seam's
             // 3D points, and they are interned under the edge.
             let points: Vec<Vec3> = params
                 .iter()
                 .map(|p| axiolid_scalar::surface::evaluate(surface, p.x, p.y))
                 .collect::<GeomResult<_>>()?;
-            let shared = edge_samples(mesh, cache, use_.edge, use_.orientation, &points);
+            let edge = brep
+                .edges()
+                .get(use_.edge.index())
+                .ok_or_else(|| GeomError::InvalidInput("edge missing".to_string()))?;
+            let start_vertex = if use_.orientation == Orientation::Forward {
+                edge.start
+            } else {
+                edge.end
+            };
+            let shared = edge_samples(
+                mesh,
+                cache,
+                welded,
+                use_.edge,
+                use_.orientation,
+                start_vertex,
+                &points,
+            );
             out.uv.extend(params);
             out.shared.extend(shared);
         }
@@ -386,8 +439,10 @@ fn curved_boundary(
 fn edge_samples(
     mesh: &mut TriMesh,
     cache: &mut EdgeSamples,
+    welded: &mut std::collections::HashMap<axiolid_topology::VertexId, u32>,
     edge: axiolid_topology::EdgeId,
     sense: Orientation,
+    start_vertex: axiolid_topology::VertexId,
     points: &[Vec3],
 ) -> Vec<u32> {
     if let Some((existing, stored)) = cache.get(&edge) {
@@ -398,14 +453,22 @@ fn edge_samples(
         }
         return out;
     }
-    let indices: Vec<u32> = points
-        .iter()
-        .map(|p| {
-            let next = mesh.positions.len() as u32;
-            mesh.positions.push(*p);
-            next
-        })
-        .collect();
+    let mut indices: Vec<u32> = Vec::with_capacity(points.len());
+    for (i, p) in points.iter().enumerate() {
+        if i == 0 {
+            let index = *welded.entry(start_vertex).or_insert_with(|| {
+                let next = mesh.positions.len() as u32;
+                mesh.positions.push(*p);
+                next
+            });
+            indices.push(index);
+            continue;
+        }
+        let next = mesh.positions.len() as u32;
+        mesh.positions.push(*p);
+        indices.push(next);
+    }
+
     cache.insert(edge, (indices.clone(), sense));
     indices
 }
@@ -418,12 +481,13 @@ fn edge_samples(
 fn append_curved_face(
     mesh: &mut TriMesh,
     ctx: &FaceContext<'_>,
+    welded: &mut std::collections::HashMap<axiolid_topology::VertexId, u32>,
     face: &axiolid_topology::Face<NodeId>,
     surface: &axiolid_surface::Surface,
     cache: &mut EdgeSamples,
     flip: bool,
 ) -> GeomResult<()> {
-    let boundary = curved_boundary(mesh, ctx, face, surface, cache)?;
+    let boundary = curved_boundary(mesh, ctx, welded, face, surface, cache)?;
     if boundary.uv.len() < 3 {
         return Ok(());
     }
@@ -444,6 +508,15 @@ fn append_curved_face(
             boundary.shared[t[1]],
             boundary.shared[t[2]],
         );
+        // Drop degenerate triangles: on a periodic face the u = 0 and u = TAU
+        // boundary columns map to the SAME 3D vertices, so a trim polygon that
+        // is proper in parameter space can produce triangles with a repeated
+        // corner. Emitting them leaves self-edges that no manifold check can
+        // pair, and they carry no area either way.
+        if a == b || b == c || c == a {
+            continue;
+        }
+
         if flip {
             mesh.indices.extend([a, c, b]);
         } else {
@@ -451,22 +524,4 @@ fn append_curved_face(
         }
     }
     Ok(())
-}
-
-/// Flatten a 2D trim curve into parameter-space points.
-fn pcurve_points(
-    graph: &axiolid_model::GeometryGraph,
-    id: NodeId,
-    tolerance: axiolid_core::Tolerance,
-) -> GeomResult<Vec<axiolid_core::Point2>> {
-    let node = graph
-        .get(id)
-        .ok_or_else(|| GeomError::InvalidInput(format!("pcurve {id:?} is not in this graph")))?;
-    let axiolid_model::GeometryNode::Curve2(curve) = node else {
-        return Err(GeomError::InvalidInput(format!(
-            "pcurve {id:?} must be a Curve2 node"
-        )));
-    };
-    let domain = axiolid_scalar::curve::domain2(curve);
-    axiolid_scalar::curve::flatten2(curve, domain, tolerance.linear(), 20)
 }
