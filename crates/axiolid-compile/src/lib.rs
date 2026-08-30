@@ -3,6 +3,7 @@
 //! Scalar reference `GeometryCompiler`.
 
 mod brep;
+pub mod center_line;
 pub mod extrude;
 pub mod half_space;
 pub mod loft;

@@ -66,6 +66,9 @@ pub fn profile_rings(
             }
             Ok(rings)
         }
+        Profile::CenterLine(cl) => {
+            crate::center_line::center_line_rings(cl, chord_error, tolerance, contour_points)
+        }
         other => Err(GeomError::Unsupported {
             backend: crate::BACKEND_ID,
             operation: axiolid_kernel::Operation::ProfileTriangulation,
