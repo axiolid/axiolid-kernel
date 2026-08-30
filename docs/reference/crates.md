@@ -7,7 +7,7 @@ The facade is convenient; the leaf crates are the actual boundaries. Consumers s
 | Facade | `axiolid` | Feature-gated re-exports; default is intentionally small |
 | Values | `axiolid-core`, `axiolid-mesh`, `axiolid-primitive`, `axiolid-profile`, `axiolid-curve`, `axiolid-surface`, `axiolid-topology` | Neutral geometry and topology vocabulary |
 | Graph | `axiolid-model` | Immutable typed geometry DAG |
-| Algorithms | `axiolid-scalar`, `axiolid-compile`, `axiolid-sweep`, `axiolid-tessellate`, `axiolid-spatial`, `axiolid-measure`, `axiolid-heal` | Reference paths and focused operations |
+| Algorithms | `axiolid-scalar`, `axiolid-compile`, `axiolid-tessellate`, `axiolid-spatial`, `axiolid-measure`, `axiolid-heal` | Reference paths and focused operations |
 | Contracts | `axiolid-kernel` | Operation contracts, policy, backend identity and errors |
 | Execution | `axiolid-backend-cpu`, `axiolid-backend-gpu`, `axiolid-boolmesh` | CPU context, GPU seam, and an optional mesh Boolean provider |
 

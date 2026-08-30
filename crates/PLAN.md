@@ -125,7 +125,7 @@ Trait implementation is capability proof; descriptor booleans are forbidden.
 L0 values            axiolid-core
 L1 representations   axiolid-mesh, axiolid-profile, axiolid-curve, axiolid-surface,
                      axiolid-topology, axiolid-primitive, axiolid-model
-L2 algorithms/traits axiolid-sweep, axiolid-tessellate, axiolid-spatial, axiolid-measure,
+L2 algorithms/traits axiolid-tessellate, axiolid-spatial, axiolid-measure,
                      axiolid-heal, axiolid-kernel
 L3 execution/adapters axiolid-backend-cpu, axiolid-backend-gpu
 L4 facade             axiolid

@@ -27,7 +27,6 @@ dependencies = [
  "axiolid-profile",
  "axiolid-spatial",
  "axiolid-surface",
- "axiolid-sweep",
  "axiolid-tessellate",
  "axiolid-topology",
 ]
@@ -198,15 +197,6 @@ version = "0.1.0"
 dependencies = [
  "axiolid-core",
  "axiolid-curve",
-]
-
-[[package]]
-name = "axiolid-sweep"
-version = "0.1.0"
-dependencies = [
- "axiolid-core",
- "axiolid-mesh",
- "axiolid-model",
 ]
 
 [[package]]

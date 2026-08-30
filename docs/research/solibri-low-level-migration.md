@@ -40,7 +40,7 @@ No benchmark claim is accepted without a release-mode baseline, output-equivalen
 | `profile/triangulate` | `axiolid-scalar` / `axiolid-tessellate` | partial | Simple loops use the certified Axiolid scalar adapter; holes remain blocked pending a maintained constrained backend. |
 | `predicates/*` and narrow phase | `axiolid-scalar` / `axiolid-measure` | partial | Certified segment/triangle contact and deterministic segment/triangle-pair metric witnesses are implemented; batch/provider execution and remaining intersection families remain separate slices. |
 | `query/{clash,distance,containment,footprint,portal}` | Axiolid query crates | inventory | Separate reusable query kernel from Solibri identifiers and rule interpretation. |
-| `solid/*` | `axiolid-boolmesh` / `axiolid-sweep` | inventory | Do not import native CSG bindings or Solibri representation policy. |
+| `solid/*` | `axiolid-boolmesh` / `axiolid-compile` | inventory | Do not import native CSG bindings or Solibri representation policy. |
 | `native_stair*`, `native_ramp`, `native_vertical_access`, head-clearance policy | Solibri rules/domain | excluded | Extract only generic slice/distance/clearance primitives that a neutral API can express. |
 
 Every candidate requires: API contract and tolerance policy, no IFC/Solibri/rule

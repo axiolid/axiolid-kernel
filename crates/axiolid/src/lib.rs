@@ -49,11 +49,6 @@ pub mod primitive {
     pub use axiolid_primitive::*;
 }
 
-#[cfg(feature = "sweeps")]
-pub mod sweep {
-    pub use axiolid_sweep::*;
-}
-
 #[cfg(feature = "tessellation")]
 pub mod tessellation {
     pub use axiolid_tessellate::*;

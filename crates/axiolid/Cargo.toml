@@ -30,7 +30,6 @@ model = [
 ]
 
 # Algorithms. Heavy implementations remain optional.
-sweeps = ["mesh", "profiles", "curves", "dep:axiolid-sweep"]
 tessellation = ["mesh", "curves", "surfaces", "topology", "dep:axiolid-tessellate"]
 spatial = ["mesh", "dep:axiolid-spatial"]
 measure = ["mesh", "dep:axiolid-measure"]
@@ -55,7 +54,6 @@ discrete = [
     "mesh",
     "profiles",
     "primitives",
-    "sweeps",
     "tessellation",
     "spatial",
     "measure",
@@ -75,7 +73,6 @@ axiolid-surface = { workspace = true, optional = true }
 axiolid-topology = { workspace = true, optional = true }
 axiolid-primitive = { workspace = true, optional = true }
 axiolid-model = { workspace = true, optional = true }
-axiolid-sweep = { workspace = true, optional = true }
 axiolid-tessellate = { workspace = true, optional = true }
 axiolid-spatial = { workspace = true, optional = true }
 axiolid-measure = { workspace = true, optional = true }

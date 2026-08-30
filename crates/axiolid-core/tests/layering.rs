@@ -23,7 +23,7 @@
 //!                        axiolid-surface, axiolid-topology, axiolid-primitive,
 //!                        axiolid-model
 //!    ^
-//!   L2  algorithms       axiolid-sweep, axiolid-tessellate, axiolid-spatial,
+//!   L2  algorithms       axiolid-tessellate, axiolid-spatial,
 //!                        axiolid-measure, axiolid-overlay, axiolid-heal, axiolid-kernel
 //!    ^
 //!   L3  implementations  axiolid-backend-cpu, axiolid-backend-gpu
@@ -66,7 +66,6 @@ const TIERS: &[(&str, u8)] = &[
     // nothing itself.
     ("axiolid-model", 1),
     // L2 -- algorithms over those representations, plus the backend contract.
-    ("axiolid-sweep", 2),
     ("axiolid-tessellate", 2),
     ("axiolid-spatial", 2),
     ("axiolid-measure", 2),

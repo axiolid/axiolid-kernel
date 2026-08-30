@@ -1,6 +1,16 @@
 # Roadmap
 
-Axiolid is an early geometry kernel. This roadmap orders work; it is not a promise of dates or a claim that every listed capability exists today.
+Axiolid is an early geometry kernel **striving to become a multipurpose, exact
+B-rep kernel** — for CAD construction, for rule checking over building models,
+and for the analysis those applications need. This roadmap orders work; it is
+not a promise of dates or a claim that every listed capability exists today.
+For what does exist, see [capabilities](./capabilities.md).
+
+The ordering principle: **build the meat of the kernel first, shape it for
+performance later.** Correctness and exact geometry come before speed. We keep
+following good practice — layering, feature isolation, provider seams, measured
+oracles — so that optimization stays possible when its turn comes, but we do not
+trade capability for benchmarks now.
 
 ## Current foundation
 
@@ -8,12 +18,35 @@ Axiolid is an early geometry kernel. This roadmap orders work; it is not a promi
 - Feature-gated facade with a portable scalar reference path and separate CPU/GPU provider seams.
 - Architecture, feature-isolation, and layering gates that keep IFC, source formats, and concrete providers out of the kernel.
 - Validated scalar polynomial/rational B-spline evaluation with analytic first derivatives and bounded conforming pcurve-trimmed curved-face tessellation, including oriented/reordered bounds, holes, guarded structured-grid/Earcut seeds, elementary periodic face charts, and aggregate work budgets; this is a reader/reference capability, not NURBS authoring.
+- Adaptive analytic curve flattening and point→parameter inversion for the elementary analytic surfaces, both fail-closed on degeneracy.
 
-## Next: trustworthy discrete geometry
+## Now: exact geometry through operations
+
+The kernel evaluates exactly but stores every graph node as triangles, so
+exactness is lost at the first edge ([ADR 0020](./adr/0020-exact-brep-kernel-model.md)).
+Closing that is the main line of work.
+
+- Define the exact B-rep result type and migrate the compiler away from a mesh-only cache, so a cylinder survives an operation as a cylinder.
+- Make tessellation an explicit, tolerance-carrying output rather than the currency between nodes.
+- Keep operations fail-closed: refuse what cannot be done exactly instead of silently substituting an approximation.
+
+## Next: intersection and inversion
+
+The prerequisites for exact booleans, section curves, offsets, and fillets.
+None of this exists today.
+
+- Surface/surface intersection, with an explicit contract for supported pairs, degeneracy policy, and tolerance.
+- Curve/surface and curve/curve intersection beneath it.
+- Projection and closest-point inversion, extending point→parameter inversion beyond the elementary analytic surfaces to splines.
+- Independent oracles for each, in mapped 3D rather than parameter space alone.
+
+## Then: trustworthy discrete geometry
+
+The mesh path remains supported for callers who explicitly want discrete
+results, and as a differential oracle for the exact path.
 
 - Finish and differentially test discrete mesh operations against the scalar oracle.
 - Expand fixture-based robustness coverage for triangulation, mesh booleans, bounds, and spatial queries.
-- Publish measured correctness and performance evidence before enabling optimized paths by default.
 
 ## Then: parametric and compiled geometry
 
@@ -21,8 +54,14 @@ Axiolid is an early geometry kernel. This roadmap orders work; it is not a promi
 - Turn geometry graphs into reproducible operation plans with explicit tolerance, memory-budget, and provenance contracts.
 - Keep imported data representable even where an operation provider cannot yet execute it.
 
-## Later: execution providers
+## Parked: performance and execution providers
 
+Deliberately deferred until the kernel's capability surface is real. See
+[ADR 0013](./adr/0013-deferred-performance-techniques.md). Benchmarks exist for
+`axiolid-scalar` and `axiolid-boolmesh` only; there are no broad performance
+claims to defend, and none should be made without same-harness evidence.
+
+- Publish measured correctness and performance evidence before enabling optimized paths by default.
 - Add measured runtime-selected CPU specialization without `target-cpu=native` assumptions.
 - Mature the pure-Rust GPU graph executor behind capability reporting and scalar differential checks.
 - Keep future native CUDA/HIP integrations out of tree and behind the provider contract.
@@ -38,3 +77,4 @@ The [changelog](./CHANGELOG.md) records user-visible changes. Automated versioni
 - Becoming an IFC, STEP, or CAD file parser.
 - Pulling C++/OpenCascade into the dependency graph.
 - Treating a type, feature flag, or provider seam as evidence that an algorithm is production-ready.
+- General NURBS authoring: knot insertion, degree elevation, refitting.
