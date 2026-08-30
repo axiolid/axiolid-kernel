@@ -65,6 +65,47 @@ fn a_sound_square_passes() {
     assert_eq!(health.open_loops, 0);
 }
 
+#[test]
+fn an_empty_outer_loop_is_not_a_boundary() {
+    let mut brep: BRep<u32> = BRep::default();
+    let outer = brep.add_loop(Loop { edges: Vec::new() });
+    brep.add_face(Face {
+        surface: None,
+        bounds: vec![FaceBound {
+            loop_id: outer,
+            orientation: Orientation::Forward,
+            outer: true,
+        }],
+        orientation: Orientation::Forward,
+    });
+
+    let health = audit_brep(&brep);
+    assert_eq!(
+        health.empty_loops, 1,
+        "empty loop must be malformed: {health:?}"
+    );
+    assert!(!health.is_tessellable());
+}
+
+#[test]
+fn multiple_outer_bounds_are_not_a_planar_face() {
+    let mut brep = square();
+    let outer = brep.faces()[0].bounds[0];
+    let duplicate = Face {
+        surface: None,
+        bounds: vec![outer, outer],
+        orientation: Orientation::Forward,
+    };
+    brep.add_face(duplicate);
+
+    let health = audit_brep(&brep);
+    assert_eq!(
+        health.faces_with_multiple_outer_bounds, 1,
+        "every face must have exactly one outer bound: {health:?}"
+    );
+    assert!(!health.is_tessellable());
+}
+
 /// An open shell is legitimate: a single face bounds no volume, and the
 /// audit must not pretend otherwise or reject it.
 #[test]

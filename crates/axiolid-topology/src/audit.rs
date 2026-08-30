@@ -17,10 +17,14 @@ use crate::{BRep, Orientation};
 pub struct BRepHealth {
     /// References to entities that do not exist.
     pub dangling_references: usize,
+    /// Loops with no edge uses, so they cannot bound a face.
+    pub empty_loops: usize,
     /// Loops whose consecutive edges do not share a vertex.
     pub open_loops: usize,
     /// Faces with no outer bound.
     pub faces_without_outer_bound: usize,
+    /// Faces with more than one outer bound.
+    pub faces_with_multiple_outer_bounds: usize,
     /// Directed edge uses in the shell that lack an opposing use.
     pub unpaired_edge_uses: usize,
     /// Edges used more than twice in one shell.
@@ -34,10 +38,15 @@ impl BRepHealth {
     ///
     /// Closure is deliberately excluded: an open shell is a legitimate
     /// surface model, and refusing it here would reject valid input. What
-    /// must never pass is a reference that does not resolve or a loop that
-    /// does not close, because both produce silently wrong geometry.
+    /// must never pass is a reference that does not resolve, a loop that is
+    /// empty or open, or a face whose outer-bound count is not exactly one;
+    /// each can produce silently wrong geometry.
     pub fn is_tessellable(&self) -> bool {
-        self.dangling_references == 0 && self.open_loops == 0 && self.faces_without_outer_bound == 0
+        self.dangling_references == 0
+            && self.empty_loops == 0
+            && self.open_loops == 0
+            && self.faces_without_outer_bound == 0
+            && self.faces_with_multiple_outer_bounds == 0
     }
 
     /// Whether every shell bounds a volume, so signed-volume reduction and
@@ -74,6 +83,7 @@ pub fn audit_brep<G>(brep: &BRep<G>) -> BRepHealth {
     // which, so a reversed use that still connects is correct.
     for lp in brep.loops() {
         if lp.edges.is_empty() {
+            health.empty_loops += 1;
             continue;
         }
         let mut open = false;
@@ -99,8 +109,10 @@ pub fn audit_brep<G>(brep: &BRep<G>) -> BRepHealth {
     }
 
     for face in brep.faces() {
-        if !face.bounds.iter().any(|b| b.outer) {
-            health.faces_without_outer_bound += 1;
+        match face.bounds.iter().filter(|bound| bound.outer).count() {
+            0 => health.faces_without_outer_bound += 1,
+            1 => {}
+            _ => health.faces_with_multiple_outer_bounds += 1,
         }
         for bound in &face.bounds {
             if bound.loop_id.index() >= loops {

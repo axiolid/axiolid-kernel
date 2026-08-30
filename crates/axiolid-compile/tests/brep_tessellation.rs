@@ -28,6 +28,13 @@ fn cube_with_sense(sense: Orientation) -> BRep<axiolid_model::NodeId> {
 
 /// The cube's faces and shell, leaving solid registration to the caller.
 fn cube_shell(sense: Orientation) -> (BRep<axiolid_model::NodeId>, axiolid_topology::ShellId) {
+    cube_shell_with_duplicate_outer(sense, false)
+}
+
+fn cube_shell_with_duplicate_outer(
+    sense: Orientation,
+    duplicate_outer: bool,
+) -> (BRep<axiolid_model::NodeId>, axiolid_topology::ShellId) {
     let mut brep = BRep::default();
     let corners = [
         [0.0, 0.0, 0.0],
@@ -58,7 +65,7 @@ fn cube_shell(sense: Orientation) -> (BRep<axiolid_model::NodeId>, axiolid_topol
     ];
     let mut edges: HashMap<(usize, usize), axiolid_topology::EdgeId> = HashMap::new();
     let mut faces = Vec::new();
-    for quad in quads {
+    for (face_index, quad) in quads.into_iter().enumerate() {
         let mut uses = Vec::new();
         for i in 0..4 {
             let (a, b) = (quad[i], quad[(i + 1) % 4]);
@@ -82,13 +89,18 @@ fn cube_shell(sense: Orientation) -> (BRep<axiolid_model::NodeId>, axiolid_topol
             });
         }
         let wire = brep.add_loop(Loop { edges: uses });
+        let outer = FaceBound {
+            loop_id: wire,
+            orientation: Orientation::Forward,
+            outer: true,
+        };
+        let mut bounds = vec![outer];
+        if duplicate_outer && face_index == 0 {
+            bounds.push(outer);
+        }
         faces.push(brep.add_face(Face {
             surface: None,
-            bounds: vec![FaceBound {
-                loop_id: wire,
-                orientation: Orientation::Forward,
-                outer: true,
-            }],
+            bounds,
             orientation: Orientation::Forward,
         }));
     }
@@ -99,18 +111,78 @@ fn cube_shell(sense: Orientation) -> (BRep<axiolid_model::NodeId>, axiolid_topol
     (brep, shell)
 }
 
-fn compile(brep: BRep<axiolid_model::NodeId>) -> axiolid_mesh::TriMesh {
+fn planar_face(points: &[Vec3]) -> BRep<axiolid_model::NodeId> {
+    planar_face_with_holes(points, &[])
+}
+
+fn planar_face_with_holes(outer: &[Vec3], holes: &[&[Vec3]]) -> BRep<axiolid_model::NodeId> {
+    let mut brep = BRep::default();
+    let mut bounds = Vec::new();
+    for (ring_index, points) in core::iter::once(outer)
+        .chain(holes.iter().copied())
+        .enumerate()
+    {
+        let vertices: Vec<_> = points
+            .iter()
+            .map(|&position| brep.add_vertex(Vertex { position }))
+            .collect();
+        let edges: Vec<_> = (0..vertices.len())
+            .map(|index| {
+                brep.add_edge(Edge {
+                    start: vertices[index],
+                    end: vertices[(index + 1) % vertices.len()],
+                    curve: None,
+                })
+            })
+            .collect();
+        let wire = brep.add_loop(Loop {
+            edges: edges
+                .into_iter()
+                .map(|edge| EdgeUse {
+                    edge,
+                    orientation: Orientation::Forward,
+                    pcurve: None,
+                })
+                .collect(),
+        });
+        bounds.push(FaceBound {
+            loop_id: wire,
+            orientation: Orientation::Forward,
+            outer: ring_index == 0,
+        });
+    }
+    let face = brep.add_face(Face {
+        surface: None,
+        bounds,
+        orientation: Orientation::Forward,
+    });
+    let shell = brep.add_shell(Shell {
+        faces: vec![(face, Orientation::Forward)],
+        closed: false,
+    });
+    brep.add_solid(Solid {
+        outer: shell,
+        voids: Vec::new(),
+    });
+    brep
+}
+
+fn compile_result(
+    brep: BRep<axiolid_model::NodeId>,
+) -> axiolid_kernel::GeomResult<axiolid_mesh::TriMesh> {
     let mut builder = GeometryGraphBuilder::new();
     let root = builder.push(GeometryNode::BRep(brep)).expect("push");
     let graph = builder.finish(vec![root]).expect("finish");
     let compiler = ScalarCompiler::new(BoolmeshBoolean::new());
-    compiler
-        .compile(
-            &graph,
-            root,
-            &ExecutionOptions::new(axiolid_core::Tolerance::METRE),
-        )
-        .expect("cube compiles")
+    compiler.compile(
+        &graph,
+        root,
+        &ExecutionOptions::new(axiolid_core::Tolerance::METRE),
+    )
+}
+
+fn compile(brep: BRep<axiolid_model::NodeId>) -> axiolid_mesh::TriMesh {
+    compile_result(brep).expect("cube compiles")
 }
 
 /// A cube tessellates to a welded, closed, outward mesh.
@@ -118,6 +190,82 @@ fn compile(brep: BRep<axiolid_model::NodeId>) -> axiolid_mesh::TriMesh {
 /// Per-face vertex copies would still render correctly but leave every edge
 /// unshared, so the weld is asserted through edge parity rather than by
 /// counting positions alone.
+#[test]
+fn multiple_outer_bounds_are_rejected_before_tessellation() {
+    let (mut brep, outer) = cube_shell_with_duplicate_outer(Orientation::Forward, true);
+    brep.add_solid(Solid {
+        outer,
+        voids: Vec::new(),
+    });
+
+    let error = compile_result(brep).expect_err("multiple outer bounds must fail closed");
+    match error {
+        axiolid_kernel::GeomError::InvalidInput(message) => assert!(
+            message.contains("faces_with_multiple_outer_bounds: 1"),
+            "diagnostic must name the malformed face: {message}"
+        ),
+        other => panic!("expected invalid topology, got {other:?}"),
+    }
+}
+
+#[test]
+fn a_two_edge_planar_bound_is_rejected() {
+    let brep = planar_face(&[Vec3::ZERO, Vec3::X]);
+    let error = compile_result(brep).expect_err("two edges cannot bound a planar face");
+    assert!(
+        matches!(error, axiolid_kernel::GeomError::Degenerate(_)),
+        "expected degenerate planar bound, got {error:?}"
+    );
+}
+
+#[test]
+fn a_zero_area_planar_bound_is_rejected() {
+    let brep = planar_face(&[Vec3::ZERO, Vec3::X, Vec3::X * 2.0]);
+    let error = compile_result(brep).expect_err("collinear vertices define no planar face");
+    assert!(
+        matches!(error, axiolid_kernel::GeomError::Degenerate(_)),
+        "expected zero-area planar bound, got {error:?}"
+    );
+}
+
+#[test]
+fn a_two_edge_inner_bound_is_rejected() {
+    let outer = [
+        Vec3::ZERO,
+        Vec3::X * 4.0,
+        Vec3::new(4.0, 4.0, 0.0),
+        Vec3::Y * 4.0,
+    ];
+    let hole = [Vec3::new(1.0, 1.0, 0.0), Vec3::new(2.0, 1.0, 0.0)];
+    let error = compile_result(planar_face_with_holes(&outer, &[&hole]))
+        .expect_err("two edges cannot bound a planar hole");
+    assert!(
+        matches!(error, axiolid_kernel::GeomError::Degenerate(_)),
+        "expected undersized inner bound, got {error:?}"
+    );
+}
+
+#[test]
+fn a_zero_area_inner_bound_is_rejected() {
+    let outer = [
+        Vec3::ZERO,
+        Vec3::X * 4.0,
+        Vec3::new(4.0, 4.0, 0.0),
+        Vec3::Y * 4.0,
+    ];
+    let hole = [
+        Vec3::new(1.0, 1.0, 0.0),
+        Vec3::new(2.0, 1.0, 0.0),
+        Vec3::new(3.0, 1.0, 0.0),
+    ];
+    let error = compile_result(planar_face_with_holes(&outer, &[&hole]))
+        .expect_err("a collinear inner bound cannot define a hole");
+    assert!(
+        matches!(error, axiolid_kernel::GeomError::Degenerate(_)),
+        "expected zero-area inner bound, got {error:?}"
+    );
+}
+
 #[test]
 fn a_cube_tessellates_to_a_closed_welded_mesh() {
     let mesh = compile(cube());

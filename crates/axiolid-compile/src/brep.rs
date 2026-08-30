@@ -246,7 +246,9 @@ fn append_face(
     for bound in &face.bounds {
         let points = loop_points(brep, bound)?;
         if points.len() < 3 {
-            continue;
+            return Err(GeomError::Degenerate(
+                "planar face bound has fewer than three vertices".into(),
+            ));
         }
         if bound.outer && outer_index.is_none() {
             outer_index = Some(rings.len());
@@ -254,19 +256,26 @@ fn append_face(
         rings.push(points);
     }
     if rings.is_empty() {
-        return Ok(());
+        return Err(GeomError::Degenerate(
+            "planar face has no non-degenerate bounds".into(),
+        ));
     }
-    // A face whose bounds are all tagged inner still has an outer boundary;
-    // fall back to the first ring rather than dropping the facet.
-    let outer_index = outer_index.unwrap_or(0);
+    let outer_index = outer_index.ok_or_else(|| {
+        GeomError::InvalidInput("planar face has no outer bound after topology audit".into())
+    })?;
     rings.swap(0, outer_index);
 
-    let outer_positions: Vec<Vec3> = rings[0].iter().map(|(_, p)| *p).collect();
-    let normal = newell_normal(&outer_positions);
-    let Some((u, v)) = plane_axes(normal) else {
-        // A zero-area ring defines no plane; skip rather than emit garbage.
-        return Ok(());
-    };
+    for ring in &rings {
+        if plane_axes(newell_normal(ring)).is_none() {
+            return Err(GeomError::Degenerate(
+                "planar face bound has zero or non-finite area".into(),
+            ));
+        }
+    }
+    let normal = newell_normal(&rings[0]);
+    let (u, v) = plane_axes(normal).ok_or_else(|| {
+        GeomError::Degenerate("planar face outer bound has no stable plane".into())
+    })?;
     let origin = rings[0][0].1;
 
     let mut flat: Vec<[Scalar; 2]> = Vec::new();
@@ -374,11 +383,11 @@ fn loop_points(
 ///
 /// A cross product of the first two edges fails when they are collinear,
 /// which is common at the start of an exported ring.
-fn newell_normal(ring: &[Vec3]) -> Vec3 {
+fn newell_normal(ring: &[(axiolid_topology::VertexId, Vec3)]) -> Vec3 {
     let mut normal = Vec3::ZERO;
     for index in 0..ring.len() {
-        let current = ring[index];
-        let next = ring[(index + 1) % ring.len()];
+        let current = ring[index].1;
+        let next = ring[(index + 1) % ring.len()].1;
         normal.x += (current.y - next.y) * (current.z + next.z);
         normal.y += (current.z - next.z) * (current.x + next.x);
         normal.z += (current.x - next.x) * (current.y + next.y);
@@ -389,7 +398,7 @@ fn newell_normal(ring: &[Vec3]) -> Vec3 {
 /// Orthonormal in-plane axes for a normal, or None when it is degenerate.
 fn plane_axes(normal: Vec3) -> Option<(Vec3, Vec3)> {
     let length = normal.length();
-    if length <= f64::EPSILON {
+    if !length.is_finite() || length <= f64::EPSILON {
         return None;
     }
     let n = normal / length;
