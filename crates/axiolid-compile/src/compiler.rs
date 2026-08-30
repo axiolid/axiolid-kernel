@@ -4,7 +4,7 @@
 //! so cycles are structurally impossible, but depth is unbounded and
 //! recursion would risk a stack overflow on adversarial input.
 
-use axiolid_core::{Point3, Scalar, Transform3};
+use axiolid_core::{Point3, Scalar, Tolerance, Transform3};
 use axiolid_kernel::{
     Backend, BackendDescriptor, BackendId, ExecutionOptions, ExecutionTarget, GeomError,
     GeomResult, GeometryCompiler, MeshBoolean, Operation, ScratchRequirement,
@@ -50,18 +50,43 @@ impl<B: MeshBoolean> Backend for ScalarCompiler<B> {
 ///
 /// `Enter` schedules dependency discovery; `Exit` runs after every dependency
 /// already has a mesh, which is what replaces the recursive call.
-#[derive(Debug, Clone, Copy)]
-enum Step {
-    Enter(NodeId),
-    Exit(NodeId),
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct EvalKey {
+    id: NodeId,
+    linear_bits: u64,
+    angular_bits: u64,
 }
 
-/// Cached meshes keyed by node index.
+impl EvalKey {
+    fn new(id: NodeId, tolerance: Tolerance) -> Self {
+        let bits = |value: Scalar| if value == 0.0 { 0 } else { value.to_bits() };
+        Self {
+            id,
+            linear_bits: bits(tolerance.linear()),
+            angular_bits: bits(tolerance.angular()),
+        }
+    }
+
+    fn tolerance(self) -> Tolerance {
+        Tolerance::new(
+            Scalar::from_bits(self.linear_bits),
+            Scalar::from_bits(self.angular_bits),
+        )
+        .expect("evaluation keys only contain validated tolerances")
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Step {
+    Enter(EvalKey),
+    Exit(EvalKey),
+}
+
+/// Cached meshes keyed by node and effective local tolerance.
 ///
-/// A DAG can reference one node from several parents; without memoisation a
-/// shared subtree is recompiled once per reference, which is exponential on
-/// deeply shared graphs.
-type Cache = std::collections::HashMap<usize, TriMesh>;
+/// A transformed instance changes the local chord budget. Keying only by node
+/// would incorrectly reuse a coarse source mesh for a larger instance.
+type Cache = std::collections::HashMap<EvalKey, TriMesh>;
 
 impl<B: MeshBoolean> ScalarCompiler<B> {
     /// Resolve a node handle, blaming the graph rather than panicking.
@@ -126,6 +151,28 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
         }
     }
 
+    fn surface_normals(
+        &self,
+        graph: &GeometryGraph,
+        id: NodeId,
+        path: &[Point3],
+        options: &ExecutionOptions,
+    ) -> GeomResult<Vec<axiolid_core::Vec3>> {
+        if let Some(GeometryNode::SurfaceRelation(
+            axiolid_model::SurfaceRelation::LinearExtrusion { direction, .. },
+        )) = graph.get(id)
+        {
+            return crate::sweep::linear_extrusion_normals(path, *direction);
+        }
+        let surface = Self::surface_of(graph, id)?;
+        path.iter()
+            .map(|point| {
+                let (u, v) = axiolid_scalar::surface::invert(surface, *point, options.tolerance())?;
+                axiolid_scalar::surface::normal(surface, u, v)
+            })
+            .collect()
+    }
+
     fn rings_of(
         &self,
         graph: &GeometryGraph,
@@ -156,68 +203,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
         range: Option<(Scalar, Scalar)>,
         options: &ExecutionOptions,
     ) -> GeomResult<Vec<Point3>> {
-        let node = self.node(graph, id)?;
-        let GeometryNode::Curve3(curve) = node else {
-            return Err(GeomError::InvalidInput(format!(
-                "sweep directrix {id:?} is not a Curve3 node"
-            )));
-        };
-
-        // Trimming is parameter-aware: the requested interval is checked
-        // against the curve's own domain rather than applied as an index
-        // slice, so a range in the wrong units is reported instead of
-        // quietly sweeping the wrong span.
-        let natural = axiolid_scalar::curve::domain3(curve);
-        let domain = match range {
-            None => natural,
-            Some((start, end)) => {
-                if !(start.is_finite() && end.is_finite()) {
-                    return Err(GeomError::InvalidInput(format!(
-                        "sweep parameter range ({start}, {end}) must be finite"
-                    )));
-                }
-                if start == end {
-                    return Err(GeomError::Degenerate(format!(
-                        "sweep parameter range ({start}, {end}) is empty, so \
-                         the directrix has no extent"
-                    )));
-                }
-                let (lo, hi) = (
-                    natural.start.min(natural.end),
-                    natural.start.max(natural.end),
-                );
-                let (rlo, rhi) = (start.min(end), start.max(end));
-                // A tolerance-width overshoot is round-off; anything larger
-                // is a caller error worth naming, because extrapolating a
-                // bounded curve invents geometry.
-                let slack = options.tolerance().linear();
-                if rlo < lo - slack || rhi > hi + slack {
-                    return Err(GeomError::InvalidInput(format!(
-                        "sweep parameter range ({start}, {end}) falls outside \
-                         the directrix domain ({lo}, {hi})"
-                    )));
-                }
-                axiolid_core::Interval {
-                    start: rlo.max(lo),
-                    end: rhi.min(hi),
-                }
-            }
-        };
-
-        // Adaptive sampling: the chord budget decides the point count, so a
-        // tighter tolerance buys a closer path rather than a fixed guess.
-        let points = axiolid_scalar::curve::flatten3(
-            curve,
-            domain,
-            chord_error(options),
-            MAX_FLATTEN_DEPTH,
-        )?;
-        if points.len() < 2 {
-            return Err(GeomError::InvalidInput(
-                "a sweep directrix needs at least two points".to_owned(),
-            ));
-        }
-        Ok(points)
+        crate::directrix::points(graph, id, range, options)
     }
 
     fn node<'g>(&self, graph: &'g GeometryGraph, id: NodeId) -> GeomResult<&'g GeometryNode> {
@@ -231,15 +217,31 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
     /// Only mesh-producing dependencies are listed. A profile referenced by an
     /// extrusion is consumed as 2D data, not as a mesh, so it is deliberately
     /// absent: compiling it standalone would be meaningless.
-    fn mesh_dependencies(&self, node: &GeometryNode) -> Vec<NodeId> {
-        match node {
-            GeometryNode::Instance(instance) => vec![instance.source],
-            GeometryNode::Collection(members) => members.clone(),
-            GeometryNode::SolidOperation(SolidOperation::Boolean { left, right, .. }) => {
-                vec![*left, *right]
+    fn mesh_dependencies(
+        &self,
+        graph: &GeometryGraph,
+        node: &GeometryNode,
+        key: EvalKey,
+    ) -> GeomResult<Vec<EvalKey>> {
+        let tolerance = key.tolerance();
+        let same = |id| EvalKey::new(id, tolerance);
+        Ok(match node {
+            GeometryNode::Instance(instance) => vec![EvalKey::new(
+                instance.source,
+                instance_local_tolerance(instance.transform, tolerance)?,
+            )],
+            GeometryNode::Collection(members) => members.iter().copied().map(same).collect(),
+            GeometryNode::SolidOperation(
+                operation @ SolidOperation::Boolean { left, right, .. },
+            ) => {
+                if is_half_space_difference(graph, operation) {
+                    vec![same(*left)]
+                } else {
+                    vec![same(*left), same(*right)]
+                }
             }
             _ => Vec::new(),
-        }
+        })
     }
 
     /// Iterative post-order evaluation of one root.
@@ -250,34 +252,36 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
         options: &ExecutionOptions,
         cache: &mut Cache,
     ) -> GeomResult<TriMesh> {
-        let mut stack = vec![Step::Enter(root)];
+        let root_key = EvalKey::new(root, options.tolerance());
+        let mut stack = vec![Step::Enter(root_key)];
         while let Some(step) = stack.pop() {
             match step {
-                Step::Enter(id) => {
-                    if cache.contains_key(&id.index()) {
+                Step::Enter(key) => {
+                    if cache.contains_key(&key) {
                         continue;
                     }
-                    let node = self.node(graph, id)?;
-                    let deps = self.mesh_dependencies(node);
+                    let node = self.node(graph, key.id)?;
+                    let deps = self.mesh_dependencies(graph, node, key)?;
                     // Exit runs after every dependency, so push it first.
-                    stack.push(Step::Exit(id));
+                    stack.push(Step::Exit(key));
                     for dep in deps {
-                        if !cache.contains_key(&dep.index()) {
+                        if !cache.contains_key(&dep) {
                             stack.push(Step::Enter(dep));
                         }
                     }
                 }
-                Step::Exit(id) => {
-                    if cache.contains_key(&id.index()) {
+                Step::Exit(key) => {
+                    if cache.contains_key(&key) {
                         continue;
                     }
-                    let mesh = self.build(graph, id, options, cache)?;
-                    cache.insert(id.index(), mesh);
+                    let local_options = options.clone().with_tolerance(key.tolerance());
+                    let mesh = self.build(graph, key, &local_options, cache)?;
+                    cache.insert(key, mesh);
                 }
             }
         }
         cache
-            .get(&root.index())
+            .get(&root_key)
             .cloned()
             .ok_or_else(|| GeomError::InvalidInput(format!("root {root:?} produced no mesh")))
     }
@@ -286,21 +290,27 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
     fn build(
         &self,
         graph: &GeometryGraph,
-        id: NodeId,
+        key: EvalKey,
         options: &ExecutionOptions,
         cache: &Cache,
     ) -> GeomResult<TriMesh> {
+        let id = key.id;
         let node = self.node(graph, id)?;
         match node {
             GeometryNode::TriMesh(mesh) => Ok(mesh.clone()),
             GeometryNode::Instance(instance) => {
-                let source = self.cached(cache, instance.source)?;
+                let source_tolerance =
+                    instance_local_tolerance(instance.transform, options.tolerance())?;
+                let source = self.cached(cache, instance.source, source_tolerance)?;
                 Ok(transform_mesh(source, instance.transform))
             }
             GeometryNode::Collection(members) => {
                 let mut merged = TriMesh::default();
                 for &member in members {
-                    append_mesh(&mut merged, self.cached(cache, member)?);
+                    append_mesh(
+                        &mut merged,
+                        self.cached(cache, member, options.tolerance())?,
+                    );
                 }
                 Ok(merged)
             }
@@ -321,9 +331,16 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
     }
 
     /// Read an already-built dependency.
-    fn cached<'c>(&self, cache: &'c Cache, id: NodeId) -> GeomResult<&'c TriMesh> {
-        cache.get(&id.index()).ok_or_else(|| {
-            GeomError::InvalidInput(format!("dependency {id:?} was not evaluated first"))
+    fn cached<'c>(
+        &self,
+        cache: &'c Cache,
+        id: NodeId,
+        tolerance: Tolerance,
+    ) -> GeomResult<&'c TriMesh> {
+        cache.get(&EvalKey::new(id, tolerance)).ok_or_else(|| {
+            GeomError::InvalidInput(format!(
+                "dependency {id:?} was not evaluated first at tolerance {tolerance:?}"
+            ))
         })
     }
 
@@ -434,20 +451,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                 let rings =
                     self.rings_of(graph, *profile, options, "surface curve sweep profile")?;
                 let path = self.directrix_points(graph, *directrix, *parameter_range, options)?;
-                let surface = Self::surface_of(graph, *reference_surface)?;
-                // The up vector is the surface normal AT the directrix, so
-                // each sample must first be named in surface parameters.
-                // Inversion refuses a point that is not on the surface,
-                // which is what keeps a drifted directrix from silently
-                // producing a plausible but wrongly oriented solid.
-                let normals = path
-                    .iter()
-                    .map(|point| {
-                        let (u, v) =
-                            axiolid_scalar::surface::invert(surface, *point, options.tolerance())?;
-                        axiolid_scalar::surface::normal(surface, u, v)
-                    })
-                    .collect::<GeomResult<Vec<_>>>()?;
+                let normals = self.surface_normals(graph, *reference_surface, &path, options)?;
                 crate::sweep::surface_curve_sweep(&rings, &path, &normals)
             }
             SolidOperation::SectionedSpine { spine, sections } => {
@@ -510,8 +514,22 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                 right,
                 operator,
             } => {
-                let subject = self.cached(cache, *left)?;
-                let tool = self.cached(cache, *right)?;
+                let subject = self.cached(cache, *left, options.tolerance())?;
+                let right_node = self.node(graph, *right)?;
+                let bounded_tool = if let GeometryNode::HalfSpace(hs) = right_node {
+                    Some(crate::half_space::for_subject(
+                        subject,
+                        *hs,
+                        options.tolerance(),
+                    )?)
+                } else {
+                    None
+                };
+                let tool = if let Some(tool) = bounded_tool.as_ref() {
+                    tool
+                } else {
+                    self.cached(cache, *right, options.tolerance())?
+                };
                 // The compiler produces a mesh graph, so it takes the mesh and
                 // drops the evidence here. A caller wanting boolean diagnostics
                 // calls the registry directly; threading evidence through every
@@ -533,20 +551,49 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
     }
 }
 
-/// Chord budget for curve flattening.
-///
-/// Derived from the operation tolerance rather than a global constant: the
-/// acceptable sagitta is a property of the model's unit scale.
-/// Subdivision ceiling for directrix flattening.
-///
-/// Depth 16 permits 65536 segments, far past any chord budget a
-/// sweep sets; the flattener's own point cap is the real bound.
-/// This exists so a pathological curve terminates rather than
-/// recursing to the stack limit.
-const MAX_FLATTEN_DEPTH: u32 = 16;
+/// Convert a world-space tolerance into conservative instance-local space.
+fn instance_local_tolerance(transform: Transform3, tolerance: Tolerance) -> GeomResult<Tolerance> {
+    let m = transform.matrix3;
+    let sx = m.x_axis.length();
+    let sy = m.y_axis.length();
+    let sz = m.z_axis.length();
+    let max_scale = sx.max(sy).max(sz);
+    if !max_scale.is_finite() || max_scale == 0.0 {
+        return Err(GeomError::InvalidInput(
+            "instance transform has no finite scale".into(),
+        ));
+    }
+    let eps = 32.0 * f64::EPSILON;
+    let orthogonal = m.x_axis.dot(m.y_axis).abs() <= eps * sx * sy
+        && m.x_axis.dot(m.z_axis).abs() <= eps * sx * sz
+        && m.y_axis.dot(m.z_axis).abs() <= eps * sy * sz;
+    let stretch = if orthogonal {
+        max_scale * (1.0 + 3.0 * eps)
+    } else {
+        (sx * sx + sy * sy + sz * sz).sqrt()
+    };
+    if !stretch.is_finite() {
+        return Err(GeomError::InvalidInput(
+            "instance transform scale overflow".into(),
+        ));
+    }
+    Tolerance::new(tolerance.linear() / stretch, tolerance.angular())
+        .map_err(|error| GeomError::InvalidInput(error.to_string()))
+}
 
 fn chord_error(options: &ExecutionOptions) -> Scalar {
     options.tolerance().linear()
+}
+
+fn is_half_space_difference(graph: &GeometryGraph, operation: &SolidOperation) -> bool {
+    let SolidOperation::Boolean {
+        right, operator, ..
+    } = operation
+    else {
+        return false;
+    };
+    *operator == axiolid_core::BooleanOperator::Difference
+        && matches!(graph.get(*right), Some(GeometryNode::HalfSpace(_)))
 }
 
 /// Which capability a node family would need.

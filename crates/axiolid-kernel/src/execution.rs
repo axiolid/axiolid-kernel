@@ -299,6 +299,16 @@ impl ExecutionOptions {
         }
     }
 
+    /// Replace the tolerance while preserving every other execution policy.
+    ///
+    /// Compilers use this when evaluating geometry in a transformed local
+    /// coordinate system. Cloning first keeps cancellation, budgets,
+    /// determinism, residency, and provider preferences intact.
+    pub fn with_tolerance(mut self, tolerance: Tolerance) -> Self {
+        self.tolerance = tolerance;
+        self
+    }
+
     /// Attach a cooperative cancellation token.
     ///
     /// Absent a token, an operation runs to completion; there is no ambient

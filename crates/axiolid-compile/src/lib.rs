@@ -4,6 +4,7 @@
 
 mod brep;
 pub mod center_line;
+mod directrix;
 pub mod extrude;
 pub mod half_space;
 pub mod loft;

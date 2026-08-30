@@ -8,9 +8,13 @@
 use axiolid_boolmesh::BoolmeshBoolean;
 use axiolid_compile::ScalarCompiler;
 use axiolid_core::{Frame3, Point3, Scalar, Tolerance, Vec3};
+use axiolid_curve::{Curve3, Line3};
 use axiolid_kernel::{ExecutionOptions, GeometryCompiler};
 use axiolid_measure::volume_properties;
-use axiolid_model::{GeometryGraphBuilder, GeometryNode, SolidOperation};
+use axiolid_model::{
+    CurveRelation, CurveSegment, GeometryGraphBuilder, GeometryNode, SolidOperation, Transition,
+    TrimSelector, TrimmingPreference,
+};
 use axiolid_profile::{Profile, RectangleProfile};
 
 fn compiler() -> ScalarCompiler<BoolmeshBoolean> {
@@ -257,4 +261,76 @@ fn a_normalised_range_on_a_polyline_is_refused() {
         sweep_along(path, Some((0.0, 1.0))).is_err(),
         "a normalised range on a 3-segment polyline must be refused"
     );
+}
+
+#[test]
+fn swept_disk_accepts_trimmed_composite_directrix_with_segment_sense() {
+    let mut builder = GeometryGraphBuilder::new();
+    let first_line = builder
+        .push(GeometryNode::Curve3(Curve3::Line(Line3 {
+            origin: Point3::ZERO,
+            direction: Vec3::X,
+        })))
+        .unwrap();
+    let first_trim = builder
+        .push(GeometryNode::CurveRelation(CurveRelation::Trimmed {
+            basis: first_line,
+            start: vec![TrimSelector::Parameter(0.0)],
+            end: vec![TrimSelector::Parameter(2.0)],
+            sense_agreement: true,
+            preference: TrimmingPreference::Parameter,
+        }))
+        .unwrap();
+
+    let second_line = builder
+        .push(GeometryNode::Curve3(Curve3::Line(Line3 {
+            origin: Point3::new(4.0, 0.0, 0.0),
+            direction: -Vec3::X,
+        })))
+        .unwrap();
+    let second_trim = builder
+        .push(GeometryNode::CurveRelation(CurveRelation::Trimmed {
+            basis: second_line,
+            start: vec![TrimSelector::Parameter(0.0)],
+            end: vec![TrimSelector::Parameter(2.0)],
+            sense_agreement: true,
+            preference: TrimmingPreference::Parameter,
+        }))
+        .unwrap();
+    let composite = builder
+        .push(GeometryNode::CurveRelation(CurveRelation::Composite {
+            segments: vec![
+                CurveSegment {
+                    curve: first_trim,
+                    transition: Transition::Continuous,
+                    same_sense: true,
+                },
+                CurveSegment {
+                    curve: second_trim,
+                    transition: Transition::Continuous,
+                    same_sense: false,
+                },
+            ],
+        }))
+        .unwrap();
+    let sweep = builder
+        .push(GeometryNode::SolidOperation(SolidOperation::SweptDisk {
+            directrix: composite,
+            radius: 0.1,
+            inner_radius: None,
+            parameter_range: None,
+            fillet_radius: None,
+        }))
+        .unwrap();
+    let graph = builder.finish(vec![sweep]).unwrap();
+
+    let mesh = compiler()
+        .compile(&graph, sweep, &options())
+        .expect("composite relation directrix");
+    assert!(!mesh.indices.is_empty());
+    assert!(mesh.positions.iter().all(|p| p.is_finite()));
+    let max_x = mesh.positions.iter().map(|p| p.x).fold(f64::MIN, f64::max);
+    let max_y = mesh.positions.iter().map(|p| p.y).fold(f64::MIN, f64::max);
+    assert!(max_x >= 4.0, "x extent {max_x}");
+    assert!(max_y > 0.09, "y extent {max_y}");
 }

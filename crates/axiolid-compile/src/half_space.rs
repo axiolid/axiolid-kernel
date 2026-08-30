@@ -11,10 +11,10 @@
 //! units: a boundary in millimetres and the same boundary in metres
 //! produce the same shape.
 
-use axiolid_core::{Plane3, Scalar, Tolerance, Vec3};
+use axiolid_core::{Plane3, Point2, Scalar, Tolerance, Vec3};
 use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_mesh::TriMesh;
-use axiolid_primitive::ClipMargin;
+use axiolid_primitive::{ClipMargin, HalfSpace};
 
 use crate::loft::{self, Frame, Station};
 use crate::profile::Rings;
@@ -100,4 +100,65 @@ pub fn bounded_half_space(
         .collect();
     let _ = tolerance;
     loft::loft(boundary, &stations, false)
+}
+
+pub(crate) fn for_subject(
+    subject: &TriMesh,
+    half_space: HalfSpace,
+    tolerance: Tolerance,
+) -> GeomResult<TriMesh> {
+    let normal = half_space.boundary.normal.normalize_or_zero();
+    if normal == Vec3::ZERO || subject.positions.is_empty() {
+        return Err(GeomError::InvalidInput(
+            "half-space boolean needs finite subject bounds".into(),
+        ));
+    }
+    let reference = if normal.x.abs() < 0.9 {
+        Vec3::X
+    } else {
+        Vec3::Y
+    };
+    let frame = Frame::from_reference(half_space.boundary.origin, normal, reference)?;
+    let mut min = Point2::splat(Scalar::INFINITY);
+    let mut max = Point2::splat(Scalar::NEG_INFINITY);
+    let side = if half_space.agreement { 1.0 } else { -1.0 };
+    let mut selected_depth: Scalar = 0.0;
+    for &point in &subject.positions {
+        if !point.is_finite() {
+            return Err(GeomError::InvalidInput(
+                "half-space subject contains non-finite points".into(),
+            ));
+        }
+        let delta = point - half_space.boundary.origin;
+        let uv = Point2::new(delta.dot(frame.x), delta.dot(frame.y));
+        min = min.min(uv);
+        max = max.max(uv);
+        selected_depth = selected_depth.max(delta.dot(normal) * side);
+    }
+    let span = (max - min).max_element().max(tolerance.linear());
+    let pad = span * 0.1 + tolerance.linear();
+    min -= Point2::splat(pad);
+    max += Point2::splat(pad);
+    let boundary = Rings {
+        outer: vec![
+            min,
+            Point2::new(max.x, min.y),
+            max,
+            Point2::new(min.x, max.y),
+        ],
+        holes: Vec::new(),
+    };
+    let extent = min.abs().max(max.abs()).max_element();
+    let depth = selected_depth + pad;
+    let factor = depth / extent;
+    let margin = ClipMargin::new(factor).ok_or_else(|| {
+        GeomError::InvalidInput("half-space subject has no finite clipping extent".into())
+    })?;
+    bounded_half_space(
+        &boundary,
+        half_space.boundary,
+        half_space.agreement,
+        margin,
+        tolerance,
+    )
 }

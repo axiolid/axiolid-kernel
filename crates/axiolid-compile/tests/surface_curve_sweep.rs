@@ -11,7 +11,7 @@ use axiolid_compile::ScalarCompiler;
 use axiolid_core::{Frame3, Point3, Scalar, Tolerance, Vec3};
 use axiolid_kernel::{ExecutionOptions, GeomError, GeometryCompiler, Operation};
 use axiolid_measure::volume_properties;
-use axiolid_model::{GeometryGraphBuilder, GeometryNode, SolidOperation};
+use axiolid_model::{GeometryGraphBuilder, GeometryNode, SolidOperation, SurfaceRelation};
 use axiolid_profile::{Profile, RectangleProfile};
 
 fn compiler() -> ScalarCompiler<BoolmeshBoolean> {
@@ -409,4 +409,56 @@ fn every_station_stays_square_to_the_surface() {
         (0.99..=1.01).contains(&ratio),
         "helical sweep volume {volume} against {expected} (ratio {ratio})"
     );
+}
+
+#[test]
+fn linear_extrusion_relation_supplies_surface_normals() {
+    let radius = 0.15;
+    let points = (0..=32)
+        .map(|i| {
+            let angle =
+                -core::f64::consts::FRAC_PI_2 + core::f64::consts::FRAC_PI_2 * i as Scalar / 32.0;
+            Point3::new(radius * angle.cos(), radius + radius * angle.sin(), 0.0)
+        })
+        .collect();
+    let mut builder = GeometryGraphBuilder::new();
+    let profile = builder
+        .push(GeometryNode::Profile(rect(0.02, 0.04)))
+        .unwrap();
+    let directrix = builder
+        .push(GeometryNode::Curve3(axiolid_curve::Curve3::Polyline(
+            axiolid_curve::Polyline3 {
+                points,
+                closed: false,
+            },
+        )))
+        .unwrap();
+    let surface = builder
+        .push(GeometryNode::SurfaceRelation(
+            SurfaceRelation::LinearExtrusion {
+                swept_curve: directrix,
+                direction: Vec3::Z,
+            },
+        ))
+        .unwrap();
+    let swept = builder
+        .push(GeometryNode::SolidOperation(
+            SolidOperation::SurfaceCurveSweep {
+                profile,
+                directrix,
+                reference_surface: surface,
+                parameter_range: None,
+            },
+        ))
+        .unwrap();
+    let graph = builder.finish(vec![swept]).unwrap();
+    let mesh = compiler()
+        .compile(&graph, swept, &options())
+        .expect("linear-extrusion reference surface sweeps");
+    let volume = volume_properties(&mesh, Tolerance::MILLIMETRE)
+        .expect("sweep is closed and two-manifold")
+        .signed_volume
+        .abs();
+    let expected = 0.02 * 0.04 * radius * core::f64::consts::FRAC_PI_2;
+    assert!((volume / expected - 1.0).abs() < 0.02);
 }

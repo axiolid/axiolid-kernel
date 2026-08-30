@@ -166,6 +166,39 @@ fn frames_along(path: &[Point3], up: impl Fn(usize) -> Vec3) -> GeomResult<Vec<F
     Ok(frames)
 }
 
+pub(crate) fn linear_extrusion_normals(path: &[Point3], direction: Vec3) -> GeomResult<Vec<Vec3>> {
+    if path.len() < 2 {
+        return Err(GeomError::InvalidInput(
+            "a linear-extrusion surface needs at least two directrix points".into(),
+        ));
+    }
+    let direction = direction.normalize_or_zero();
+    if direction == Vec3::ZERO {
+        return Err(GeomError::InvalidInput(
+            "linear-extrusion direction must be finite and non-zero".into(),
+        ));
+    }
+    let mut normals = Vec::with_capacity(path.len());
+    for i in 0..path.len() {
+        let tangent = if i == 0 {
+            path[1] - path[0]
+        } else if i + 1 == path.len() {
+            path[i] - path[i - 1]
+        } else {
+            (path[i] - path[i - 1]).normalize_or_zero()
+                + (path[i + 1] - path[i]).normalize_or_zero()
+        };
+        let normal = tangent.cross(direction).normalize_or_zero();
+        if normal == Vec3::ZERO {
+            return Err(GeomError::Degenerate(
+                "directrix tangent is parallel to linear-extrusion direction".into(),
+            ));
+        }
+        normals.push(normal);
+    }
+    Ok(normals)
+}
+
 /// Sweep a profile along a directrix lying on a reference surface.
 ///
 /// The surface normal at each sample supplies the up direction, so the

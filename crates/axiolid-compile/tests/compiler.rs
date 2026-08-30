@@ -5,11 +5,13 @@
 
 use axiolid_boolmesh::BoolmeshBoolean;
 use axiolid_compile::ScalarCompiler;
-use axiolid_core::{BooleanOperator, Tolerance, Transform3, Vec3};
+use axiolid_core::{BooleanOperator, Plane3, Point3, Tolerance, Transform3, Vec3};
+use axiolid_curve::{Curve3, Polyline3};
 use axiolid_kernel::{ExecutionOptions, GeomError, GeometryCompiler, Operation};
 use axiolid_mesh::TriMesh;
 use axiolid_model::{GeometryGraphBuilder, GeometryNode, Instance, SolidOperation};
-use axiolid_profile::{Profile, RectangleProfile};
+use axiolid_primitive::HalfSpace;
+use axiolid_profile::{CircleProfile, Profile, RectangleProfile};
 
 fn options() -> ExecutionOptions {
     ExecutionOptions::new(Tolerance::METRE)
@@ -455,4 +457,104 @@ fn a_collection_rebases_indices_when_merging() {
     // 1x1x1 + 3x3x1 = 10. Un-rebased indices would yield 1 + 1 = 2.
     assert!((volume(&mesh) - 10.0).abs() < 1e-9, "got {}", volume(&mesh));
     assert_eq!(mesh.positions.len(), 16);
+}
+
+#[test]
+fn scaled_instances_tessellate_sources_at_instance_local_tolerance() {
+    let mut b = GeometryGraphBuilder::new();
+    let tiny_circle = b
+        .push(GeometryNode::Profile(Profile::Circle(CircleProfile {
+            radius: 0.000_05,
+            thickness: None,
+        })))
+        .unwrap();
+    let extrusion = b
+        .push(GeometryNode::SolidOperation(SolidOperation::Extrusion {
+            profile: tiny_circle,
+            direction: Vec3::Z,
+            depth: 0.002,
+        }))
+        .unwrap();
+    let scaled_extrusion = b
+        .push(GeometryNode::Instance(Instance {
+            source: extrusion,
+            transform: Transform3::from_scale(Vec3::splat(1000.0)),
+        }))
+        .unwrap();
+
+    let short_path = b
+        .push(GeometryNode::Curve3(Curve3::Polyline(Polyline3 {
+            points: vec![Point3::new(0.001, 0.0, 0.0), Point3::new(0.001, 0.0, 0.002)],
+            closed: false,
+        })))
+        .unwrap();
+    let swept_disk = b
+        .push(GeometryNode::SolidOperation(SolidOperation::SweptDisk {
+            directrix: short_path,
+            radius: 0.000_05,
+            inner_radius: None,
+            parameter_range: None,
+            fillet_radius: None,
+        }))
+        .unwrap();
+    let scaled_sweep = b
+        .push(GeometryNode::Instance(Instance {
+            source: swept_disk,
+            transform: Transform3::from_scale(Vec3::splat(1000.0)),
+        }))
+        .unwrap();
+    let both = b
+        .push(GeometryNode::Collection(vec![
+            scaled_extrusion,
+            scaled_sweep,
+        ]))
+        .unwrap();
+    let graph = b.finish(vec![both]).unwrap();
+
+    let mesh = compiler()
+        .compile(&graph, both, &ExecutionOptions::new(Tolerance::MILLIMETRE))
+        .expect("scaled sources must be tessellated in local coordinates");
+    assert!(
+        mesh.positions.len() >= 40,
+        "under-tessellated: {} vertices",
+        mesh.positions.len()
+    );
+    assert!(!mesh.indices.is_empty());
+    assert!(mesh.positions.iter().all(|p| p.is_finite()));
+}
+
+#[test]
+fn boolean_difference_materializes_unbounded_half_space_from_subject_bounds() {
+    let mut b = GeometryGraphBuilder::new();
+    let profile = b.push(GeometryNode::Profile(rect(2.0, 2.0))).unwrap();
+    let subject = b
+        .push(GeometryNode::SolidOperation(SolidOperation::Extrusion {
+            profile,
+            direction: Vec3::Z,
+            depth: 2.0,
+        }))
+        .unwrap();
+    let upper_half = b
+        .push(GeometryNode::HalfSpace(HalfSpace {
+            boundary: Plane3 {
+                origin: Point3::new(0.0, 0.0, 1.0),
+                normal: Vec3::Z,
+            },
+            agreement: true,
+        }))
+        .unwrap();
+    let clipped = b
+        .push(GeometryNode::SolidOperation(SolidOperation::Boolean {
+            operator: BooleanOperator::Difference,
+            left: subject,
+            right: upper_half,
+        }))
+        .unwrap();
+    let graph = b.finish(vec![clipped]).unwrap();
+
+    let mesh = compiler()
+        .compile(&graph, clipped, &options())
+        .expect("finite subject must bound its half-space operand");
+    assert!((volume(&mesh) - 4.0).abs() < 1e-6, "got {}", volume(&mesh));
+    assert!(mesh.positions.iter().all(|p| p.is_finite()));
 }
