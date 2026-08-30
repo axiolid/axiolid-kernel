@@ -76,7 +76,7 @@ pub enum SectionProfile {
         bottom_flange_edge_radius: Option<Scalar>,
         bottom_flange_slope: Option<Scalar>,
         top_flange_width: Scalar,
-        /// Defaults to the bottom thickness in IFC when absent.
+        /// Defaults to the bottom thickness when absent.
         top_flange_thickness: Option<Scalar>,
         top_fillet_radius: Option<Scalar>,
         top_flange_edge_radius: Option<Scalar>,
@@ -85,7 +85,7 @@ pub enum SectionProfile {
     /// L or angle section.
     L {
         depth: Scalar,
-        /// Defaults to the depth in IFC when absent, giving an equal angle.
+        /// Defaults to the depth when absent, giving an equal angle.
         width: Option<Scalar>,
         thickness: Scalar,
         fillet_radius: Option<Scalar>,
