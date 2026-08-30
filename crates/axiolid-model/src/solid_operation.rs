@@ -46,11 +46,24 @@ pub enum SolidOperation {
         angle: Scalar,
     },
     /// Disk swept along a directrix curve.
+    ///
+    /// `fillet_radius` rounds the corners where consecutive directrix segments
+    /// meet, and is meaningful only on a piecewise-linear directrix: a smooth
+    /// curve has no corners to round. `None` means sharp corners, which is
+    /// also the correct reading for any directrix that is already smooth.
+    ///
+    /// It is a property of the SWEEP, not of the disk: the disk stays circular
+    /// and it is the swept path whose corners are filleted. A consumer that
+    /// cannot round corners must refuse a `Some` rather than drop it, because
+    /// silently sharpening a pipe run produces geometry that builds, renders,
+    /// and is wrong.
     SweptDisk {
         directrix: NodeId,
         radius: Scalar,
         inner_radius: Option<Scalar>,
         parameter_range: Option<(Scalar, Scalar)>,
+        /// Corner rounding radius; `None` means sharp corners.
+        fillet_radius: Option<Scalar>,
     },
     /// Profile swept along a directrix using a fixed reference direction.
     FixedReferenceSweep {
@@ -122,5 +135,75 @@ impl SolidOperation {
                 ..
             } => out.extend([*half_space, *boundary]),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::graph::GeometryGraphBuilder;
+    use crate::node::GeometryNode;
+    use axiolid_core::Vec3;
+
+    fn directrix(builder: &mut GeometryGraphBuilder) -> NodeId {
+        builder.push(GeometryNode::Point3(Vec3::ZERO)).unwrap()
+    }
+
+    /// A fillet radius does not add a node reference.
+    ///
+    /// `references` drives graph traversal and validation, so a scalar that
+    /// leaked into it would be read as a `NodeId` and either dangle or alias
+    /// an unrelated node. The fillet is geometry data, not a reference.
+    #[test]
+    fn a_fillet_radius_is_not_a_node_reference() {
+        let mut builder = GeometryGraphBuilder::default();
+        let curve = directrix(&mut builder);
+
+        let sharp = SolidOperation::SweptDisk {
+            directrix: curve,
+            radius: 0.05,
+            inner_radius: None,
+            parameter_range: None,
+            fillet_radius: None,
+        };
+        let rounded = SolidOperation::SweptDisk {
+            directrix: curve,
+            radius: 0.05,
+            inner_radius: None,
+            parameter_range: None,
+            fillet_radius: Some(0.09),
+        };
+
+        let mut sharp_refs = Vec::new();
+        sharp.references(&mut sharp_refs);
+        let mut rounded_refs = Vec::new();
+        rounded.references(&mut rounded_refs);
+
+        assert_eq!(sharp_refs, vec![curve]);
+        assert_eq!(
+            sharp_refs, rounded_refs,
+            "a fillet changes geometry, not the reference graph"
+        );
+    }
+
+    /// Sharp and rounded sweeps are distinguishable.
+    ///
+    /// This is the whole reason the field exists. If they compared equal, a
+    /// consumer could not tell a filleted pipe run from a mitred one, and
+    /// dropping the fillet would be undetectable downstream.
+    #[test]
+    fn a_fillet_radius_distinguishes_two_otherwise_identical_sweeps() {
+        let mut builder = GeometryGraphBuilder::default();
+        let curve = directrix(&mut builder);
+
+        let common = |fillet| SolidOperation::SweptDisk {
+            directrix: curve,
+            radius: 0.05,
+            inner_radius: Some(0.04),
+            parameter_range: Some((0.0, 2.0)),
+            fillet_radius: fillet,
+        };
+        assert_ne!(common(None), common(Some(0.09)));
+        assert_eq!(common(Some(0.09)), common(Some(0.09)));
     }
 }
