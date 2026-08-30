@@ -5,7 +5,11 @@ set -euo pipefail
 unset CARGO_NET_OFFLINE CARGO_HOME GIT_DIR GIT_WORK_TREE 2>/dev/null || true
 export RUSTUP_TOOLCHAIN=1.88.0
 
-cd /mnt/backup/build-cache/axiolid-solibri-spatial
+# Run against the tree this script lives in, not a hardcoded checkout.
+# The absolute path made the gate test someone else's working copy: from a
+# worktree it reported failures caused by unrelated uncommitted work, and
+# would equally have reported success while the tree under test was broken.
+cd "$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 
 echo "=== 1. fmt ==="
 cargo fmt --all -- --check
