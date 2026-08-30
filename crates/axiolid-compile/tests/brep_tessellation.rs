@@ -1033,19 +1033,686 @@ fn a_periodic_seam_closes_the_tube() {
             (pa.z - pb.z).abs() > 1e-9 && pa.y.abs() < 1e-6 && pb.y.abs() < 1e-6 && pa.x > 0.0
         })
         .count();
-    // The seam's two uses share vertices, so the columns at u = 0 and
-    // u = TAU are the same mesh vertices. What is NOT yet solved is the
-    // sample-count mismatch: the straight seam needs 2 samples, the
-    // circular rims need 128, and earcut fans that rectangle leaving one
-    // unpaired diagonal. Pinned at the measured value so a regression is
-    // visible and the gap is not mistaken for closure.
-    assert!(
-        seam_open <= 1,
-        "periodic seam regressed: {seam_open} open edges at u = 0"
+    // The seam is now closed outright. Its two uses resolve to the same
+    // vertices AND the reversed use starts from the correct endpoint, so
+    // every edge along the join pairs.
+    assert_eq!(
+        seam_open, 0,
+        "periodic seam must be closed, found {seam_open} open edges at u = 0"
     );
     assert!(
         mesh.positions.len() > 100,
         "the tube must actually be sampled, got {} vertices",
         mesh.positions.len()
     );
+
+    // Closure must not be bought by deleting the seam. Classify EVERY open
+    // edge: a capless tube is allowed exactly two rims of open boundary,
+    // and nothing else. An implementation that dropped the seam triangles
+    // would satisfy `seam_open == 0` above while failing here.
+    let mut rim = 0usize;
+    let mut other = 0usize;
+    for ((a, b), _) in edges.iter().filter(|(_, &bal)| bal != 0) {
+        let pa = mesh.positions[*a as usize];
+        let pb = mesh.positions[*b as usize];
+        if (pa.z - pb.z).abs() < 1e-9 {
+            rim += 1;
+        } else {
+            other += 1;
+        }
+    }
+    assert_eq!(
+        other, 0,
+        "every open edge must lie on a rim; {other} span the height"
+    );
+    assert_eq!(
+        rim, 256,
+        "both rims must remain fully sampled, got {rim} open rim edges"
+    );
+
+    // The lateral area of a closed cylinder is TAU * r * h. Chord sampling
+    // inscribes the tube, so the mesh area is slightly under; assert it is
+    // close, which fails outright if triangles went missing at the seam.
+    let area: f64 = mesh
+        .indices
+        .chunks_exact(3)
+        .map(|t| {
+            let a = mesh.positions[t[0] as usize];
+            let b = mesh.positions[t[1] as usize];
+            let c = mesh.positions[t[2] as usize];
+            (b - a).cross(c - a).length() * 0.5
+        })
+        .sum();
+    let exact = core::f64::consts::TAU * radius * height;
+    assert!(
+        (exact - area) / exact < 1e-3 && area <= exact,
+        "lateral area {area} should inscribe {exact}"
+    );
+}
+
+/// A half cylinder must NOT be welded shut.
+///
+/// The grid mesher wraps a patch whose first and last u columns are the
+/// same mesh vertices. A sector's columns are DIFFERENT vertices that
+/// merely sit some distance apart, so wrapping it would fabricate a
+/// surface across the opening and silently turn an open sheet into a
+/// closed tube. This is the failure mode that a coordinate-comparison
+/// wrap test would eventually hit; the topological test must refuse it.
+#[test]
+fn a_half_cylinder_is_not_welded_shut() {
+    use axiolid_core::{Point2, Vec3};
+    use axiolid_curve::{Curve2, Polyline2};
+    use axiolid_surface::{Cylinder, Surface};
+    use core::f64::consts::PI;
+
+    let radius = 2.0;
+    let height = 3.0;
+    let mut builder = GeometryGraphBuilder::new();
+    let surface = builder
+        .push(GeometryNode::Surface(Surface::Cylinder(Cylinder {
+            frame: axiolid_core::Frame3 {
+                origin: axiolid_core::Point3::ZERO,
+                x: Vec3::X,
+                y: Vec3::Y,
+                z: Vec3::Z,
+            },
+            radius,
+        })))
+        .expect("surface");
+    let bottom = builder
+        .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+            points: vec![Point2::new(0.0, 0.0), Point2::new(PI, 0.0)],
+            closed: false,
+        })))
+        .expect("bottom");
+    let right = builder
+        .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+            points: vec![Point2::new(PI, 0.0), Point2::new(PI, height)],
+            closed: false,
+        })))
+        .expect("right");
+    let top = builder
+        .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+            points: vec![Point2::new(PI, height), Point2::new(0.0, height)],
+            closed: false,
+        })))
+        .expect("top");
+    let left = builder
+        .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+            points: vec![Point2::new(0.0, height), Point2::new(0.0, 0.0)],
+            closed: false,
+        })))
+        .expect("left");
+
+    let p = |u: f64, v: f64| axiolid_core::Point3::new(radius * u.cos(), radius * u.sin(), v);
+    let mut brep: BRep<axiolid_model::NodeId> = BRep::default();
+    let v00 = brep.add_vertex(Vertex {
+        position: p(0.0, 0.0),
+    });
+    let v10 = brep.add_vertex(Vertex {
+        position: p(PI, 0.0),
+    });
+    let v11 = brep.add_vertex(Vertex {
+        position: p(PI, height),
+    });
+    let v01 = brep.add_vertex(Vertex {
+        position: p(0.0, height),
+    });
+    let e_b = brep.add_edge(Edge {
+        start: v00,
+        end: v10,
+        curve: None,
+    });
+    let e_r = brep.add_edge(Edge {
+        start: v10,
+        end: v11,
+        curve: None,
+    });
+    let e_t = brep.add_edge(Edge {
+        start: v11,
+        end: v01,
+        curve: None,
+    });
+    let e_l = brep.add_edge(Edge {
+        start: v01,
+        end: v00,
+        curve: None,
+    });
+    let wire = brep.add_loop(Loop {
+        edges: vec![
+            EdgeUse {
+                edge: e_b,
+                orientation: Orientation::Forward,
+                pcurve: Some(bottom),
+            },
+            EdgeUse {
+                edge: e_r,
+                orientation: Orientation::Forward,
+                pcurve: Some(right),
+            },
+            EdgeUse {
+                edge: e_t,
+                orientation: Orientation::Forward,
+                pcurve: Some(top),
+            },
+            EdgeUse {
+                edge: e_l,
+                orientation: Orientation::Forward,
+                pcurve: Some(left),
+            },
+        ],
+    });
+    let face = brep.add_face(Face {
+        surface: Some(surface),
+        bounds: vec![FaceBound {
+            loop_id: wire,
+            orientation: Orientation::Forward,
+            outer: true,
+        }],
+        orientation: Orientation::Forward,
+    });
+    let shell = brep.add_shell(Shell {
+        faces: vec![(face, Orientation::Forward)],
+        closed: false,
+    });
+    brep.add_solid(Solid {
+        outer: shell,
+        voids: Vec::new(),
+    });
+    let root = builder.push(GeometryNode::BRep(brep)).expect("brep");
+    let graph = builder.finish(vec![root]).expect("finish");
+    let mesh = ScalarCompiler::new(BoolmeshBoolean::new())
+        .compile(
+            &graph,
+            root,
+            &ExecutionOptions::new(axiolid_core::Tolerance::MILLIMETRE),
+        )
+        .expect("half cylinder tessellates");
+
+    // Half the lateral area of a full cylinder, inscribed.
+    let area: f64 = mesh
+        .indices
+        .chunks_exact(3)
+        .map(|t| {
+            let a = mesh.positions[t[0] as usize];
+            let b = mesh.positions[t[1] as usize];
+            let c = mesh.positions[t[2] as usize];
+            (b - a).cross(c - a).length() * 0.5
+        })
+        .sum();
+    let exact = PI * radius * height;
+    assert!(
+        (exact - area) / exact < 1e-3 && area <= exact,
+        "half-cylinder area {area} should inscribe {exact}"
+    );
+
+    // The opening must survive: a sheet has boundary on all four sides.
+    let mut balance: std::collections::HashMap<(u32, u32), i32> = Default::default();
+    for t in mesh.indices.chunks_exact(3) {
+        for (a, b) in [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])] {
+            let key = if a < b { (a, b) } else { (b, a) };
+            *balance.entry(key).or_default() += if a < b { 1 } else { -1 };
+        }
+    }
+    let vertical: usize = balance
+        .iter()
+        .filter(|(_, &b)| b != 0)
+        .filter(|((a, b), _)| {
+            let (pa, pb) = (mesh.positions[*a as usize], mesh.positions[*b as usize]);
+            (pa.z - pb.z).abs() > 1e-9
+        })
+        .count();
+    assert!(
+        vertical > 0,
+        "the sector's straight sides must remain open, found none"
+    );
+}
+
+/// A periodic patch WITH interior rows must close across its seam.
+///
+/// The tube fixture cannot prove the wrap: its seam needs no interior
+/// samples, so every grid vertex is also a boundary vertex and the
+/// boundary walk supplies the seam column whether the grid wraps or not.
+/// A torus is curved in BOTH parameters, so the grid has interior rows
+/// whose seam vertices exist only if the grid wraps. Without the wrap
+/// those rows get two separate columns at u = 0 and u = TAU and the
+/// surface cracks along its whole length.
+#[test]
+fn a_periodic_patch_with_interior_rows_closes_across_the_seam() {
+    use axiolid_core::{Point2, Vec3};
+    use axiolid_curve::{Curve2, Polyline2};
+    use axiolid_surface::{Surface, Torus};
+    use core::f64::consts::TAU;
+
+    let major = 5.0;
+    let minor = 1.0;
+    let mut builder = GeometryGraphBuilder::new();
+    let surface = builder
+        .push(GeometryNode::Surface(Surface::Torus(Torus {
+            frame: axiolid_core::Frame3 {
+                origin: axiolid_core::Point3::ZERO,
+                x: Vec3::X,
+                y: Vec3::Y,
+                z: Vec3::Z,
+            },
+            major_radius: major,
+            minor_radius: minor,
+        })))
+        .expect("surface");
+
+    // A band around the tube: u full turn, v a quarter of the minor circle
+    // so the patch needs interior rows in v.
+    let v_hi = TAU / 4.0;
+    let bottom = builder
+        .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+            points: vec![Point2::new(0.0, 0.0), Point2::new(TAU, 0.0)],
+            closed: false,
+        })))
+        .expect("bottom");
+    let top = builder
+        .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+            points: vec![Point2::new(TAU, v_hi), Point2::new(0.0, v_hi)],
+            closed: false,
+        })))
+        .expect("top");
+    let seam_up = builder
+        .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+            points: vec![Point2::new(TAU, 0.0), Point2::new(TAU, v_hi)],
+            closed: false,
+        })))
+        .expect("seam up");
+    let seam_down = builder
+        .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+            points: vec![Point2::new(0.0, v_hi), Point2::new(0.0, 0.0)],
+            closed: false,
+        })))
+        .expect("seam down");
+
+    let p = |u: f64, v: f64| {
+        let r = major + minor * v.cos();
+        axiolid_core::Point3::new(r * u.cos(), r * u.sin(), minor * v.sin())
+    };
+    let mut brep: BRep<axiolid_model::NodeId> = BRep::default();
+    let v00 = brep.add_vertex(Vertex {
+        position: p(0.0, 0.0),
+    });
+    let v01 = brep.add_vertex(Vertex {
+        position: p(0.0, v_hi),
+    });
+    let e_bottom = brep.add_edge(Edge {
+        start: v00,
+        end: v00,
+        curve: None,
+    });
+    let e_seam = brep.add_edge(Edge {
+        start: v00,
+        end: v01,
+        curve: None,
+    });
+    let e_top = brep.add_edge(Edge {
+        start: v01,
+        end: v01,
+        curve: None,
+    });
+    let wire = brep.add_loop(Loop {
+        edges: vec![
+            EdgeUse {
+                edge: e_bottom,
+                orientation: Orientation::Forward,
+                pcurve: Some(bottom),
+            },
+            EdgeUse {
+                edge: e_seam,
+                orientation: Orientation::Forward,
+                pcurve: Some(seam_up),
+            },
+            EdgeUse {
+                edge: e_top,
+                orientation: Orientation::Forward,
+                pcurve: Some(top),
+            },
+            EdgeUse {
+                edge: e_seam,
+                orientation: Orientation::Reversed,
+                pcurve: Some(seam_down),
+            },
+        ],
+    });
+    let face = brep.add_face(Face {
+        surface: Some(surface),
+        bounds: vec![FaceBound {
+            loop_id: wire,
+            orientation: Orientation::Forward,
+            outer: true,
+        }],
+        orientation: Orientation::Forward,
+    });
+    let shell = brep.add_shell(Shell {
+        faces: vec![(face, Orientation::Forward)],
+        closed: false,
+    });
+    brep.add_solid(Solid {
+        outer: shell,
+        voids: Vec::new(),
+    });
+
+    let root = builder.push(GeometryNode::BRep(brep)).expect("brep");
+    let graph = builder.finish(vec![root]).expect("finish");
+    let mesh = ScalarCompiler::new(BoolmeshBoolean::new())
+        .compile(
+            &graph,
+            root,
+            &ExecutionOptions::new(axiolid_core::Tolerance::MILLIMETRE),
+        )
+        .expect("torus band tessellates");
+
+    // No vertex may be duplicated: a seam that failed to wrap emits a
+    // second copy of every interior row's seam vertex.
+    let mut seen: std::collections::HashMap<(i64, i64, i64), usize> = Default::default();
+    for q in &mesh.positions {
+        let key = (
+            (q.x * 1e9).round() as i64,
+            (q.y * 1e9).round() as i64,
+            (q.z * 1e9).round() as i64,
+        );
+        *seen.entry(key).or_default() += 1;
+    }
+    let duplicated = seen.values().filter(|&&c| c > 1).count();
+    assert_eq!(
+        duplicated, 0,
+        "the seam must be one column of vertices, found {duplicated} duplicated positions"
+    );
+
+    // And the only open edges may be the two rims, never a vertical crack.
+    let mut balance: std::collections::HashMap<(u32, u32), i32> = Default::default();
+    for t in mesh.indices.chunks_exact(3) {
+        for (a, b) in [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])] {
+            let key = if a < b { (a, b) } else { (b, a) };
+            *balance.entry(key).or_default() += if a < b { 1 } else { -1 };
+        }
+    }
+    let cracks = balance
+        .iter()
+        .filter(|(_, &b)| b != 0)
+        .filter(|((a, b), _)| {
+            let (pa, pb) = (mesh.positions[*a as usize], mesh.positions[*b as usize]);
+            // A rim edge runs around the major circle at constant minor
+            // angle, so its endpoints share |z|. Anything else is a crack.
+            (pa.z - pb.z).abs() > 1e-9
+        })
+        .count();
+    assert_eq!(
+        cracks, 0,
+        "the seam must be closed, found {cracks} open edges spanning v"
+    );
+}
+
+/// A curved face with a hole must fall back to the polygon triangulator.
+///
+/// The grid mesher only handles rectangles in parameter space. A face with
+/// an inner loop is not one, and forcing a grid onto it would pave straight
+/// over the hole. `recognise_grid` has to decline, which is a capability
+/// boundary worth pinning: the guard is invisible until something relies
+/// on it.
+#[test]
+fn a_curved_face_with_a_hole_is_not_gridded() {
+    use axiolid_core::{Point2, Vec3};
+    use axiolid_curve::{Curve2, Polyline2};
+    use axiolid_surface::{Cylinder, Surface};
+    use core::f64::consts::PI;
+
+    let radius = 2.0;
+    let height = 4.0;
+    let mut builder = GeometryGraphBuilder::new();
+    let surface = builder
+        .push(GeometryNode::Surface(Surface::Cylinder(Cylinder {
+            frame: axiolid_core::Frame3 {
+                origin: axiolid_core::Point3::ZERO,
+                x: Vec3::X,
+                y: Vec3::Y,
+                z: Vec3::Z,
+            },
+            radius,
+        })))
+        .expect("surface");
+
+    let p = |u: f64, v: f64| axiolid_core::Point3::new(radius * u.cos(), radius * u.sin(), v);
+    let mut brep: BRep<axiolid_model::NodeId> = BRep::default();
+
+    // Outer: a rectangular patch u in [0, PI], v in [0, height].
+    let outer_pts = [(0.0, 0.0), (PI, 0.0), (PI, height), (0.0, height)];
+    let mut outer_uses = Vec::new();
+    let mut outer_vertices = Vec::new();
+    for (u, v) in outer_pts {
+        outer_vertices.push(brep.add_vertex(Vertex { position: p(u, v) }));
+    }
+    for i in 0..4 {
+        let (u0, v0) = outer_pts[i];
+        let (u1, v1) = outer_pts[(i + 1) % 4];
+        let pc = builder
+            .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+                points: vec![Point2::new(u0, v0), Point2::new(u1, v1)],
+                closed: false,
+            })))
+            .expect("outer pcurve");
+        let edge = brep.add_edge(Edge {
+            start: outer_vertices[i],
+            end: outer_vertices[(i + 1) % 4],
+            curve: None,
+        });
+        outer_uses.push(EdgeUse {
+            edge,
+            orientation: Orientation::Forward,
+            pcurve: Some(pc),
+        });
+    }
+    let outer_loop = brep.add_loop(Loop { edges: outer_uses });
+
+    // Inner: a small window, wound the other way.
+    let inner_pts = [(1.0, 1.0), (1.0, 3.0), (2.0, 3.0), (2.0, 1.0)];
+    let mut inner_uses = Vec::new();
+    let mut inner_vertices = Vec::new();
+    for (u, v) in inner_pts {
+        inner_vertices.push(brep.add_vertex(Vertex { position: p(u, v) }));
+    }
+    for i in 0..4 {
+        let (u0, v0) = inner_pts[i];
+        let (u1, v1) = inner_pts[(i + 1) % 4];
+        let pc = builder
+            .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+                points: vec![Point2::new(u0, v0), Point2::new(u1, v1)],
+                closed: false,
+            })))
+            .expect("inner pcurve");
+        let edge = brep.add_edge(Edge {
+            start: inner_vertices[i],
+            end: inner_vertices[(i + 1) % 4],
+            curve: None,
+        });
+        inner_uses.push(EdgeUse {
+            edge,
+            orientation: Orientation::Forward,
+            pcurve: Some(pc),
+        });
+    }
+    let inner_loop = brep.add_loop(Loop { edges: inner_uses });
+
+    let face = brep.add_face(Face {
+        surface: Some(surface),
+        bounds: vec![
+            FaceBound {
+                loop_id: outer_loop,
+                orientation: Orientation::Forward,
+                outer: true,
+            },
+            FaceBound {
+                loop_id: inner_loop,
+                orientation: Orientation::Forward,
+                outer: false,
+            },
+        ],
+        orientation: Orientation::Forward,
+    });
+    let shell = brep.add_shell(Shell {
+        faces: vec![(face, Orientation::Forward)],
+        closed: false,
+    });
+    brep.add_solid(Solid {
+        outer: shell,
+        voids: Vec::new(),
+    });
+
+    let root = builder.push(GeometryNode::BRep(brep)).expect("brep");
+    let graph = builder.finish(vec![root]).expect("finish");
+    let mesh = ScalarCompiler::new(BoolmeshBoolean::new())
+        .compile(
+            &graph,
+            root,
+            &ExecutionOptions::new(axiolid_core::Tolerance::MILLIMETRE),
+        )
+        .expect("holed face tessellates");
+
+    // A gridded result would tile the whole rectangle, so its area would
+    // reach the full outer patch and its vertex count would be the grid's
+    // (nu+1)*(nv+1). Both must be strictly below that: the face went to the
+    // polygon triangulator, which is what the hole guard exists to force.
+    //
+    // This pins the CAPABILITY BOUNDARY, not the quality of earcut's hole
+    // handling: the fallback path subtracts only part of the window, which
+    // is a separate pre-existing limitation and not what this test judges.
+    let area: f64 = mesh
+        .indices
+        .chunks_exact(3)
+        .map(|t| {
+            let a = mesh.positions[t[0] as usize];
+            let b = mesh.positions[t[1] as usize];
+            let c = mesh.positions[t[2] as usize];
+            (b - a).cross(c - a).length() * 0.5
+        })
+        .sum();
+    let outer_area = PI * radius * height;
+    assert!(
+        area < outer_area,
+        "a gridded face would cover the hole: area {area} vs outer {outer_area}"
+    );
+    // The hole's own boundary must appear in the mesh: a grid would never
+    // place vertices on the window's rim.
+    let on_hole_rim = mesh
+        .positions
+        .iter()
+        .filter(|p| {
+            let u = p.y.atan2(p.x);
+            (1.0..=2.0).contains(&u) && (p.z - 1.0).abs() < 1e-9
+        })
+        .count();
+    assert!(
+        on_hole_rim > 0,
+        "the hole's rim vertices must survive into the mesh"
+    );
+}
+
+/// A slanted trim must not be gridded.
+///
+/// `recognise_grid` only claims a boundary whose every point lies on the
+/// rectangle's border at uniform spacing. A diagonal trim leaves points in
+/// the rectangle's INTERIOR, and gridding it would replace the slanted
+/// edge with the bounding box, inventing surface the face does not have.
+#[test]
+fn a_slanted_trim_is_not_gridded() {
+    use axiolid_core::{Point2, Vec3};
+    use axiolid_curve::{Curve2, Polyline2};
+    use axiolid_surface::{Cylinder, Surface};
+
+    let radius = 2.0;
+    let mut builder = GeometryGraphBuilder::new();
+    let surface = builder
+        .push(GeometryNode::Surface(Surface::Cylinder(Cylinder {
+            frame: axiolid_core::Frame3 {
+                origin: axiolid_core::Point3::ZERO,
+                x: Vec3::X,
+                y: Vec3::Y,
+                z: Vec3::Z,
+            },
+            radius,
+        })))
+        .expect("surface");
+
+    // A triangle in parameter space: (0,0) -> (1,0) -> (1,2) -> back.
+    // The closing edge is diagonal, so its samples sit strictly inside the
+    // bounding rectangle.
+    let corners = [(0.0_f64, 0.0_f64), (1.0, 0.0), (1.0, 2.0)];
+    let p = |u: f64, v: f64| axiolid_core::Point3::new(radius * u.cos(), radius * u.sin(), v);
+    let mut brep: BRep<axiolid_model::NodeId> = BRep::default();
+    let vertices: Vec<_> = corners
+        .iter()
+        .map(|&(u, v)| brep.add_vertex(Vertex { position: p(u, v) }))
+        .collect();
+    let mut uses = Vec::new();
+    for i in 0..3 {
+        let (u0, v0) = corners[i];
+        let (u1, v1) = corners[(i + 1) % 3];
+        let pc = builder
+            .push(GeometryNode::Curve2(Curve2::Polyline(Polyline2 {
+                points: vec![Point2::new(u0, v0), Point2::new(u1, v1)],
+                closed: false,
+            })))
+            .expect("pcurve");
+        let edge = brep.add_edge(Edge {
+            start: vertices[i],
+            end: vertices[(i + 1) % 3],
+            curve: None,
+        });
+        uses.push(EdgeUse {
+            edge,
+            orientation: Orientation::Forward,
+            pcurve: Some(pc),
+        });
+    }
+    let wire = brep.add_loop(Loop { edges: uses });
+    let face = brep.add_face(Face {
+        surface: Some(surface),
+        bounds: vec![FaceBound {
+            loop_id: wire,
+            orientation: Orientation::Forward,
+            outer: true,
+        }],
+        orientation: Orientation::Forward,
+    });
+    let shell = brep.add_shell(Shell {
+        faces: vec![(face, Orientation::Forward)],
+        closed: false,
+    });
+    brep.add_solid(Solid {
+        outer: shell,
+        voids: Vec::new(),
+    });
+
+    let root = builder.push(GeometryNode::BRep(brep)).expect("brep");
+    let graph = builder.finish(vec![root]).expect("finish");
+    let mesh = ScalarCompiler::new(BoolmeshBoolean::new())
+        .compile(
+            &graph,
+            root,
+            &ExecutionOptions::new(axiolid_core::Tolerance::MILLIMETRE),
+        )
+        .expect("slanted face tessellates");
+
+    let area: f64 = mesh
+        .indices
+        .chunks_exact(3)
+        .map(|t| {
+            let a = mesh.positions[t[0] as usize];
+            let b = mesh.positions[t[1] as usize];
+            let c = mesh.positions[t[2] as usize];
+            (b - a).cross(c - a).length() * 0.5
+        })
+        .sum();
+    // The triangle is half its bounding rectangle. A gridded result would
+    // pave the whole rectangle and roughly double the area.
+    let rectangle = radius * 1.0 * 2.0;
+    assert!(
+        area < rectangle * 0.75,
+        "a slanted trim must not be squared off: area {area} vs rectangle {rectangle}"
+    );
+    assert!(area > 0.0, "the face must still be meshed");
 }

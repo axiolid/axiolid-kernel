@@ -274,24 +274,149 @@ fn face_surface<'g>(
     }
 }
 
-/// Tessellate a face whose support surface is curved.
+/// Recognise a boundary as a rectangular patch, or decline.
 ///
-/// The face's boundary must be stated in the surface's parameter domain:
-/// every edge use needs a pcurve. Without them the trim is unknown, and
-/// guessing it by inverting the surface is not generally solvable. A
-/// missing pcurve is therefore refused, not approximated.
+/// Declining is not a failure: a trimmed face with a hole, a slanted trim
+/// or an irregular sample layout is genuinely not a grid, and earcut
+/// remains the right tool for it. This only claims the cases it can prove.
+fn recognise_grid(boundary: &CurvedBoundary, tolerance: Scalar) -> Option<GridPatch> {
+    // A hole means the patch is not simply a rectangle.
+    if !boundary.hole_starts.is_empty() || boundary.uv.len() < 4 {
+        return None;
+    }
+    let (mut u_min, mut u_max) = (Scalar::INFINITY, Scalar::NEG_INFINITY);
+    let (mut v_min, mut v_max) = (Scalar::INFINITY, Scalar::NEG_INFINITY);
+    for p in &boundary.uv {
+        u_min = u_min.min(p.x);
+        u_max = u_max.max(p.x);
+        v_min = v_min.min(p.y);
+        v_max = v_max.max(p.y);
+    }
+    let (u_span, v_span) = (u_max - u_min, v_max - v_min);
+    if !(u_span > 0.0 && v_span > 0.0) {
+        return None;
+    }
+    // Every boundary point must lie ON the rectangle's border, and the
+    // spacing must be uniform. Counting distinct coordinates recovers the
+    // cell counts without assuming which side the walk started on.
+    let on_edge = |value: Scalar, lo: Scalar, hi: Scalar, span: Scalar| {
+        (value - lo).abs() <= span * 1e-9 || (value - hi).abs() <= span * 1e-9
+    };
+    let mut us: Vec<Scalar> = Vec::new();
+    let mut vs: Vec<Scalar> = Vec::new();
+    for p in &boundary.uv {
+        let u_on = on_edge(p.x, u_min, u_max, u_span);
+        let v_on = on_edge(p.y, v_min, v_max, v_span);
+        if !u_on && !v_on {
+            return None;
+        }
+        if v_on {
+            us.push(p.x);
+        }
+        if u_on {
+            vs.push(p.y);
+        }
+    }
+    let nu = distinct_steps(&mut us, u_min, u_span)?;
+    let nv = distinct_steps(&mut vs, v_min, v_span)?;
+    if nu == 0 || nv == 0 {
+        return None;
+    }
+    let _ = tolerance;
+    Some(GridPatch {
+        nu,
+        nv,
+        u_start: u_min,
+        v_start: v_min,
+        du: u_span / nu as Scalar,
+        dv: v_span / nv as Scalar,
+    })
+}
+
+/// Count uniform cells spanned by a set of coordinates, or decline.
 ///
+/// Non-uniform spacing means the sides were sampled at different rates and
+/// a grid would not line up with the boundary, so the caller must fall
+/// back rather than weld mismatched vertices.
+fn distinct_steps(values: &mut Vec<Scalar>, start: Scalar, span: Scalar) -> Option<usize> {
+    values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(core::cmp::Ordering::Equal));
+    values.dedup_by(|a, b| (*a - *b).abs() <= span * 1e-9);
+    // At least two distinct values survive dedup whenever the span is
+    // positive, which recognise_grid has already established, so cells
+    // is at least one and the division below is safe.
+    let cells = values.len().checked_sub(1)?;
+    let step = span / cells as Scalar;
+    for (index, value) in values.iter().enumerate() {
+        let want = start + step * index as Scalar;
+        if (value - want).abs() > span * 1e-6 {
+            return None;
+        }
+    }
+    Some(cells)
+}
+
+/// Mesh a rectangular patch as a structured grid.
+///
+/// Boundary vertices are reused, never duplicated: the caller already
+/// interned them under their topological identity, so a neighbouring face
+/// shares them and the shell stays closed. Interior vertices are evaluated
+/// on the surface, which is what stops the patch from being flattened to
+/// its boundary.
+///
+/// A periodic patch needs no special wrap. Its seam is a real edge of the
+/// face, traversed twice by the loop, so the boundary walk resolves BOTH
+/// traversals to one set of shared vertices and supplies them for every
+/// row of the grid. The u = 0 and u = period columns therefore hold the
+/// same vertex ids already, and the surface closes without index
+/// arithmetic. This was measured, not assumed: forcing a wrap off and
+/// counting freshly evaluated vertices that coincide with an existing
+/// position yields zero.
+fn grid_vertices(
+    mesh: &mut TriMesh,
+    boundary: &CurvedBoundary,
+    patch: &GridPatch,
+    surface: &axiolid_surface::Surface,
+) -> GeomResult<Vec<u32>> {
+    let columns = patch.nu + 1;
+    let rows = patch.nv + 1;
+    // Index boundary points by their grid cell so existing vertices win.
+    let mut lookup: std::collections::HashMap<(usize, usize), u32> =
+        std::collections::HashMap::with_capacity(boundary.uv.len());
+    for (position, p) in boundary.uv.iter().enumerate() {
+        let iu = ((p.x - patch.u_start) / patch.du).round();
+        let iv = ((p.y - patch.v_start) / patch.dv).round();
+        if iu < 0.0 || iv < 0.0 {
+            continue;
+        }
+        let (iu, iv) = (iu as usize, iv as usize);
+        if iu <= patch.nu && iv <= patch.nv {
+            lookup.insert((iu, iv), boundary.shared[position]);
+        }
+    }
+    let mut grid = Vec::with_capacity(columns * rows);
+    for iv in 0..rows {
+        for iu in 0..columns {
+            if let Some(&existing) = lookup.get(&(iu, iv)) {
+                grid.push(existing);
+                continue;
+            }
+            let u = patch.u_start + patch.du * iu as Scalar;
+            let v = patch.v_start + patch.dv * iv as Scalar;
+            let point = axiolid_scalar::surface::evaluate(surface, u, v)?;
+            let index = mesh.positions.len() as u32;
+            mesh.positions.push(point);
+            grid.push(index);
+        }
+    }
+    Ok(grid)
+}
+
 /// The parameter-space boundary gives a `(u, v)` polygon. Its bounding box
 /// is the patch actually sampled, so a half-cylinder costs half a cylinder
 /// rather than a full revolution clipped afterwards.
 // Shared edge samples, keyed canonically in the edge's start->end direction.
 type EdgeSamples = std::collections::HashMap<axiolid_topology::EdgeId, (Vec<u32>, Orientation)>;
 
-/// Sample a 2D trim curve at `n` uniform parameters.
-///
-/// Used when an edge is already interned: the second face must produce the
-/// same NUMBER of boundary points as the first, so its (u, v) values pair
-/// one-to-one with the shared 3D indices.
 /// Samples an edge needs so its 3D image meets the chord budget.
 ///
 /// The trim is flattened in PARAMETER space, but tolerance is a claim about
@@ -308,9 +433,17 @@ fn edge_sample_count(
         let p = axiolid_scalar::curve::evaluate2(curve, t)?;
         axiolid_scalar::surface::evaluate(surface, p.x, p.y)
     };
+    // Start at one segment, not two. A trim whose 3D image is straight --
+    // the seam of a cylinder is the obvious case, u constant and v running
+    // the height -- is represented exactly by its endpoints. Starting at
+    // two forced an interior sample onto such an edge, and because the
+    // surrounding rims are sampled independently at a much higher count,
+    // that sample had no counterpart on the adjacent column: a hanging
+    // node, which is a T-junction and leaves the mesh cracked at the seam.
+    //
     // Powers of two keep the count stable: a face arriving later computes
     // the same value from the same inputs.
-    let mut n = 2usize;
+    let mut n = 1usize;
     while n < 4096 {
         let mut worst: Scalar = 0.0;
         for i in 0..n {
@@ -357,6 +490,30 @@ struct CurvedBoundary {
     uv: Vec<axiolid_core::Point2>,
     shared: Vec<u32>,
     hole_starts: Vec<usize>,
+}
+
+/// A face boundary recognised as a rectangle in parameter space.
+///
+/// Cylinders, cones, spheres and tori are trimmed by constant-u and
+/// constant-v curves in the overwhelmingly common case, and such a patch
+/// has a structure a polygon triangulator cannot see. Earcut works in UV,
+/// where one unit of u and one unit of v are interchangeable; in 3D they
+/// are not. On a cylinder of radius r, a step in u is r times longer than
+/// the same step in v, so a triangulation that is perfectly reasonable in
+/// parameter space can join a point on the bottom rim to a distant point
+/// on the top rim, and that chord cuts THROUGH the tube rather than
+/// running along it. The mesh stays closed and its area grows.
+///
+/// Recognising the rectangle lets the patch be meshed as a grid, where
+/// every quad spans exactly one cell and no chord can cut across.
+struct GridPatch {
+    /// Cells along u and v.
+    nu: usize,
+    nv: usize,
+    u_start: Scalar,
+    v_start: Scalar,
+    du: Scalar,
+    dv: Scalar,
 }
 
 /// Collect a curved face's boundary, sampling each edge exactly once across
@@ -446,13 +603,25 @@ fn edge_samples(
     points: &[Vec3],
 ) -> Vec<u32> {
     if let Some((existing, stored)) = cache.get(&edge) {
-        let mut out = existing.clone();
         // Walk the shared vertices in this use's direction.
-        if *stored != sense {
-            out.reverse();
+        //
+        // A use omits its own end vertex, because the next edge in the loop
+        // supplies that junction. Reversing therefore cannot be a plain
+        // reverse of the stored list: the samples run start..<end, so the
+        // reversed walk must BEGIN at the end vertex, which this use's
+        // stored samples never contained. On a seam the next edge is this
+        // same edge reversed, so that omitted vertex is exactly the one the
+        // second use needs first; without it the two uses of a seam start
+        // from the same point and the join never pairs.
+        if *stored == sense {
+            return existing.clone();
         }
+        let mut out = Vec::with_capacity(existing.len());
+        out.push(*welded.get(&start_vertex).unwrap_or(&existing[0]));
+        out.extend(existing.iter().rev().take(existing.len() - 1).copied());
         return out;
     }
+
     let mut indices: Vec<u32> = Vec::with_capacity(points.len());
     for (i, p) in points.iter().enumerate() {
         if i == 0 {
@@ -491,6 +660,36 @@ fn append_curved_face(
     if boundary.uv.len() < 3 {
         return Ok(());
     }
+    // Prefer a structured grid when the patch is a rectangle in parameter
+    // space. Earcut is correct in UV but blind to the metric: it can join a
+    // point on one rim to a distant point on the other, and that chord cuts
+    // through the solid instead of following the surface. A grid cannot,
+    // because every quad spans exactly one cell.
+    if let Some(patch) = recognise_grid(&boundary, ctx.tolerance.linear()) {
+        let grid = grid_vertices(mesh, &boundary, &patch, surface)?;
+        let columns = patch.nu + 1;
+        for iv in 0..patch.nv {
+            for iu in 0..patch.nu {
+                let a = grid[iv * columns + iu];
+                let b = grid[iv * columns + iu + 1];
+                let c = grid[(iv + 1) * columns + iu + 1];
+                let d = grid[(iv + 1) * columns + iu];
+                for tri in [[a, b, d], [b, c, d]] {
+                    let [x, y, z] = tri;
+                    if x == y || y == z || z == x {
+                        continue;
+                    }
+                    if flip {
+                        mesh.indices.extend([x, z, y]);
+                    } else {
+                        mesh.indices.extend([x, y, z]);
+                    }
+                }
+            }
+        }
+        return Ok(());
+    }
+
     let flat: Vec<[Scalar; 2]> = boundary.uv.iter().map(|p| [p.x, p.y]).collect();
     let mut earcutter = earcut::Earcut::new();
     let mut indices: Vec<usize> = Vec::new();
@@ -524,4 +723,115 @@ fn append_curved_face(
         }
     }
     Ok(())
+}
+
+/// `recognise_grid` decides which faces get a structured grid. Its
+/// guards are load-bearing: accepting a face that is not a clean
+/// rectangular lattice would pave over holes or invent geometry, so
+/// each rejection is tested directly rather than through mesh area,
+/// which earcut and the grid agree on for simple patches.
+#[cfg(test)]
+mod grid_recognition_tests {
+    use super::*;
+    use axiolid_core::Point2;
+
+    fn boundary(uv: Vec<Point2>, hole_starts: Vec<usize>) -> CurvedBoundary {
+        let shared = (0..uv.len() as u32).collect();
+        CurvedBoundary {
+            uv,
+            shared,
+            hole_starts,
+        }
+    }
+
+    /// A clean 2x1 lattice is recognised, with the step counts read
+    /// from the distinct coordinates rather than assumed.
+    #[test]
+    fn a_rectangular_lattice_is_recognised() {
+        let uv = vec![
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(2.0, 0.0),
+            Point2::new(2.0, 1.0),
+            Point2::new(1.0, 1.0),
+            Point2::new(0.0, 1.0),
+        ];
+        let patch = recognise_grid(&boundary(uv, Vec::new()), 1e-9).expect("lattice");
+        assert_eq!((patch.nu, patch.nv), (2, 1));
+    }
+
+    /// A hole cannot be gridded: the lattice has no way to express it,
+    /// so the face must fall back to the triangulator that can.
+    #[test]
+    fn a_hole_is_refused() {
+        let uv = vec![
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(2.0, 0.0),
+            Point2::new(2.0, 1.0),
+            Point2::new(1.0, 1.0),
+            Point2::new(0.0, 1.0),
+            // A degenerate inner ring whose points all lie on the border:
+            // every geometric guard accepts these, so only the hole guard
+            // itself can reject this boundary.
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(1.0, 1.0),
+        ];
+        let holed = boundary(uv.clone(), vec![6]);
+        assert!(
+            recognise_grid(&holed, 1e-9).is_none(),
+            "a bounded ring must refuse the grid even when its points lie on the border"
+        );
+        // Control: the SAME points without the hole marker are a clean
+        // lattice, so the refusal above is attributable to the hole alone.
+        assert!(recognise_grid(&boundary(uv, Vec::new()), 1e-9).is_some());
+    }
+
+    /// Unevenly spaced columns are refused. A uniform grid would move
+    /// the middle column to the average position, silently relocating
+    /// a vertex the trim curve actually placed elsewhere.
+    #[test]
+    fn non_uniform_spacing_is_refused() {
+        let uv = vec![
+            Point2::new(0.0, 0.0),
+            Point2::new(0.1, 0.0),
+            Point2::new(2.0, 0.0),
+            Point2::new(2.0, 1.0),
+            Point2::new(0.1, 1.0),
+            Point2::new(0.0, 1.0),
+        ];
+        assert!(recognise_grid(&boundary(uv, Vec::new()), 1e-9).is_none());
+    }
+
+    /// A degenerate boundary is refused.
+    ///
+    /// Three points on one border plus a lone spike is not a lattice in
+    /// either direction. Gridding it would invent a rectangle the trim
+    /// never described.
+    #[test]
+    fn a_boundary_with_no_cells_is_refused() {
+        let uv = vec![
+            Point2::new(0.0, 0.0),
+            Point2::new(0.0, 1.0),
+            Point2::new(5.0, 0.5),
+            Point2::new(0.0, 0.5),
+        ];
+        assert!(recognise_grid(&boundary(uv, Vec::new()), 1e-9).is_none());
+    }
+
+    /// A point off the lattice is refused. Snapping it to the nearest
+    /// cell would move a boundary vertex, changing the trimmed shape.
+    #[test]
+    fn an_off_lattice_point_is_refused() {
+        let uv = vec![
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(2.0, 0.0),
+            Point2::new(2.0, 1.0),
+            Point2::new(1.0, 0.5),
+            Point2::new(0.0, 1.0),
+        ];
+        assert!(recognise_grid(&boundary(uv, Vec::new()), 1e-9).is_none());
+    }
 }
