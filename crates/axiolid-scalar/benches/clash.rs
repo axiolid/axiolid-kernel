@@ -64,4 +64,27 @@ fn main() {
             ms * 1e3 / (n as f64)
         );
     }
+    println!("\nclash scaling: two spheres, DISJOINT (containment path)\n");
+    println!(
+        "{:>6} {:>10} {:>12} {:>14} {:>10}",
+        "bands", "triangles", "narrow", "elapsed_ms", "us/tri"
+    );
+    for bands in [8usize, 12, 16, 24, 32] {
+        let a = sphere(0.0, 1.0, bands);
+        let b = sphere(5.0, 1.0, bands);
+        let n = a.indices.len() / 3;
+        let start = Instant::now();
+        let report = interference(&a, &b, Tolerance::MILLIMETRE).expect("interference");
+        let elapsed = start.elapsed();
+        black_box(&report);
+        let ms = elapsed.as_secs_f64() * 1e3;
+        println!(
+            "{:>6} {:>10} {:>12} {:>14.2} {:>10.3}",
+            bands,
+            n,
+            report.narrow_phase_tests,
+            ms,
+            ms * 1e3 / (n as f64)
+        );
+    }
 }

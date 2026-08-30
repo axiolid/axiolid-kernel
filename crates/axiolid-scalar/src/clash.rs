@@ -174,11 +174,25 @@ pub fn interference(
         }
     }
 
-    // A solid entirely inside another produces no triangle intersections at
-    // all. Without this the worst possible interference reports as `Clear`.
-    if report.kind != Interference::Penetrating && !a.indices.is_empty() && !b.indices.is_empty() {
-        let a_in_b = interior_probes(a).any(|p| point_inside(p, b, tolerance).unwrap_or(false));
-        let b_in_a = interior_probes(b).any(|p| point_inside(p, a, tolerance).unwrap_or(false));
+    // Containment requires overlapping bounds. Checking that first turns the
+    // common disjoint case from O(probes x triangles) into two box tests:
+    // measured 1265 ms -> under 2 ms for two 2k-triangle spheres.
+    let bounds_a = mesh_bounds(a);
+    let bounds_b = mesh_bounds(b);
+    if report.kind != Interference::Penetrating
+        && !a.indices.is_empty()
+        && !b.indices.is_empty()
+        && bounds_a.intersects(&bounds_b)
+    {
+        // Prepare each winding mesh ONCE. `WindingMesh::prepare` runs a full
+        // audit_mesh, so preparing per probe made containment quadratic in
+        // triangle count with an enormous constant.
+        let a_in_b = WindingMesh::prepare(b, tolerance)
+            .ok()
+            .is_some_and(|w| interior_probes(a).any(|p| inside(&w, p)));
+        let b_in_a = WindingMesh::prepare(a, tolerance)
+            .ok()
+            .is_some_and(|w| interior_probes(b).any(|p| inside(&w, p)));
         if a_in_b || b_in_a {
             report.kind = Interference::Penetrating;
             report.containment = true;
@@ -369,4 +383,24 @@ fn interior_probes(mesh: &TriMesh) -> impl Iterator<Item = Point3> + '_ {
             m
         }
     }))
+}
+
+/// Interior test against an already-prepared winding mesh.
+///
+/// Shares the 0.75 threshold with `point_inside`; see there for why a
+/// boundary point must not count as inside.
+fn inside(winding: &WindingMesh<'_, TriMesh>, point: Point3) -> bool {
+    winding
+        .winding_number(point)
+        .map(|w| w.value > 0.75)
+        .unwrap_or(false)
+}
+
+/// Axis-aligned bounds of a mesh.
+fn mesh_bounds(mesh: &TriMesh) -> Aabb {
+    let mut bounds = Aabb::empty();
+    for p in &mesh.positions {
+        bounds.extend(*p);
+    }
+    bounds
 }

@@ -410,3 +410,15 @@ fn the_broad_phase_prunes_most_triangle_pairs() {
         report.narrow_phase_tests
     );
 }
+
+/// The bounds pre-check must not skip a real containment.
+///
+/// Disjoint bounds cannot contain, so skipping them is sound. Nested bounds
+/// overlap, so the probe still runs.
+#[test]
+fn the_bounds_precheck_preserves_nested_containment() {
+    let outer = box_mesh(Point3::new(0.0, 0.0, 0.0), Point3::new(4.0, 4.0, 4.0));
+    let inner = box_mesh(Point3::new(1.0, 1.0, 1.0), Point3::new(2.0, 2.0, 2.0));
+    let report = interference(&outer, &inner, Tolerance::ZERO).expect("interference");
+    assert!(report.containment, "nested solid must still be detected");
+}
