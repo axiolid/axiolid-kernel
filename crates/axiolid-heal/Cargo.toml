@@ -11,3 +11,5 @@ readme.workspace = true
 
 [dependencies]
 axiolid-core.workspace = true
+axiolid-mesh.workspace = true
+thiserror.workspace = true

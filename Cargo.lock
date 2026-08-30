@@ -105,6 +105,8 @@ name = "axiolid-heal"
 version = "0.1.0"
 dependencies = [
  "axiolid-core",
+ "axiolid-mesh",
+ "thiserror",
 ]
 
 [[package]]

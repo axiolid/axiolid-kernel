@@ -6,6 +6,7 @@
 //! a narrow [`RepairPlan`], and retain the resulting [`RepairReport`] for audit.
 
 pub mod diagnosis;
+pub mod mesh;
 pub mod repair;
 pub mod traits;
 
