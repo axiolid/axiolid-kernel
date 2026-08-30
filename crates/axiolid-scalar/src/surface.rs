@@ -434,3 +434,143 @@ impl axiolid_surface::SurfaceEvaluator<Surface> for ScalarSurface {
         normal(surface, u, v)
     }
 }
+
+/// Surface parameters `(u, v)` whose evaluation reproduces `point`.
+///
+/// This is the exact inverse of [`evaluate`] for the analytic surfaces,
+/// derived from each parameterisation rather than found by iteration, so
+/// it neither needs a seed nor converges to a nearby-but-wrong branch.
+///
+/// The point must already lie ON the surface: this answers "which
+/// parameters name this point", not "which point is nearest". A sweep
+/// directrix that has drifted off its reference surface is a modelling
+/// error, and silently projecting it would tilt every section frame by an
+/// amount nothing downstream can detect. The residual is therefore checked
+/// against `tolerance` and a miss is reported rather than absorbed.
+///
+/// Parameters that no unique answer exists for are refused, not guessed:
+/// at a cone apex or a sphere pole the whole `u` circle maps to one point,
+/// so any choice would be arbitrary and would rotate the swept section.
+pub fn invert(
+    surface: &Surface,
+    point: Point3,
+    tolerance: axiolid_core::Tolerance,
+) -> GeomResult<(Scalar, Scalar)> {
+    let (u, v) = match surface {
+        Surface::Plane(p) => {
+            let local = to_local(&p.frame, point)?;
+            (local.x, local.y)
+        }
+        Surface::Cylinder(c) => {
+            positive(c.radius, "cylinder radius")?;
+            let local = to_local(&c.frame, point)?;
+            (angle_about_axis(local, "cylinder")?, local.z)
+        }
+        Surface::Cone(c) => {
+            finite(c.radius, "cone radius")?;
+            finite(c.semi_angle, "cone semi-angle")?;
+            let local = to_local(&c.frame, point)?;
+            // At the apex the radius vanishes and every u names the same
+            // point, so the angle is unrecoverable rather than merely
+            // imprecise.
+            (angle_about_axis(local, "cone")?, local.z)
+        }
+        Surface::Sphere(s) => {
+            positive(s.radius, "sphere radius")?;
+            let local = to_local(&s.frame, point)?;
+            // Latitude first: it is well defined even at the poles, which
+            // the angle lookup then rejects.
+            let sin_v = (local.z / s.radius).clamp(-1.0, 1.0);
+            (angle_about_axis(local, "sphere")?, sin_v.asin())
+        }
+        Surface::Torus(t) => {
+            positive(t.major_radius, "torus major radius")?;
+            positive(t.minor_radius, "torus minor radius")?;
+            let local = to_local(&t.frame, point)?;
+            let ring = (local.x * local.x + local.y * local.y).sqrt();
+            (
+                angle_about_axis(local, "torus")?,
+                (local.z).atan2(ring - t.major_radius),
+            )
+        }
+        // A B-spline has no closed-form inverse; recovering parameters
+        // needs iterative closest-point with its own seeding and
+        // convergence contract. `Surface` is non-exhaustive, so any
+        // future variant lands here too and is refused by name rather
+        // than silently taking an analytic branch that does not fit it.
+        _ => {
+            return Err(GeomError::Unsupported {
+                backend: ScalarSurface::ID,
+                operation: axiolid_kernel::Operation::SurfaceEvaluation,
+            });
+        }
+    };
+    // The parameters are only meaningful if they reproduce the point.
+    // This is what turns a silent mis-parameterisation into an error.
+    let round_trip = evaluate(surface, u, v)?;
+    let residual = (round_trip - point).length();
+    if residual > tolerance.linear() {
+        return Err(GeomError::Degenerate(format!(
+            "point is {residual} from the surface, beyond the {} tolerance: \
+             inversion names a point ON the surface and does not project",
+            tolerance.linear()
+        )));
+    }
+    Ok((u, v))
+}
+
+/// Express a world point in a frame's local coordinates.
+///
+/// `place` maps local to world by scaling the frame axes, so the inverse
+/// is a projection onto those axes -- but ONLY when they are orthonormal.
+/// `Frame3` stores three free vectors and the core documents that
+/// algorithms validate orthonormality explicitly, so this checks rather
+/// than assumes: on a skewed or scaled frame a dot-product projection is
+/// silently wrong, and every parameter derived from it would be wrong by
+/// an amount that still round-trips through the same bad frame.
+fn to_local(frame: &Frame3, point: Point3) -> GeomResult<Vec3> {
+    let axes = [frame.x, frame.y, frame.z];
+    for (axis, name) in axes.iter().zip(["x", "y", "z"]) {
+        let length = axis.length();
+        if (length - 1.0).abs() > 1e-9 {
+            return Err(GeomError::Degenerate(format!(
+                "surface frame {name} axis has length {length}, expected 1"
+            )));
+        }
+    }
+    for (a, b, pair) in [
+        (frame.x, frame.y, "x/y"),
+        (frame.y, frame.z, "y/z"),
+        (frame.z, frame.x, "z/x"),
+    ] {
+        let dot = a.dot(b);
+        if dot.abs() > 1e-9 {
+            return Err(GeomError::Degenerate(format!(
+                "surface frame {pair} axes are not perpendicular: dot {dot}"
+            )));
+        }
+    }
+    let offset = point - frame.origin;
+    Ok(Vec3::new(
+        offset.dot(frame.x),
+        offset.dot(frame.y),
+        offset.dot(frame.z),
+    ))
+}
+
+/// Angle of a local point about the frame's z axis.
+///
+/// Refuses points ON the axis. There the whole `u` circle collapses to a
+/// single location -- a cone apex, a sphere pole -- so no angle is more
+/// correct than any other. Returning zero would look successful and would
+/// rotate a swept section arbitrarily about its own path.
+fn angle_about_axis(local: Vec3, surface: &str) -> GeomResult<Scalar> {
+    let radial = (local.x * local.x + local.y * local.y).sqrt();
+    if radial <= 1e-12 {
+        return Err(GeomError::Degenerate(format!(
+            "{surface} point lies on the axis, where every u names it: \
+             the angular parameter is not recoverable"
+        )));
+    }
+    Ok(local.y.atan2(local.x))
+}

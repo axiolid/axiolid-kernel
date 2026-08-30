@@ -107,6 +107,25 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
     }
 
     /// Resolve a node that must be a profile, into flattened rings.
+    /// Resolve a node that must be a surface.
+    ///
+    /// Reported by node id rather than by position so a malformed graph
+    /// names the offending node instead of the operation that reached it.
+    fn surface_of(
+        graph: &GeometryGraph,
+        id: axiolid_model::NodeId,
+    ) -> GeomResult<&axiolid_surface::Surface> {
+        match graph.get(id) {
+            Some(GeometryNode::Surface(surface)) => Ok(surface),
+            Some(_) => Err(GeomError::InvalidInput(format!(
+                "reference surface {id:?} is not a Surface node"
+            ))),
+            None => Err(GeomError::InvalidInput(format!(
+                "reference surface {id:?} does not belong to this graph"
+            ))),
+        }
+    }
+
     fn rings_of(
         &self,
         graph: &GeometryGraph,
@@ -376,15 +395,30 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                 let path = self.directrix_points(graph, *directrix, *parameter_range)?;
                 crate::sweep::fixed_reference_sweep(&rings, &path, *reference_direction)
             }
-            SolidOperation::SurfaceCurveSweep { .. } => {
-                // The up vector comes from the reference surface's normal,
-                // which needs the surface provider. Substituting a fixed
-                // reference would build a solid that is plausible and
-                // wrongly oriented, so the capability is named instead.
-                Err(GeomError::Unsupported {
-                    backend: axiolid_kernel::BackendId::new("scalar-sweep"),
-                    operation: Operation::SurfaceEvaluation,
-                })
+            SolidOperation::SurfaceCurveSweep {
+                profile,
+                directrix,
+                reference_surface,
+                parameter_range,
+            } => {
+                let rings =
+                    self.rings_of(graph, *profile, options, "surface curve sweep profile")?;
+                let path = self.directrix_points(graph, *directrix, *parameter_range)?;
+                let surface = Self::surface_of(graph, *reference_surface)?;
+                // The up vector is the surface normal AT the directrix, so
+                // each sample must first be named in surface parameters.
+                // Inversion refuses a point that is not on the surface,
+                // which is what keeps a drifted directrix from silently
+                // producing a plausible but wrongly oriented solid.
+                let normals = path
+                    .iter()
+                    .map(|point| {
+                        let (u, v) =
+                            axiolid_scalar::surface::invert(surface, *point, options.tolerance())?;
+                        axiolid_scalar::surface::normal(surface, u, v)
+                    })
+                    .collect::<GeomResult<Vec<_>>>()?;
+                crate::sweep::surface_curve_sweep(&rings, &path, &normals)
             }
             SolidOperation::SectionedSpine { spine, sections } => {
                 let path = self.directrix_points(graph, *spine, None)?;

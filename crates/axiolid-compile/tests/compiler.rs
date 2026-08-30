@@ -171,8 +171,14 @@ fn an_unsupported_node_reports_the_capability_it_would_need() {
     }
 }
 
-/// A revolution is refused rather than approximated. ADR: a wrong solid is
-/// more expensive than a missing one.
+/// An unavailable capability is refused rather than approximated. ADR: a
+/// wrong solid is more expensive than a missing one.
+///
+/// A surface curve sweep is now built for the analytic surfaces, so the
+/// refusal that remains is the one with no closed form: a B-spline
+/// reference surface has no direct point-to-parameter inverse, and
+/// recovering it needs iterative closest-point with its own convergence
+/// contract. The fixture therefore uses a B-spline, not a plane.
 #[test]
 fn an_unimplemented_solid_family_is_refused_not_approximated() {
     let mut b = GeometryGraphBuilder::new();
@@ -189,14 +195,29 @@ fn an_unimplemented_solid_family_is_refused_not_approximated() {
         )))
         .unwrap();
     let surface = b
-        .push(GeometryNode::Surface(axiolid_surface::Surface::Plane(
-            axiolid_surface::Plane {
-                frame: axiolid_core::Frame3 {
-                    origin: axiolid_core::Point3::ZERO,
-                    x: Vec3::X,
-                    y: Vec3::Y,
-                    z: Vec3::Z,
-                },
+        .push(GeometryNode::Surface(axiolid_surface::Surface::BSpline(
+            axiolid_surface::BSplineSurface {
+                u_degree: 1,
+                v_degree: 1,
+                control_points: vec![
+                    vec![
+                        axiolid_core::Point3::ZERO,
+                        axiolid_core::Point3::new(0.0, 1.0, 0.0),
+                    ],
+                    vec![
+                        axiolid_core::Point3::new(1.0, 0.0, 0.0),
+                        axiolid_core::Point3::new(1.0, 1.0, 0.0),
+                    ],
+                ],
+                u_knots: vec![0.0, 1.0],
+                u_multiplicities: vec![2, 2],
+                v_knots: vec![0.0, 1.0],
+                v_multiplicities: vec![2, 2],
+                weights: None,
+                u_closed: false,
+                v_closed: false,
+                knot_spec: axiolid_curve::KnotSpec::Unspecified,
+                self_intersect: None,
             },
         )))
         .unwrap();
@@ -213,9 +234,8 @@ fn an_unimplemented_solid_family_is_refused_not_approximated() {
     let graph = b.finish(vec![swept]).unwrap();
 
     // Assert the NAMED capability, not merely that it failed: a caller uses
-    // this to decide which provider to register. A surface curve sweep takes
-    // its up vector from the reference surface's normal, so what it lacks is
-    // surface evaluation, not the sweep itself.
+    // this to decide which provider to register. What is missing here is
+    // surface evaluation for this surface kind, not the sweep itself.
     match compiler().compile(&graph, swept, &options()) {
         Err(GeomError::Unsupported { operation, .. }) => {
             assert_eq!(operation, Operation::SurfaceEvaluation);
