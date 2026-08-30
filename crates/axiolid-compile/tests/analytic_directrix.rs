@@ -12,8 +12,8 @@ use axiolid_curve::{Curve3, Line3};
 use axiolid_kernel::{ExecutionOptions, GeometryCompiler};
 use axiolid_measure::volume_properties;
 use axiolid_model::{
-    CurveRelation, CurveSegment, GeometryGraphBuilder, GeometryNode, SolidOperation, Transition,
-    TrimSelector, TrimmingPreference,
+    CurveRelation, CurveSegment, GeometryGraphBuilder, GeometryNode, MasterRepresentation,
+    SolidOperation, Transition, TrimSelector, TrimmingPreference,
 };
 use axiolid_profile::{Profile, RectangleProfile};
 
@@ -333,4 +333,53 @@ fn swept_disk_accepts_trimmed_composite_directrix_with_segment_sense() {
     let max_y = mesh.positions.iter().map(|p| p.y).fold(f64::MIN, f64::max);
     assert!(max_x >= 4.0, "x extent {max_x}");
     assert!(max_y > 0.09, "y extent {max_y}");
+}
+
+#[test]
+fn surface_curve_master_representation_is_not_silently_ignored() {
+    let compile = |master| {
+        let mut builder = GeometryGraphBuilder::new();
+        let curve_3d = builder
+            .push(GeometryNode::Curve3(Curve3::Line(Line3 {
+                origin: Point3::ZERO,
+                direction: Vec3::X,
+            })))
+            .unwrap();
+        let directrix = builder
+            .push(GeometryNode::CurveRelation(CurveRelation::SurfaceCurve {
+                curve_3d,
+                associated_geometry: Vec::new(),
+                master,
+            }))
+            .unwrap();
+        let sweep = builder
+            .push(GeometryNode::SolidOperation(SolidOperation::SweptDisk {
+                directrix,
+                radius: 0.1,
+                inner_radius: None,
+                parameter_range: Some((0.0, 2.0)),
+                fillet_radius: None,
+            }))
+            .unwrap();
+        let graph = builder.finish(vec![sweep]).unwrap();
+        compiler().compile(&graph, sweep, &options())
+    };
+
+    compile(MasterRepresentation::Curve3d).expect("Curve3d master is supported");
+    for master in [
+        MasterRepresentation::ParameterCurve,
+        MasterRepresentation::Both,
+        MasterRepresentation::Unspecified,
+    ] {
+        assert!(
+            matches!(
+                compile(master),
+                Err(axiolid_kernel::GeomError::Unsupported {
+                    operation: axiolid_kernel::Operation::CurveEvaluation,
+                    ..
+                })
+            ),
+            "unsupported master {master:?} must fail closed"
+        );
+    }
 }

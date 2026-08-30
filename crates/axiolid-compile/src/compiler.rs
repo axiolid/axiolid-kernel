@@ -234,7 +234,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
             GeometryNode::SolidOperation(
                 operation @ SolidOperation::Boolean { left, right, .. },
             ) => {
-                if is_half_space_difference(graph, operation) {
+                if is_subject_bounded_half_space_boolean(graph, operation) {
                     vec![same(*left)]
                 } else {
                     vec![same(*left), same(*right)]
@@ -585,15 +585,23 @@ fn chord_error(options: &ExecutionOptions) -> Scalar {
     options.tolerance().linear()
 }
 
-fn is_half_space_difference(graph: &GeometryGraph, operation: &SolidOperation) -> bool {
+fn is_subject_bounded_half_space_boolean(
+    graph: &GeometryGraph,
+    operation: &SolidOperation,
+) -> bool {
     let SolidOperation::Boolean {
         right, operator, ..
     } = operation
     else {
         return false;
     };
-    *operator == axiolid_core::BooleanOperator::Difference
-        && matches!(graph.get(*right), Some(GeometryNode::HalfSpace(_)))
+    // These operators stay within the finite left-hand subject, so a prism
+    // covering its bounds is an exact finite stand-in for the half-space.
+    // Union and XOR are unbounded and must remain unsupported.
+    matches!(
+        operator,
+        axiolid_core::BooleanOperator::Difference | axiolid_core::BooleanOperator::Intersection
+    ) && matches!(graph.get(*right), Some(GeometryNode::HalfSpace(_)))
 }
 
 /// Which capability a node family would need.

@@ -3,7 +3,8 @@
 use axiolid_core::{Point3, Scalar};
 use axiolid_kernel::{ExecutionOptions, GeomError, GeomResult};
 use axiolid_model::{
-    CurveRelation, GeometryGraph, GeometryNode, NodeId, TrimSelector, TrimmingPreference,
+    CurveRelation, GeometryGraph, GeometryNode, MasterRepresentation, NodeId, TrimSelector,
+    TrimmingPreference,
 };
 
 const MAX_DEPTH: usize = 256;
@@ -39,8 +40,16 @@ fn resolve(
     }
     match graph.get(id) {
         Some(GeometryNode::Curve3(curve)) => sample_curve(curve, range, options),
-        Some(GeometryNode::CurveRelation(CurveRelation::SurfaceCurve { curve_3d, .. })) => {
-            resolve(graph, *curve_3d, range, options, depth + 1)
+        Some(GeometryNode::CurveRelation(CurveRelation::SurfaceCurve {
+            curve_3d,
+            master: MasterRepresentation::Curve3d,
+            ..
+        })) => resolve(graph, *curve_3d, range, options, depth + 1),
+        // Selecting curve_3d for a pcurve master can move a seam to the wrong
+        // side of a periodic surface. Until pcurve evaluation and Both-agreement
+        // validation exist, refusing these representations is the safe result.
+        Some(GeometryNode::CurveRelation(CurveRelation::SurfaceCurve { .. })) => {
+            Err(unsupported_curve_evaluation())
         }
         Some(GeometryNode::CurveRelation(CurveRelation::Trimmed {
             basis,
@@ -92,16 +101,20 @@ fn resolve(
                 None => Ok(out),
             }
         }
-        Some(GeometryNode::CurveRelation(_)) => Err(GeomError::Unsupported {
-            backend: axiolid_kernel::BackendId::new("scalar-compile"),
-            operation: axiolid_kernel::Operation::CurveEvaluation,
-        }),
+        Some(GeometryNode::CurveRelation(_)) => Err(unsupported_curve_evaluation()),
         Some(_) => Err(GeomError::InvalidInput(format!(
             "sweep directrix {id:?} is not a 3D curve"
         ))),
         None => Err(GeomError::InvalidInput(format!(
             "directrix {id:?} is outside the graph"
         ))),
+    }
+}
+
+fn unsupported_curve_evaluation() -> GeomError {
+    GeomError::Unsupported {
+        backend: axiolid_kernel::BackendId::new("scalar-compile"),
+        operation: axiolid_kernel::Operation::CurveEvaluation,
     }
 }
 

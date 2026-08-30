@@ -558,3 +558,43 @@ fn boolean_difference_materializes_unbounded_half_space_from_subject_bounds() {
     assert!((volume(&mesh) - 4.0).abs() < 1e-6, "got {}", volume(&mesh));
     assert!(mesh.positions.iter().all(|p| p.is_finite()));
 }
+
+#[test]
+fn boolean_intersection_materializes_unbounded_half_space_from_subject_bounds() {
+    let mut b = GeometryGraphBuilder::new();
+    let profile = b.push(GeometryNode::Profile(rect(2.0, 2.0))).unwrap();
+    let subject = b
+        .push(GeometryNode::SolidOperation(SolidOperation::Extrusion {
+            profile,
+            direction: Vec3::Z,
+            depth: 2.0,
+        }))
+        .unwrap();
+    let upper_half = b
+        .push(GeometryNode::HalfSpace(HalfSpace {
+            boundary: Plane3 {
+                origin: Point3::new(0.0, 0.0, 1.0),
+                normal: Vec3::Z,
+            },
+            agreement: true,
+        }))
+        .unwrap();
+    let clipped = b
+        .push(GeometryNode::SolidOperation(SolidOperation::Boolean {
+            operator: BooleanOperator::Intersection,
+            left: subject,
+            right: upper_half,
+        }))
+        .unwrap();
+    let graph = b.finish(vec![clipped]).unwrap();
+
+    let mesh = compiler()
+        .compile(&graph, clipped, &options())
+        .expect("finite subject must bound its half-space intersection");
+    assert!((volume(&mesh) - 4.0).abs() < 1e-6, "got {}", volume(&mesh));
+    assert!(mesh.positions.iter().all(|p| p.is_finite()));
+    let min_z = mesh.positions.iter().map(|p| p.z).fold(f64::MAX, f64::min);
+    let max_z = mesh.positions.iter().map(|p| p.z).fold(f64::MIN, f64::max);
+    assert!(min_z >= 1.0 - 1e-9, "wrong half-space side: min z {min_z}");
+    assert!(max_z <= 2.0 + 1e-9, "escaped subject bounds: max z {max_z}");
+}
