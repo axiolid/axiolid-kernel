@@ -195,6 +195,27 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                 let rings = profile_rings(shape, chord_error(options), options.tolerance())?;
                 extrude_profile(&rings, *direction, *depth, options.tolerance())
             }
+            SolidOperation::Revolution {
+                profile,
+                axis_origin,
+                axis_direction,
+                angle,
+            } => {
+                let node = self.node(graph, *profile)?;
+                let GeometryNode::Profile(shape) = node else {
+                    return Err(GeomError::InvalidInput(format!(
+                        "revolution profile {profile:?} is not a Profile node"
+                    )));
+                };
+                let rings = profile_rings(shape, chord_error(options), options.tolerance())?;
+                crate::revolve::revolve(
+                    &rings,
+                    *axis_origin,
+                    *axis_direction,
+                    *angle,
+                    options.tolerance(),
+                )
+            }
             SolidOperation::Boolean {
                 left,
                 right,

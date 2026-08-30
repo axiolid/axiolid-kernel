@@ -176,13 +176,27 @@ fn an_unsupported_node_reports_the_capability_it_would_need() {
 #[test]
 fn an_unimplemented_solid_family_is_refused_not_approximated() {
     let mut b = GeometryGraphBuilder::new();
-    let profile = b.push(GeometryNode::Profile(rect(1.0, 1.0))).unwrap();
+    // Revolution is implemented now, so the guard points at a family that
+    // genuinely is not: SweptDisk. The test asserts the NAMED capability, so
+    // it keeps its meaning only while its subject stays unimplemented.
+    let directrix = b
+        .push(GeometryNode::Curve3(axiolid_curve::Curve3::Polyline(
+            axiolid_curve::Polyline3 {
+                points: vec![
+                    axiolid_core::Point3::ZERO,
+                    axiolid_core::Point3::new(0.0, 0.0, 5.0),
+                ],
+                closed: false,
+            },
+        )))
+        .unwrap();
     let revolved = b
-        .push(GeometryNode::SolidOperation(SolidOperation::Revolution {
-            profile,
-            axis_origin: axiolid_core::Point3::new(0.0, -5.0, 0.0),
-            axis_direction: Vec3::X,
-            angle: std::f64::consts::PI,
+        .push(GeometryNode::SolidOperation(SolidOperation::SweptDisk {
+            directrix,
+            radius: 0.5,
+            inner_radius: None,
+            parameter_range: None,
+            fillet_radius: None,
         }))
         .unwrap();
     let graph = b.finish(vec![revolved]).unwrap();
