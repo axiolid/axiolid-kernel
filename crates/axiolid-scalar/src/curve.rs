@@ -659,8 +659,9 @@ pub fn flatten2(
     }
 
     let mut out = vec![evaluate2(curve, domain.start)?];
-    subdivide2(
-        curve,
+    let eval = |t| evaluate2(curve, t);
+    subdivide(
+        &eval,
         domain.start,
         domain.end,
         chord_tolerance,
@@ -683,15 +684,89 @@ const MAX_DEPTH_CEILING: u32 = 20;
 /// `budget` bounds total emitted points. Exceeding it is an error rather than
 /// a truncation: silently returning a coarser polyline than the caller asked
 /// for would violate the tolerance contract this function exists to honour.
-fn subdivide2(
-    curve: &Curve2,
+/// The vector operations chord subdivision needs, in either dimension.
+///
+/// `Point2` and `Point3` are both glam vectors with the same surface, and
+/// the subdivision below is genuinely dimension-independent: it measures a
+/// sagitta and bisects a parameter interval, neither of which mentions a
+/// coordinate count. This trait states that once instead of maintaining
+/// two copies that can drift apart.
+trait ChordPoint: Copy {
+    fn sub(self, other: Self) -> Self;
+    fn add_scaled(self, direction: Self, scale: Scalar) -> Self;
+    fn dot(self, other: Self) -> Scalar;
+    fn length(self) -> Scalar;
+    fn length_squared(self) -> Scalar;
+}
+
+impl ChordPoint for Point2 {
+    fn sub(self, other: Self) -> Self {
+        self - other
+    }
+    fn add_scaled(self, direction: Self, scale: Scalar) -> Self {
+        self + direction * scale
+    }
+    fn dot(self, other: Self) -> Scalar {
+        Point2::dot(self, other)
+    }
+    fn length(self) -> Scalar {
+        Point2::length(self)
+    }
+    fn length_squared(self) -> Scalar {
+        Point2::length_squared(self)
+    }
+}
+
+impl ChordPoint for Point3 {
+    fn sub(self, other: Self) -> Self {
+        self - other
+    }
+    fn add_scaled(self, direction: Self, scale: Scalar) -> Self {
+        self + direction * scale
+    }
+    fn dot(self, other: Self) -> Scalar {
+        Point3::dot(self, other)
+    }
+    fn length(self) -> Scalar {
+        Point3::length(self)
+    }
+    fn length_squared(self) -> Scalar {
+        Point3::length_squared(self)
+    }
+}
+
+/// Perpendicular distance from `m` to the chord `a`-`b`.
+fn sagitta<P: ChordPoint>(a: P, b: P, m: P) -> Scalar {
+    let ab = b.sub(a);
+    let len2 = ab.length_squared();
+    if len2 <= 0.0 {
+        // Degenerate chord: fall back to point distance so a closed curve
+        // whose endpoints coincide still subdivides.
+        return m.sub(a).length();
+    }
+    let t = (m.sub(a).dot(ab) / len2).clamp(0.0, 1.0);
+    m.sub(a.add_scaled(ab, t)).length()
+}
+
+/// Emit the interior points of `(a, b)` needed to meet `tol`.
+///
+/// Shared by both dimensions; the caller supplies the evaluator. Depth
+/// exhaustion is an error rather than a truncation, matching the 2D
+/// contract: silently returning a coarser polyline than asked for would
+/// break the tolerance guarantee the caller is relying on.
+fn subdivide<P, F>(
+    eval: &F,
     a: Scalar,
     b: Scalar,
     tol: Scalar,
     depth: u32,
     budget: usize,
-    out: &mut Vec<Point2>,
-) -> GeomResult<()> {
+    out: &mut Vec<P>,
+) -> GeomResult<()>
+where
+    P: ChordPoint,
+    F: Fn(Scalar) -> GeomResult<P>,
+{
     if out.len() >= budget {
         return Err(GeomError::Degenerate(format!(
             "curve flattening exceeded {budget} points before meeting the \
@@ -699,18 +774,24 @@ fn subdivide2(
         )));
     }
     let mid = 0.5 * (a + b);
+    let pa = eval(a)?;
+    let pb = eval(b)?;
     // A parameter interval too small to bisect cannot be refined further:
-    // `mid` equals `a` or `b` in floating point and the recursion would not
-    // terminate on its own.
+    // `mid` equals `a` or `b` in floating point. Returning the chord anyway
+    // would hand back an unverified approximation, so this fails closed --
+    // unless the chord already meets the tolerance, in which case there was
+    // nothing left to verify.
     if !(mid > a && mid < b) {
+        if sagitta(pa, pb, pa) <= tol && (pb.sub(pa)).length() <= tol {
+            return Ok(());
+        }
         return Err(GeomError::Degenerate(format!(
-            "curve flattening cannot bisect parameter interval [{a}, {b}] before meeting chord tolerance {tol}"
+            "curve parameter interval ({a}, {b}) is too small to bisect but \
+             its chord still exceeds the tolerance {tol}"
         )));
     }
-    let pa = evaluate2(curve, a)?;
-    let pb = evaluate2(curve, b)?;
-    let pm = evaluate2(curve, mid)?;
-    if sagitta2(pa, pb, pm) <= tol {
+    let pm = eval(mid)?;
+    if sagitta(pa, pb, pm) <= tol {
         // Within tolerance: the chord a->b stands, no interior point.
         return Ok(());
     }
@@ -719,23 +800,10 @@ fn subdivide2(
             resource: "curve flattening depth",
         });
     }
-    subdivide2(curve, a, mid, tol, depth - 1, budget, out)?;
+    subdivide(eval, a, mid, tol, depth - 1, budget, out)?;
     out.push(pm);
-    subdivide2(curve, mid, b, tol, depth - 1, budget, out)?;
+    subdivide(eval, mid, b, tol, depth - 1, budget, out)?;
     Ok(())
-}
-
-/// Distance from `m` to segment `a-b`: the sagitta of this subdivision step.
-fn sagitta2(a: Point2, b: Point2, m: Point2) -> Scalar {
-    let ab = b - a;
-    let len2 = ab.length_squared();
-    if len2 <= 0.0 {
-        // Degenerate chord: fall back to point distance so a closed curve
-        // whose endpoints coincide still subdivides.
-        return (m - a).length();
-    }
-    let t = ((m - a).dot(ab) / len2).clamp(0.0, 1.0);
-    (m - (a + ab * t)).length()
 }
 
 /// Polylines flatten to their own breakpoints, restricted to `domain`.
@@ -838,3 +906,70 @@ impl CurveEvaluator<Curve3> for ScalarCurve {
 fn _type_anchors(_: Circle2, _: Circle3, _: Ellipse2, _: Ellipse3, _: Line2, _: Line3) {}
 #[allow(unused)]
 fn _poly_anchors(_: Polyline2, _: Polyline3) {}
+
+/// Flatten a 3D curve to a polyline within `chord_tolerance`.
+///
+/// The 3D twin of [`flatten2`], sharing its subdivision, its resource
+/// bounds and its polyline contract. Sampling is adaptive: a curve is
+/// bisected only where the chord actually departs from it, so a gentle
+/// arc costs few points and a tight one costs many, and neither is
+/// decided by a fixed count chosen in advance.
+pub fn flatten3(
+    curve: &Curve3,
+    domain: Interval,
+    chord_tolerance: Scalar,
+    max_depth: u32,
+) -> GeomResult<Vec<Point3>> {
+    // A depth bound alone is not a resource bound: depth `d` permits `2^d`
+    // segments. Cap the total point count too, so a curve that cannot meet
+    // the tolerance fails fast instead of exhausting memory.
+    const MAX_POINTS: usize = 1 << 16;
+    if !(chord_tolerance.is_finite()
+        && chord_tolerance.is_sign_positive()
+        && chord_tolerance != 0.0)
+    {
+        return Err(GeomError::InvalidInput(format!(
+            "chord tolerance must be positive and finite, got {chord_tolerance}"
+        )));
+    }
+    // A line is exact between its endpoints: subdividing adds vertices that
+    // carry no information.
+    if let Curve3::Line(_) = curve {
+        return Ok(vec![
+            evaluate3(curve, domain.start)?,
+            evaluate3(curve, domain.end)?,
+        ]);
+    }
+    if let Curve3::Polyline(p) = curve {
+        // A polyline's parameter is one unit per segment, so a caller passing
+        // a normalized `(0, 1)` domain would silently collapse an n-vertex
+        // path to its first edge. That is data loss disguised as success.
+        let natural = polyline_domain(p.points.len(), p.closed);
+        let requested = (domain.end - domain.start).abs();
+        if natural.end > 1.0 && requested <= 1.0 {
+            return Err(GeomError::InvalidInput(format!(
+                "polyline domain {:?} spans {requested} of {} segments; a \
+                 polyline parameter is one unit per segment, so this would \
+                 discard {} vertices",
+                domain,
+                natural.end,
+                p.points.len().saturating_sub(2)
+            )));
+        }
+        return polyline_flatten(&p.points, p.closed, domain, |t| evaluate3(curve, t));
+    }
+
+    let eval = |t| evaluate3(curve, t);
+    let mut out = vec![eval(domain.start)?];
+    subdivide(
+        &eval,
+        domain.start,
+        domain.end,
+        chord_tolerance,
+        max_depth.min(MAX_DEPTH_CEILING),
+        MAX_POINTS,
+        &mut out,
+    )?;
+    out.push(eval(domain.end)?);
+    Ok(out)
+}

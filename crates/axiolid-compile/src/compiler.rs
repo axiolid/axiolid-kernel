@@ -154,40 +154,70 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
         graph: &GeometryGraph,
         id: NodeId,
         range: Option<(Scalar, Scalar)>,
+        options: &ExecutionOptions,
     ) -> GeomResult<Vec<Point3>> {
-        if range.is_some() {
-            // Trimming needs the curve's parameterisation, which only the
-            // evaluator defines. Ignoring it would sweep the whole directrix
-            // and silently produce a longer solid than asked for.
-            return Err(GeomError::Unsupported {
-                backend: axiolid_kernel::BackendId::new("scalar-sweep"),
-                operation: Operation::Sweep,
-            });
-        }
         let node = self.node(graph, id)?;
         let GeometryNode::Curve3(curve) = node else {
             return Err(GeomError::InvalidInput(format!(
                 "sweep directrix {id:?} is not a Curve3 node"
             )));
         };
-        match curve {
-            axiolid_curve::Curve3::Polyline(p) => {
-                if p.points.len() < 2 {
-                    return Err(GeomError::InvalidInput(
-                        "a sweep directrix needs at least two points".to_owned(),
-                    ));
+
+        // Trimming is parameter-aware: the requested interval is checked
+        // against the curve's own domain rather than applied as an index
+        // slice, so a range in the wrong units is reported instead of
+        // quietly sweeping the wrong span.
+        let natural = axiolid_scalar::curve::domain3(curve);
+        let domain = match range {
+            None => natural,
+            Some((start, end)) => {
+                if !(start.is_finite() && end.is_finite()) {
+                    return Err(GeomError::InvalidInput(format!(
+                        "sweep parameter range ({start}, {end}) must be finite"
+                    )));
                 }
-                let mut pts = p.points.clone();
-                if p.closed {
-                    pts.push(p.points[0]);
+                if start == end {
+                    return Err(GeomError::Degenerate(format!(
+                        "sweep parameter range ({start}, {end}) is empty, so \
+                         the directrix has no extent"
+                    )));
                 }
-                Ok(pts)
+                let (lo, hi) = (
+                    natural.start.min(natural.end),
+                    natural.start.max(natural.end),
+                );
+                let (rlo, rhi) = (start.min(end), start.max(end));
+                // A tolerance-width overshoot is round-off; anything larger
+                // is a caller error worth naming, because extrapolating a
+                // bounded curve invents geometry.
+                let slack = options.tolerance().linear();
+                if rlo < lo - slack || rhi > hi + slack {
+                    return Err(GeomError::InvalidInput(format!(
+                        "sweep parameter range ({start}, {end}) falls outside \
+                         the directrix domain ({lo}, {hi})"
+                    )));
+                }
+                axiolid_core::Interval {
+                    start: rlo.max(lo),
+                    end: rhi.min(hi),
+                }
             }
-            _ => Err(GeomError::Unsupported {
-                backend: axiolid_kernel::BackendId::new("scalar-sweep"),
-                operation: Operation::CurveEvaluation,
-            }),
+        };
+
+        // Adaptive sampling: the chord budget decides the point count, so a
+        // tighter tolerance buys a closer path rather than a fixed guess.
+        let points = axiolid_scalar::curve::flatten3(
+            curve,
+            domain,
+            chord_error(options),
+            MAX_FLATTEN_DEPTH,
+        )?;
+        if points.len() < 2 {
+            return Err(GeomError::InvalidInput(
+                "a sweep directrix needs at least two points".to_owned(),
+            ));
         }
+        Ok(points)
     }
 
     fn node<'g>(&self, graph: &'g GeometryGraph, id: NodeId) -> GeomResult<&'g GeometryNode> {
@@ -376,7 +406,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                 parameter_range,
                 fillet_radius,
             } => {
-                let path = self.directrix_points(graph, *directrix, *parameter_range)?;
+                let path = self.directrix_points(graph, *directrix, *parameter_range, options)?;
                 crate::sweep::swept_disk(
                     &path,
                     *radius,
@@ -392,7 +422,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                 parameter_range,
             } => {
                 let rings = self.rings_of(graph, *profile, options, "sweep profile")?;
-                let path = self.directrix_points(graph, *directrix, *parameter_range)?;
+                let path = self.directrix_points(graph, *directrix, *parameter_range, options)?;
                 crate::sweep::fixed_reference_sweep(&rings, &path, *reference_direction)
             }
             SolidOperation::SurfaceCurveSweep {
@@ -403,7 +433,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
             } => {
                 let rings =
                     self.rings_of(graph, *profile, options, "surface curve sweep profile")?;
-                let path = self.directrix_points(graph, *directrix, *parameter_range)?;
+                let path = self.directrix_points(graph, *directrix, *parameter_range, options)?;
                 let surface = Self::surface_of(graph, *reference_surface)?;
                 // The up vector is the surface normal AT the directrix, so
                 // each sample must first be named in surface parameters.
@@ -421,7 +451,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                 crate::sweep::surface_curve_sweep(&rings, &path, &normals)
             }
             SolidOperation::SectionedSpine { spine, sections } => {
-                let path = self.directrix_points(graph, *spine, None)?;
+                let path = self.directrix_points(graph, *spine, None, options)?;
                 if sections.len() != path.len() {
                     return Err(GeomError::InvalidInput(format!(
                         "a sectioned spine needs one section per spine point: {} sections, {} points",
@@ -507,6 +537,14 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
 ///
 /// Derived from the operation tolerance rather than a global constant: the
 /// acceptable sagitta is a property of the model's unit scale.
+/// Subdivision ceiling for directrix flattening.
+///
+/// Depth 16 permits 65536 segments, far past any chord budget a
+/// sweep sets; the flattener's own point cap is the real bound.
+/// This exists so a pathological curve terminates rather than
+/// recursing to the stack limit.
+const MAX_FLATTEN_DEPTH: u32 = 16;
+
 fn chord_error(options: &ExecutionOptions) -> Scalar {
     options.tolerance().linear()
 }

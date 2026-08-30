@@ -1577,9 +1577,11 @@ fn a_curved_face_with_a_hole_is_not_gridded() {
     // (nu+1)*(nv+1). Both must be strictly below that: the face went to the
     // polygon triangulator, which is what the hole guard exists to force.
     //
-    // This pins the CAPABILITY BOUNDARY, not the quality of earcut's hole
-    // handling: the fallback path subtracts only part of the window, which
-    // is a separate pre-existing limitation and not what this test judges.
+    // The hole must actually be subtracted, not merely dented. Refinement
+    // splits the long UV chords earcut produced, so the mapped area now
+    // converges on the analytic patch minus the window. A boundary-only
+    // triangulation scored 24.18 here -- it kept three quarters of a hole
+    // it claimed to have cut.
     let area: f64 = mesh
         .indices
         .chunks_exact(3)
@@ -1591,9 +1593,18 @@ fn a_curved_face_with_a_hole_is_not_gridded() {
         })
         .sum();
     let outer_area = PI * radius * height;
+    // u spans 1 radian and v spans 2, so the window is r * 1 * 2 = 4.
+    let hole_area = radius * 1.0 * 2.0;
+    let expected = outer_area - hole_area;
+    let removed = outer_area - area;
     assert!(
-        area < outer_area,
-        "a gridded face would cover the hole: area {area} vs outer {outer_area}"
+        (removed - hole_area).abs() < 1.0e-2,
+        "the window must be subtracted: removed {removed} of {hole_area} \
+         (area {area}, expected about {expected})"
+    );
+    assert!(
+        area < expected + 1.0e-6,
+        "a chordal mesh cannot exceed the analytic patch: {area} vs {expected}"
     );
     // The hole's own boundary must appear in the mesh: a grid would never
     // place vertices on the window's rim.
