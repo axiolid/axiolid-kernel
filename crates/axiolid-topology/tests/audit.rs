@@ -88,6 +88,27 @@ fn an_empty_outer_loop_is_not_a_boundary() {
 }
 
 #[test]
+fn a_face_without_an_outer_bound_is_not_tessellable() {
+    let mut brep = square();
+    let bound = brep.faces()[0].bounds[0];
+    brep.add_face(Face {
+        surface: None,
+        bounds: vec![FaceBound {
+            outer: false,
+            ..bound
+        }],
+        orientation: Orientation::Forward,
+    });
+
+    let health = audit_brep(&brep);
+    assert_eq!(
+        health.faces_without_outer_bound, 1,
+        "every face must designate one outer bound: {health:?}"
+    );
+    assert!(!health.is_tessellable());
+}
+
+#[test]
 fn multiple_outer_bounds_are_not_a_planar_face() {
     let mut brep = square();
     let outer = brep.faces()[0].bounds[0];

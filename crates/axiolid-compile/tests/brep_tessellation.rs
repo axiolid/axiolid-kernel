@@ -116,6 +116,18 @@ fn planar_face(points: &[Vec3]) -> BRep<axiolid_model::NodeId> {
 }
 
 fn planar_face_with_holes(outer: &[Vec3], holes: &[&[Vec3]]) -> BRep<axiolid_model::NodeId> {
+    planar_face_with_bound_roles(outer, holes, true)
+}
+
+fn planar_face_without_outer(points: &[Vec3]) -> BRep<axiolid_model::NodeId> {
+    planar_face_with_bound_roles(points, &[], false)
+}
+
+fn planar_face_with_bound_roles(
+    outer: &[Vec3],
+    holes: &[&[Vec3]],
+    mark_outer: bool,
+) -> BRep<axiolid_model::NodeId> {
     let mut brep = BRep::default();
     let mut bounds = Vec::new();
     for (ring_index, points) in core::iter::once(outer)
@@ -148,7 +160,7 @@ fn planar_face_with_holes(outer: &[Vec3], holes: &[&[Vec3]]) -> BRep<axiolid_mod
         bounds.push(FaceBound {
             loop_id: wire,
             orientation: Orientation::Forward,
-            outer: ring_index == 0,
+            outer: mark_outer && ring_index == 0,
         });
     }
     let face = brep.add_face(Face {
@@ -190,6 +202,87 @@ fn compile(brep: BRep<axiolid_model::NodeId>) -> axiolid_mesh::TriMesh {
 /// Per-face vertex copies would still render correctly but leave every edge
 /// unshared, so the weld is asserted through edge parity rather than by
 /// counting positions alone.
+#[test]
+fn a_solid_with_an_empty_outer_shell_is_rejected() {
+    let mut brep = BRep::default();
+    let outer = brep.add_shell(Shell {
+        faces: Vec::new(),
+        closed: true,
+    });
+    brep.add_solid(Solid {
+        outer,
+        voids: Vec::new(),
+    });
+
+    let error = compile_result(brep).expect_err("a solid cannot have an empty outer shell");
+    assert!(
+        matches!(error, axiolid_kernel::GeomError::InvalidInput(_)),
+        "expected malformed outer shell, got {error:?}"
+    );
+}
+
+#[test]
+fn a_face_without_an_outer_bound_is_rejected_before_tessellation() {
+    let points = [Vec3::ZERO, Vec3::X, Vec3::new(1.0, 1.0, 0.0), Vec3::Y];
+    let error = compile_result(planar_face_without_outer(&points))
+        .expect_err("a face must designate one outer bound");
+    match error {
+        axiolid_kernel::GeomError::InvalidInput(message) => assert!(
+            message.contains("faces_without_outer_bound: 1"),
+            "diagnostic must name the missing outer bound: {message}"
+        ),
+        other => panic!("expected invalid topology, got {other:?}"),
+    }
+}
+
+#[test]
+fn a_face_with_an_empty_outer_loop_is_rejected_before_tessellation() {
+    let mut brep = BRep::default();
+    let empty = brep.add_loop(Loop { edges: Vec::new() });
+    let face = brep.add_face(Face {
+        surface: None,
+        bounds: vec![FaceBound {
+            loop_id: empty,
+            orientation: Orientation::Forward,
+            outer: true,
+        }],
+        orientation: Orientation::Forward,
+    });
+    let outer = brep.add_shell(Shell {
+        faces: vec![(face, Orientation::Forward)],
+        closed: false,
+    });
+    brep.add_solid(Solid {
+        outer,
+        voids: Vec::new(),
+    });
+
+    let error = compile_result(brep).expect_err("an empty loop cannot bound a face");
+    match error {
+        axiolid_kernel::GeomError::InvalidInput(message) => assert!(
+            message.contains("empty_loops: 1"),
+            "diagnostic must name the empty loop: {message}"
+        ),
+        other => panic!("expected invalid topology, got {other:?}"),
+    }
+}
+
+#[test]
+fn non_finite_planar_bounds_are_rejected() {
+    for (label, coordinate) in [("NaN", f64::NAN), ("infinity", f64::INFINITY)] {
+        let points = [Vec3::ZERO, Vec3::X, Vec3::new(0.0, coordinate, 0.0)];
+        let error = compile_result(planar_face(&points))
+            .expect_err("non-finite planar input cannot be tessellated");
+        match error {
+            axiolid_kernel::GeomError::Degenerate(message) => assert!(
+                message.contains("non-finite"),
+                "{label} diagnostic must identify non-finite area: {message}"
+            ),
+            other => panic!("expected degenerate {label} bound, got {other:?}"),
+        }
+    }
+}
+
 #[test]
 fn multiple_outer_bounds_are_rejected_before_tessellation() {
     let (mut brep, outer) = cube_shell_with_duplicate_outer(Orientation::Forward, true);

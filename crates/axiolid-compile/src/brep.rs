@@ -153,6 +153,11 @@ pub fn tessellate(
         .shells()
         .get(solid.outer.index())
         .ok_or_else(|| GeomError::InvalidInput("outer shell missing".to_string()))?;
+    if shell.faces.is_empty() {
+        return Err(GeomError::InvalidInput(
+            "outer shell has no faces".to_string(),
+        ));
+    }
 
     let mut expanded_work = 0_usize;
     for &(face_id, _) in &shell.faces {
