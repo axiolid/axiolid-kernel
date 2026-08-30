@@ -176,38 +176,51 @@ fn an_unsupported_node_reports_the_capability_it_would_need() {
 #[test]
 fn an_unimplemented_solid_family_is_refused_not_approximated() {
     let mut b = GeometryGraphBuilder::new();
-    // Revolution is implemented now, so the guard points at a family that
-    // genuinely is not: SweptDisk. The test asserts the NAMED capability, so
-    // it keeps its meaning only while its subject stays unimplemented.
+    let profile = b.push(GeometryNode::Profile(rect(1.0, 1.0))).unwrap();
     let directrix = b
         .push(GeometryNode::Curve3(axiolid_curve::Curve3::Polyline(
             axiolid_curve::Polyline3 {
                 points: vec![
                     axiolid_core::Point3::ZERO,
-                    axiolid_core::Point3::new(0.0, 0.0, 5.0),
+                    axiolid_core::Point3::new(0.0, 0.0, 1.0),
                 ],
                 closed: false,
             },
         )))
         .unwrap();
-    let revolved = b
-        .push(GeometryNode::SolidOperation(SolidOperation::SweptDisk {
-            directrix,
-            radius: 0.5,
-            inner_radius: None,
-            parameter_range: None,
-            fillet_radius: None,
-        }))
+    let surface = b
+        .push(GeometryNode::Surface(axiolid_surface::Surface::Plane(
+            axiolid_surface::Plane {
+                frame: axiolid_core::Frame3 {
+                    origin: axiolid_core::Point3::ZERO,
+                    x: Vec3::X,
+                    y: Vec3::Y,
+                    z: Vec3::Z,
+                },
+            },
+        )))
         .unwrap();
-    let graph = b.finish(vec![revolved]).unwrap();
+    let swept = b
+        .push(GeometryNode::SolidOperation(
+            SolidOperation::SurfaceCurveSweep {
+                profile,
+                directrix,
+                reference_surface: surface,
+                parameter_range: None,
+            },
+        ))
+        .unwrap();
+    let graph = b.finish(vec![swept]).unwrap();
 
     // Assert the NAMED capability, not merely that it failed: a caller uses
-    // this to decide which provider to register.
-    match compiler().compile(&graph, revolved, &options()) {
+    // this to decide which provider to register. A surface curve sweep takes
+    // its up vector from the reference surface's normal, so what it lacks is
+    // surface evaluation, not the sweep itself.
+    match compiler().compile(&graph, swept, &options()) {
         Err(GeomError::Unsupported { operation, .. }) => {
-            assert_eq!(operation, Operation::Sweep);
+            assert_eq!(operation, Operation::SurfaceEvaluation);
         }
-        other => panic!("expected Unsupported{{Sweep}}, got {other:?}"),
+        other => panic!("expected Unsupported{{SurfaceEvaluation}}, got {other:?}"),
     }
 }
 

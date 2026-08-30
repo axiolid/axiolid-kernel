@@ -4,7 +4,7 @@
 //! so cycles are structurally impossible, but depth is unbounded and
 //! recursion would risk a stack overflow on adversarial input.
 
-use axiolid_core::{Scalar, Transform3};
+use axiolid_core::{Point3, Scalar, Transform3};
 use axiolid_kernel::{
     Backend, BackendDescriptor, BackendId, ExecutionOptions, ExecutionTarget, GeomError,
     GeomResult, GeometryCompiler, MeshBoolean, Operation, ScratchRequirement,
@@ -65,6 +65,71 @@ type Cache = std::collections::HashMap<usize, TriMesh>;
 
 impl<B: MeshBoolean> ScalarCompiler<B> {
     /// Resolve a node handle, blaming the graph rather than panicking.
+    /// Resolve a node that must be a profile, into flattened rings.
+    fn rings_of(
+        &self,
+        graph: &GeometryGraph,
+        id: NodeId,
+        options: &ExecutionOptions,
+        what: &str,
+    ) -> GeomResult<crate::profile::Rings> {
+        let node = self.node(graph, id)?;
+        let GeometryNode::Profile(shape) = node else {
+            return Err(GeomError::InvalidInput(format!(
+                "{what} {id:?} is not a Profile node"
+            )));
+        };
+        profile_rings(shape, chord_error(options), options.tolerance())
+    }
+
+    /// Sample a directrix curve into a polyline.
+    ///
+    /// Only a polyline directrix is handled here: its points ARE the samples,
+    /// so no evaluator is involved. An analytic directrix needs the curve
+    /// provider, which the compiler does not yet hold, and is refused with the
+    /// named capability rather than silently approximated by its control
+    /// points.
+    fn directrix_points(
+        &self,
+        graph: &GeometryGraph,
+        id: NodeId,
+        range: Option<(Scalar, Scalar)>,
+    ) -> GeomResult<Vec<Point3>> {
+        if range.is_some() {
+            // Trimming needs the curve's parameterisation, which only the
+            // evaluator defines. Ignoring it would sweep the whole directrix
+            // and silently produce a longer solid than asked for.
+            return Err(GeomError::Unsupported {
+                backend: axiolid_kernel::BackendId::new("scalar-sweep"),
+                operation: Operation::Sweep,
+            });
+        }
+        let node = self.node(graph, id)?;
+        let GeometryNode::Curve3(curve) = node else {
+            return Err(GeomError::InvalidInput(format!(
+                "sweep directrix {id:?} is not a Curve3 node"
+            )));
+        };
+        match curve {
+            axiolid_curve::Curve3::Polyline(p) => {
+                if p.points.len() < 2 {
+                    return Err(GeomError::InvalidInput(
+                        "a sweep directrix needs at least two points".to_owned(),
+                    ));
+                }
+                let mut pts = p.points.clone();
+                if p.closed {
+                    pts.push(p.points[0]);
+                }
+                Ok(pts)
+            }
+            _ => Err(GeomError::Unsupported {
+                backend: axiolid_kernel::BackendId::new("scalar-sweep"),
+                operation: Operation::CurveEvaluation,
+            }),
+        }
+    }
+
     fn node<'g>(&self, graph: &'g GeometryGraph, id: NodeId) -> GeomResult<&'g GeometryNode> {
         graph.get(id).ok_or_else(|| {
             GeomError::InvalidInput(format!("node {id:?} does not belong to this graph"))
@@ -215,6 +280,100 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                     *angle,
                     options.tolerance(),
                 )
+            }
+            SolidOperation::TaperedExtrusion {
+                start_profile,
+                end_profile,
+                direction,
+                depth,
+            } => {
+                let a = self.rings_of(graph, *start_profile, options, "taper start profile")?;
+                let b = self.rings_of(graph, *end_profile, options, "taper end profile")?;
+                crate::sweep::tapered_extrude(&a, &b, *direction, *depth)
+            }
+            SolidOperation::TaperedRevolution {
+                start_profile,
+                end_profile,
+                axis_origin,
+                axis_direction,
+                angle,
+            } => {
+                let a = self.rings_of(graph, *start_profile, options, "taper start profile")?;
+                let b = self.rings_of(graph, *end_profile, options, "taper end profile")?;
+                crate::sweep::tapered_revolve(
+                    &a,
+                    &b,
+                    *axis_origin,
+                    *axis_direction,
+                    *angle,
+                    options.tolerance(),
+                )
+            }
+            SolidOperation::SweptDisk {
+                directrix,
+                radius,
+                inner_radius,
+                parameter_range,
+                fillet_radius,
+            } => {
+                let path = self.directrix_points(graph, *directrix, *parameter_range)?;
+                crate::sweep::swept_disk(
+                    &path,
+                    *radius,
+                    *inner_radius,
+                    *fillet_radius,
+                    options.tolerance(),
+                )
+            }
+            SolidOperation::FixedReferenceSweep {
+                profile,
+                directrix,
+                reference_direction,
+                parameter_range,
+            } => {
+                let rings = self.rings_of(graph, *profile, options, "sweep profile")?;
+                let path = self.directrix_points(graph, *directrix, *parameter_range)?;
+                crate::sweep::fixed_reference_sweep(&rings, &path, *reference_direction)
+            }
+            SolidOperation::SurfaceCurveSweep { .. } => {
+                // The up vector comes from the reference surface's normal,
+                // which needs the surface provider. Substituting a fixed
+                // reference would build a solid that is plausible and
+                // wrongly oriented, so the capability is named instead.
+                Err(GeomError::Unsupported {
+                    backend: axiolid_kernel::BackendId::new("scalar-sweep"),
+                    operation: Operation::SurfaceEvaluation,
+                })
+            }
+            SolidOperation::SectionedSpine { spine, sections } => {
+                let path = self.directrix_points(graph, *spine, None)?;
+                if sections.len() != path.len() {
+                    return Err(GeomError::InvalidInput(format!(
+                        "a sectioned spine needs one section per spine point: {} sections, {} points",
+                        sections.len(),
+                        path.len()
+                    )));
+                }
+                let mut placed = Vec::with_capacity(sections.len());
+                for (section, origin) in sections.iter().zip(&path) {
+                    let rings =
+                        self.rings_of(graph, section.profile, options, "spine section profile")?;
+                    // The section's own placement positions its profile;
+                    // the spine point supplies the station origin.
+                    let pts = rings
+                        .outer
+                        .iter()
+                        .chain(rings.holes.iter().flatten())
+                        .map(|p| {
+                            section
+                                .placement
+                                .transform_point3(Point3::new(p.x, p.y, 0.0))
+                                + *origin
+                        })
+                        .collect();
+                    placed.push((rings, pts));
+                }
+                crate::sweep::sectioned_spine(&placed)
             }
             SolidOperation::Boolean {
                 left,

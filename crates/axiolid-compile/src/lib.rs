@@ -4,8 +4,10 @@
 
 mod brep;
 pub mod extrude;
+pub mod loft;
 pub mod profile;
 pub mod revolve;
+pub mod sweep;
 
 use axiolid_kernel::BackendId;
 
