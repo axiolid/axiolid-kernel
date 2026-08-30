@@ -34,15 +34,18 @@ assert_eq!(source, world);
 # optional mesh-Boolean provider.
 axiolid = { git = "https://github.com/axiolid/axiolid-kernel.git", features = ["discrete"] }
 
-# Representation vocabulary for curves, surfaces, topology, and a neutral DAG.
+# Representation vocabulary plus general NURBS reference algorithms.
 axiolid = { git = "https://github.com/axiolid/axiolid-kernel.git", features = ["parametric"] }
+
+# Or select only curve/surface values and the general NURBS algorithms.
+axiolid = { git = "https://github.com/axiolid/axiolid-kernel.git", default-features = false, features = ["nurbs"] }
 ```
 
 | Bundle | Includes | Does not imply |
 | --- | --- | --- |
 | default | core values, mesh facade, portable CPU shell | every mesh algorithm |
 | `discrete` | mesh-centric representations and declared algorithms/providers | exact B-rep evaluation |
-| `parametric` | curve, surface, topology, primitive, and graph vocabulary | a complete CAD evaluator |
+| `parametric` | curve, surface, topology, primitive, and graph vocabulary plus general NURBS reference algorithms | a complete CAD modeling/intersection kernel |
 | `advanced` | `discrete` + `parametric` + healing vocabulary | production GPU computation |
 | `full` | advanced facade plus optional parallel/SIMD/GPU seams | that each acceleration path is implemented or faster |
 

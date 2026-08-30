@@ -59,6 +59,23 @@ pub struct Patch {
     pub v_end: Scalar,
 }
 
+/// Position and all first/second partial derivatives of a surface.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SurfaceJet {
+    /// Position at `(u, v)`.
+    pub point: Point3,
+    /// First partial with respect to `u`.
+    pub du: Vec3,
+    /// First partial with respect to `v`.
+    pub dv: Vec3,
+    /// Second partial with respect to `u` twice.
+    pub duu: Vec3,
+    /// Mixed second partial.
+    pub duv: Vec3,
+    /// Second partial with respect to `v` twice.
+    pub dvv: Vec3,
+}
+
 impl Patch {
     /// Construct a patch, rejecting an empty or non-finite rectangle.
     pub fn new(u_start: Scalar, u_end: Scalar, v_start: Scalar, v_end: Scalar) -> GeomResult<Self> {
@@ -250,6 +267,115 @@ pub fn partials(surface: &Surface, u: Scalar, v: Scalar) -> GeomResult<(Vec3, Ve
     } else {
         Err(GeomError::Degenerate(
             "surface partial is non-finite".to_owned(),
+        ))
+    }
+}
+
+/// Second-order differential jet at `(u, v)`.
+///
+/// All values are analytic in the surface's native parameterisation. Rational
+/// B-splines are differentiated in homogeneous space before projection.
+pub fn jet(surface: &Surface, u: Scalar, v: Scalar) -> GeomResult<SurfaceJet> {
+    finite(u, "surface parameter u")?;
+    finite(v, "surface parameter v")?;
+    finite_surface_frame(surface)?;
+    let value = match surface {
+        Surface::Plane(p) => SurfaceJet {
+            point: plane_point(p, u, v),
+            du: p.frame.x,
+            dv: p.frame.y,
+            duu: Vec3::ZERO,
+            duv: Vec3::ZERO,
+            dvv: Vec3::ZERO,
+        },
+        Surface::Cylinder(c) => {
+            positive(c.radius, "cylinder radius")?;
+            let (s, co) = u.sin_cos();
+            SurfaceJet {
+                point: cylinder_point(c, u, v)?,
+                du: direct(&c.frame, Vec3::new(-c.radius * s, c.radius * co, 0.0)),
+                dv: c.frame.z,
+                duu: direct(&c.frame, Vec3::new(-c.radius * co, -c.radius * s, 0.0)),
+                duv: Vec3::ZERO,
+                dvv: Vec3::ZERO,
+            }
+        }
+        Surface::Cone(c) => {
+            finite(c.radius, "cone radius")?;
+            finite(c.semi_angle, "cone semi-angle")?;
+            let slope = c.semi_angle.tan();
+            let radius = c.radius + v * slope;
+            if radius < 0.0 {
+                return Err(GeomError::Degenerate(format!(
+                    "cone radius is negative at v = {v}: the patch crosses the apex"
+                )));
+            }
+            let (s, co) = u.sin_cos();
+            SurfaceJet {
+                point: cone_point(c, u, v)?,
+                du: direct(&c.frame, Vec3::new(-radius * s, radius * co, 0.0)),
+                dv: direct(&c.frame, Vec3::new(slope * co, slope * s, 1.0)),
+                duu: direct(&c.frame, Vec3::new(-radius * co, -radius * s, 0.0)),
+                duv: direct(&c.frame, Vec3::new(-slope * s, slope * co, 0.0)),
+                dvv: Vec3::ZERO,
+            }
+        }
+        Surface::Sphere(sphere) => {
+            positive(sphere.radius, "sphere radius")?;
+            let r = sphere.radius;
+            let (su, cu) = u.sin_cos();
+            let (sv, cv) = v.sin_cos();
+            SurfaceJet {
+                point: sphere_point(sphere, u, v)?,
+                du: direct(&sphere.frame, Vec3::new(-r * cv * su, r * cv * cu, 0.0)),
+                dv: direct(&sphere.frame, Vec3::new(-r * sv * cu, -r * sv * su, r * cv)),
+                duu: direct(&sphere.frame, Vec3::new(-r * cv * cu, -r * cv * su, 0.0)),
+                duv: direct(&sphere.frame, Vec3::new(r * sv * su, -r * sv * cu, 0.0)),
+                dvv: direct(
+                    &sphere.frame,
+                    Vec3::new(-r * cv * cu, -r * cv * su, -r * sv),
+                ),
+            }
+        }
+        Surface::Torus(torus) => {
+            positive(torus.major_radius, "torus major radius")?;
+            positive(torus.minor_radius, "torus minor radius")?;
+            let r = torus.minor_radius;
+            let (su, cu) = u.sin_cos();
+            let (sv, cv) = v.sin_cos();
+            let ring = torus.major_radius + r * cv;
+            SurfaceJet {
+                point: torus_point(torus, u, v)?,
+                du: direct(&torus.frame, Vec3::new(-ring * su, ring * cu, 0.0)),
+                dv: direct(&torus.frame, Vec3::new(-r * sv * cu, -r * sv * su, r * cv)),
+                duu: direct(&torus.frame, Vec3::new(-ring * cu, -ring * su, 0.0)),
+                duv: direct(&torus.frame, Vec3::new(r * sv * su, -r * sv * cu, 0.0)),
+                dvv: direct(&torus.frame, Vec3::new(-r * cv * cu, -r * cv * su, -r * sv)),
+            }
+        }
+        Surface::BSpline(b) => bspline_jet(b, u, v)?,
+        _ => {
+            return Err(GeomError::Unsupported {
+                backend: ScalarSurface::ID,
+                operation: axiolid_kernel::Operation::SurfaceEvaluation,
+            })
+        }
+    };
+    if [
+        value.point,
+        value.du,
+        value.dv,
+        value.duu,
+        value.duv,
+        value.dvv,
+    ]
+    .iter()
+    .all(|vector| vector.is_finite())
+    {
+        Ok(value)
+    } else {
+        Err(GeomError::Degenerate(
+            "surface differential jet is non-finite".to_owned(),
         ))
     }
 }
@@ -663,6 +789,172 @@ fn bspline_partials(b: &BSplineSurface, u: Scalar, v: Scalar) -> GeomResult<(Vec
         project_derivative(point, weight, du, du_weight, "u")?,
         project_derivative(point, weight, dv, dv_weight, "v")?,
     ))
+}
+
+/// Full second-order jet of a rational tensor-product B-spline.
+/// Second-order differential jet of a B-spline surface without enum wrapping.
+pub fn bspline_jet(b: &BSplineSurface, u: Scalar, v: Scalar) -> GeomResult<SurfaceJet> {
+    let (ua, va) = bspline_axes(b)?;
+    let (uc, vc) = (ua.clamp(u), va.clamp(v));
+    let (points, weights) = homogeneous_control_net(b)?;
+    let base_axes = HomogeneousAxes {
+        u_knots: &ua.knots,
+        u_degree: ua.degree,
+        v_knots: &va.knots,
+        v_degree: va.degree,
+    };
+    let (point, weight) = eval_tensor_homogeneous(base_axes, &points, &weights, uc, vc);
+    if !weight.is_finite() || weight == 0.0 {
+        return Err(GeomError::Degenerate(
+            "B-spline surface weight collapsed to a non-finite or zero value".to_owned(),
+        ));
+    }
+    let position = Point3::new(point[0] / weight, point[1] / weight, point[2] / weight);
+
+    let (u_points, u_weights) = derivative_net_u(&points, &weights, &ua.knots, ua.degree);
+    let u_knots = &ua.knots[1..ua.knots.len() - 1];
+    let (du_h, du_weight) = eval_tensor_homogeneous(
+        HomogeneousAxes {
+            u_knots,
+            u_degree: ua.degree - 1,
+            v_knots: &va.knots,
+            v_degree: va.degree,
+        },
+        &u_points,
+        &u_weights,
+        uc,
+        vc,
+    );
+    let du = project_derivative(point, weight, du_h, du_weight, "u")?;
+
+    let (v_points, v_weights) = derivative_net_v(&points, &weights, &va.knots, va.degree);
+    let v_knots = &va.knots[1..va.knots.len() - 1];
+    let (dv_h, dv_weight) = eval_tensor_homogeneous(
+        HomogeneousAxes {
+            u_knots: &ua.knots,
+            u_degree: ua.degree,
+            v_knots,
+            v_degree: va.degree - 1,
+        },
+        &v_points,
+        &v_weights,
+        uc,
+        vc,
+    );
+    let dv = project_derivative(point, weight, dv_h, dv_weight, "v")?;
+
+    let (duu_h, duu_weight) = if ua.degree >= 2 {
+        let (net, net_weights) = derivative_net_u(&u_points, &u_weights, u_knots, ua.degree - 1);
+        eval_tensor_homogeneous(
+            HomogeneousAxes {
+                u_knots: &u_knots[1..u_knots.len() - 1],
+                u_degree: ua.degree - 2,
+                v_knots: &va.knots,
+                v_degree: va.degree,
+            },
+            &net,
+            &net_weights,
+            uc,
+            vc,
+        )
+    } else {
+        ([0.0; 3], 0.0)
+    };
+    let duu = project_second(point, weight, du, duu_h, du_weight, duu_weight, "uu")?;
+
+    let (dvv_h, dvv_weight) = if va.degree >= 2 {
+        let (net, net_weights) = derivative_net_v(&v_points, &v_weights, v_knots, va.degree - 1);
+        eval_tensor_homogeneous(
+            HomogeneousAxes {
+                u_knots: &ua.knots,
+                u_degree: ua.degree,
+                v_knots: &v_knots[1..v_knots.len() - 1],
+                v_degree: va.degree - 2,
+            },
+            &net,
+            &net_weights,
+            uc,
+            vc,
+        )
+    } else {
+        ([0.0; 3], 0.0)
+    };
+    let dvv = project_second(point, weight, dv, dvv_h, dv_weight, dvv_weight, "vv")?;
+
+    let (uv_points, uv_weights) = derivative_net_v(&u_points, &u_weights, &va.knots, va.degree);
+    let (duv_h, duv_weight) = eval_tensor_homogeneous(
+        HomogeneousAxes {
+            u_knots,
+            u_degree: ua.degree - 1,
+            v_knots,
+            v_degree: va.degree - 1,
+        },
+        &uv_points,
+        &uv_weights,
+        uc,
+        vc,
+    );
+    let duv = project_mixed(
+        point, weight, du, du_weight, dv, dv_weight, duv_h, duv_weight,
+    )?;
+
+    Ok(SurfaceJet {
+        point: position,
+        du,
+        dv,
+        duu,
+        duv,
+        dvv,
+    })
+}
+
+fn project_second(
+    point: [Scalar; 3],
+    weight: Scalar,
+    first: Vec3,
+    second: [Scalar; 3],
+    first_weight: Scalar,
+    second_weight: Scalar,
+    axis: &str,
+) -> GeomResult<Vec3> {
+    let position = Vec3::new(point[0], point[1], point[2]) / weight;
+    let value = (Vec3::new(second[0], second[1], second[2])
+        - 2.0 * first_weight * first
+        - second_weight * position)
+        / weight;
+    if value.is_finite() {
+        Ok(value)
+    } else {
+        Err(GeomError::Degenerate(format!(
+            "B-spline surface {axis} second derivative is non-finite"
+        )))
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn project_mixed(
+    point: [Scalar; 3],
+    weight: Scalar,
+    du: Vec3,
+    du_weight: Scalar,
+    dv: Vec3,
+    dv_weight: Scalar,
+    mixed: [Scalar; 3],
+    mixed_weight: Scalar,
+) -> GeomResult<Vec3> {
+    let position = Vec3::new(point[0], point[1], point[2]) / weight;
+    let value = (Vec3::new(mixed[0], mixed[1], mixed[2])
+        - du_weight * dv
+        - dv_weight * du
+        - mixed_weight * position)
+        / weight;
+    if value.is_finite() {
+        Ok(value)
+    } else {
+        Err(GeomError::Degenerate(
+            "B-spline surface uv mixed derivative is non-finite".to_owned(),
+        ))
+    }
 }
 
 /// Normal from analytic rational tensor-product partial derivatives.

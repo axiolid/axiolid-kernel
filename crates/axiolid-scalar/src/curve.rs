@@ -33,8 +33,8 @@
 
 use axiolid_core::{Frame2, Frame3, Interval, Point2, Point3, Scalar, Tolerance, Vec2, Vec3};
 use axiolid_curve::{
-    BSplineCurve, Circle2, Circle3, Curve2, Curve3, CurveEvaluator, Ellipse2, Ellipse3, Line2,
-    Line3, Polyline2, Polyline3,
+    BSplineCurve, BSplineCurve2, BSplineCurve3, Circle2, Circle3, Curve2, Curve3, CurveEvaluator,
+    Ellipse2, Ellipse3, Line2, Line3, Polyline2, Polyline3,
 };
 use axiolid_kernel::{GeomError, GeomResult};
 
@@ -53,6 +53,21 @@ impl ScalarCurve {
     pub const fn new() -> Self {
         Self
     }
+}
+
+/// Position and the first two parameter derivatives of a curve.
+///
+/// Keeping the derivatives with the point prevents callers from accidentally
+/// mixing results evaluated at different parameters. All derivatives use the
+/// curve's native parameter, not arc length.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CurveJet<P, D> {
+    /// Position at the requested parameter.
+    pub point: P,
+    /// First derivative with respect to the native parameter.
+    pub first: D,
+    /// Second derivative with respect to the native parameter.
+    pub second: D,
 }
 
 // --- parameter domains ------------------------------------------------------
@@ -172,6 +187,42 @@ pub fn derivative2(curve: &Curve2, t: Scalar) -> GeomResult<Vec2> {
     finite2(value, "curve derivative")
 }
 
+/// Second derivative of a 2D curve with respect to its native parameter.
+pub fn second_derivative2(curve: &Curve2, t: Scalar) -> GeomResult<Vec2> {
+    finite(t)?;
+    let value = match curve {
+        Curve2::Line(_) | Curve2::Polyline(_) => Ok(Vec2::ZERO),
+        Curve2::Circle(c) => Ok(conic_second2(&c.frame, c.radius, c.radius, t)),
+        Curve2::Ellipse(e) => Ok(conic_second2(&e.frame, e.semi_axis_x, e.semi_axis_y, t)),
+        Curve2::BSpline(b) => {
+            de_boor_second_derivative(b, t, |p| [p.x, p.y], |c| Vec2::new(c[0], c[1]))
+        }
+        _ => Err(GeomError::Unsupported {
+            backend: axiolid_kernel::BackendId::new("axiolid-scalar"),
+            operation: axiolid_kernel::Operation::CurveEvaluation,
+        }),
+    }?;
+    finite2(value, "curve second derivative")
+}
+
+/// Second-order differential jet of a 2D curve.
+pub fn bspline_jet2(curve: &BSplineCurve2, t: Scalar) -> GeomResult<CurveJet<Point2, Vec2>> {
+    Ok(CurveJet {
+        point: de_boor(curve, t, |p| [p.x, p.y], |c| Point2::new(c[0], c[1]))?,
+        first: de_boor_derivative(curve, t, |p| [p.x, p.y], |c| Vec2::new(c[0], c[1]))?,
+        second: de_boor_second_derivative(curve, t, |p| [p.x, p.y], |c| Vec2::new(c[0], c[1]))?,
+    })
+}
+
+/// Second-order differential jet of a 2D curve.
+pub fn jet2(curve: &Curve2, t: Scalar) -> GeomResult<CurveJet<Point2, Vec2>> {
+    Ok(CurveJet {
+        point: evaluate2(curve, t)?,
+        first: derivative2(curve, t)?,
+        second: second_derivative2(curve, t)?,
+    })
+}
+
 // --- 3D evaluation ----------------------------------------------------------
 
 /// Position on a 3D curve.
@@ -212,6 +263,57 @@ pub fn derivative3(curve: &Curve3, t: Scalar) -> GeomResult<Vec3> {
         }),
     }?;
     finite3(value, "curve derivative")
+}
+
+/// Second derivative of a 3D curve with respect to its native parameter.
+pub fn second_derivative3(curve: &Curve3, t: Scalar) -> GeomResult<Vec3> {
+    finite(t)?;
+    let value = match curve {
+        Curve3::Line(_) | Curve3::Polyline(_) => Ok(Vec3::ZERO),
+        Curve3::Circle(c) => Ok(conic_second3(&c.frame, c.radius, c.radius, t)),
+        Curve3::Ellipse(e) => Ok(conic_second3(&e.frame, e.semi_axis_x, e.semi_axis_y, t)),
+        Curve3::BSpline(b) => {
+            de_boor_second_derivative(b, t, |p| [p.x, p.y, p.z], |c| Vec3::new(c[0], c[1], c[2]))
+        }
+        _ => Err(GeomError::Unsupported {
+            backend: axiolid_kernel::BackendId::new("axiolid-scalar"),
+            operation: axiolid_kernel::Operation::CurveEvaluation,
+        }),
+    }?;
+    finite3(value, "curve second derivative")
+}
+
+/// Second-order differential jet of a 3D curve.
+pub fn bspline_jet3(curve: &BSplineCurve3, t: Scalar) -> GeomResult<CurveJet<Point3, Vec3>> {
+    Ok(CurveJet {
+        point: de_boor(
+            curve,
+            t,
+            |p| [p.x, p.y, p.z],
+            |c| Point3::new(c[0], c[1], c[2]),
+        )?,
+        first: de_boor_derivative(
+            curve,
+            t,
+            |p| [p.x, p.y, p.z],
+            |c| Vec3::new(c[0], c[1], c[2]),
+        )?,
+        second: de_boor_second_derivative(
+            curve,
+            t,
+            |p| [p.x, p.y, p.z],
+            |c| Vec3::new(c[0], c[1], c[2]),
+        )?,
+    })
+}
+
+/// Second-order differential jet of a 3D curve.
+pub fn jet3(curve: &Curve3, t: Scalar) -> GeomResult<CurveJet<Point3, Vec3>> {
+    Ok(CurveJet {
+        point: evaluate3(curve, t)?,
+        first: derivative3(curve, t)?,
+        second: second_derivative3(curve, t)?,
+    })
 }
 
 // --- family kernels ---------------------------------------------------------
@@ -257,12 +359,20 @@ fn conic_tangent2(frame: &Frame2, rx: Scalar, ry: Scalar, t: Scalar) -> Vec2 {
     frame.x * (-rx * t.sin()) + frame.y * (ry * t.cos())
 }
 
+fn conic_second2(frame: &Frame2, rx: Scalar, ry: Scalar, t: Scalar) -> Vec2 {
+    frame.x * (-rx * t.cos()) + frame.y * (-ry * t.sin())
+}
+
 fn conic_point3(frame: &Frame3, rx: Scalar, ry: Scalar, t: Scalar) -> Point3 {
     frame.origin + frame.x * (rx * t.cos()) + frame.y * (ry * t.sin())
 }
 
 fn conic_tangent3(frame: &Frame3, rx: Scalar, ry: Scalar, t: Scalar) -> Vec3 {
     frame.x * (-rx * t.sin()) + frame.y * (ry * t.cos())
+}
+
+fn conic_second3(frame: &Frame3, rx: Scalar, ry: Scalar, t: Scalar) -> Vec3 {
+    frame.x * (-rx * t.cos()) + frame.y * (-ry * t.sin())
 }
 
 /// Segment index and local fraction for a polyline parameter.
@@ -546,6 +656,93 @@ where
     Ok(from(core::array::from_fn(|k| {
         (da[k] - (a[k] / w) * dw) / w
     })))
+}
+
+/// Second derivative via two homogeneous hodograph constructions.
+///
+/// For `C = A / w`, the rational recurrence is
+/// `C'' = (A'' - 2 w' C' - w'' C) / w`.
+fn de_boor_second_derivative<P, const N: usize, F, G, Q>(
+    b: &BSplineCurve<P>,
+    t: Scalar,
+    to: F,
+    from: G,
+) -> GeomResult<Q>
+where
+    F: Fn(&P) -> [Scalar; N],
+    G: Fn([Scalar; N]) -> Q,
+{
+    let (knots, _, degree) = spline_span(b, t)?;
+    let control_points = finite_control_points(&b.control_points, &to)?;
+    let count = b.control_points.len();
+    let u = t.clamp(knots[degree], knots[count]);
+
+    let points: Vec<[Scalar; N]> = (0..count)
+        .map(|i| {
+            let weight = b.weights.as_ref().map_or(1.0, |weights| weights[i]);
+            core::array::from_fn(|axis| control_points[i][axis] * weight)
+        })
+        .collect();
+    if points.iter().flatten().any(|value| !value.is_finite()) {
+        return Err(GeomError::Degenerate(
+            "B-spline homogeneous control point overflowed".to_owned(),
+        ));
+    }
+    let weights: Vec<Scalar> = (0..count)
+        .map(|i| b.weights.as_ref().map_or(1.0, |values| values[i]))
+        .collect();
+
+    let (point, weight) = eval_homogeneous(&knots, degree, &points, &weights, u);
+    if !weight.is_finite() || weight == 0.0 {
+        return Err(GeomError::Degenerate(
+            "B-spline weight collapsed to zero".to_owned(),
+        ));
+    }
+
+    let (first_points, first_weights) = derivative_controls(&points, &weights, &knots, degree);
+    let first_knots = &knots[1..knots.len() - 1];
+    let (first, first_weight) =
+        eval_homogeneous(first_knots, degree - 1, &first_points, &first_weights, u);
+    let position: [Scalar; N] = core::array::from_fn(|axis| point[axis] / weight);
+    let first_projected: [Scalar; N] =
+        core::array::from_fn(|axis| (first[axis] - position[axis] * first_weight) / weight);
+
+    let (second, second_weight) = if degree == 1 {
+        ([0.0; N], 0.0)
+    } else {
+        let (second_points, second_weights) =
+            derivative_controls(&first_points, &first_weights, first_knots, degree - 1);
+        let second_knots = &first_knots[1..first_knots.len() - 1];
+        eval_homogeneous(second_knots, degree - 2, &second_points, &second_weights, u)
+    };
+    Ok(from(core::array::from_fn(|axis| {
+        (second[axis] - 2.0 * first_weight * first_projected[axis] - second_weight * position[axis])
+            / weight
+    })))
+}
+
+/// Derivative control polygon for one homogeneous B-spline axis.
+fn derivative_controls<const N: usize>(
+    points: &[[Scalar; N]],
+    weights: &[Scalar],
+    knots: &[Scalar],
+    degree: usize,
+) -> (Vec<[Scalar; N]>, Vec<Scalar>) {
+    let mut derivative_points = Vec::with_capacity(points.len() - 1);
+    let mut derivative_weights = Vec::with_capacity(weights.len() - 1);
+    for i in 0..points.len() - 1 {
+        let denominator = knots[i + degree + 1] - knots[i + 1];
+        let factor = if denominator.abs() > 0.0 {
+            degree as Scalar / denominator
+        } else {
+            0.0
+        };
+        derivative_points.push(core::array::from_fn(|axis| {
+            (points[i + 1][axis] - points[i][axis]) * factor
+        }));
+        derivative_weights.push((weights[i + 1] - weights[i]) * factor);
+    }
+    (derivative_points, derivative_weights)
 }
 
 /// de Boor over explicit homogeneous arrays; returns `(numerator, weight)`.

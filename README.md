@@ -57,6 +57,13 @@ For narrow dependency graphs, depend directly on leaf crates such as `axiolid-co
 axiolid = { git = "https://github.com/axiolid/axiolid-kernel.git", features = ["discrete"] }
 ```
 
+General NURBS algorithms are independently opt-in and also included in the
+broader `parametric` bundle:
+
+```toml
+axiolid = { git = "https://github.com/axiolid/axiolid-kernel.git", default-features = false, features = ["nurbs"] }
+```
+
 See [Getting started](https://axiolid.github.io/axiolid-kernel/guide/getting-started) before selecting a bundle.
 
 ## Architecture at a glance
@@ -84,6 +91,7 @@ The central invariant is a downward-only dependency graph: representation does n
 | Core values, transforms, bounds, tolerance | Implemented |
 | Mesh values, triangulation, and spatial primitives | Implemented in focused crates |
 | Exact curve/surface/topology vocabulary | Represented behind opt-in features |
+| General NURBS analysis and exact transformations | Implemented scalar reference algorithms behind `nurbs`; bounded projection is not a global-optimum certificate |
 | Immutable geometry DAG | Implemented structural model |
 | Scalar predicates and compilation reference paths | Implemented reference/oracle work |
 | Mesh Boolean provider | Optional provider; bounded to its declared mesh contract |

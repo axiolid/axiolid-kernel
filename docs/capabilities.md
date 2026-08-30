@@ -48,10 +48,13 @@ any exactness claim as applying to *evaluation*, not to *operation results*.
 | Primitive solids and half-spaces | Represented | `axiolid-primitive` owns neutral values and validation |
 | Profiles / contours | Represented with validation | `axiolid-profile` |
 | Curves and surfaces | Represented | `axiolid-curve`, `axiolid-surface`; representation alone is not an evaluator claim |
-| Polynomial/rational B-spline evaluation | Implemented scalar read path | `axiolid-scalar`; validates compact knot/control/weight data, evaluates homogeneous curves/surfaces, and exposes analytic first derivatives/partials |
+| Polynomial/rational B-spline evaluation | Implemented scalar oracle | `axiolid-scalar`; validates compact knot/control/weight data and exposes homogeneous point, first-, and second-derivative curve/surface jets |
 | Analytic curve evaluation and adaptive flattening | Implemented | `axiolid-scalar`; native-parameter evaluation with a chord-error budget, fail-closed on depth exhaustion and unbisectable intervals |
 | Point→parameter inversion, elementary surfaces | Implemented | `axiolid-scalar`; plane/cylinder/cone/sphere/torus with residual validation, refusing degenerate axis/apex/pole points |
-| Point→parameter inversion, spline surfaces | Planned | In scope per [ADR 0020](/adr/0020-exact-brep-kernel-model); refuses today rather than fabricating parameters |
+| General NURBS differential analysis | Implemented reference path | `axiolid-nurbs`; curve tangents/curvature and surface fundamental forms, normals, Gaussian/mean/principal curvature; see [ADR 0022](/adr/0022-general-nurbs-kernel-capability) |
+| NURBS inverse queries | Implemented bounded reference path | `axiolid-nurbs`; deterministic multi-start curve/surface projection with per-span, per-start, and aggregate budgets. Results are best candidates, not globally certified minima |
+| NURBS exact transformations | Implemented | `axiolid-nurbs`; homogeneous curve knot insertion/reversal/split/Bézier decomposition and surface U/V insertion/reversal preserve the represented shape |
+| Closed-curve seam semantics | Implemented | `axiolid-nurbs`; native-parameter continuity through second derivative and wrapping only after declared closure plus verified position continuity |
 | Trimmed curved-face tessellation | Implemented bounded reference path | `axiolid-compile`; endpoint-inclusive pcurve boundaries and holes, guarded structured-grid/Earcut seeds, topological seam reuse, explicit outer/bound orientation, face-level conforming support-surface refinement, periodic face charts, and fail-closed input/per-edge/per-face/aggregate/depth limits; see [ADR 0019](/adr/0019-validate-and-refine-nurbs-on-the-scalar-read-path) |
 | Topology / B-rep vocabulary | Represented | `axiolid-topology`; stored topology is distinct from geometry |
 | Exact B-rep operation results | Planned | The central gap. Accepted in [ADR 0020](/adr/0020-exact-brep-kernel-model); `axiolid-compile` returns meshes today |
@@ -76,13 +79,13 @@ architecture is kept clean so optimization stays possible later.
 ## In scope, not yet built
 
 Accepted by [ADR 0020](/adr/0020-exact-brep-kernel-model) as work the kernel
-intends to do. None of it exists today:
+intends to do. These exact/certified forms do not exist today:
 
 - Exact B-rep results carried through operations, rather than meshes between
   graph nodes.
 - Surface/surface intersection, and the curve/surface and curve/curve cases
   beneath it.
-- Projection and closest-point inversion, including for spline surfaces.
+- Globally certified projection and closest-point inversion; bounded NURBS best-candidate search exists but is not a certificate.
 - Exact booleans, section curves, offsets, and fillets, which all sit
   downstream of intersection.
 
@@ -92,9 +95,7 @@ intends to do. None of it exists today:
 - A claim of OpenCascade compatibility or replacement coverage.
 - Bundled production CUDA, HIP, Metal, Vulkan, or WebGPU compute kernels.
 - A global hidden tolerance policy.
-- General NURBS *authoring* — knot insertion, degree elevation, and
-  refitting. Evaluation and, per ADR 0020, intersection and inversion are in
-  scope; editing is not.
+
 
 ## How to evaluate a claim
 

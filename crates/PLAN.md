@@ -1,7 +1,7 @@
 # Geometry package plan
 
 Status: active architecture scaffold
-Last updated: 2026-08-19
+Last updated: 2026-08-30
 
 This is implementation planning, not ambient agent context. Read `AGENTS.md`
 for standing rules. Read this file only when planning or implementing geometry
@@ -126,7 +126,8 @@ L0 values            axiolid-core
 L1 representations   axiolid-mesh, axiolid-profile, axiolid-curve, axiolid-surface,
                      axiolid-topology, axiolid-primitive, axiolid-model
 L2 algorithms/traits axiolid-tessellate, axiolid-spatial, axiolid-measure,
-                     axiolid-heal, axiolid-kernel
+                     axiolid-overlay, axiolid-field, axiolid-heal, axiolid-nurbs,
+                     axiolid-kernel, axiolid-scalar
 L3 execution/adapters axiolid-backend-cpu, axiolid-backend-gpu
 L4 facade             axiolid
 L5 format bridges     ifc-geometry and future adapters (outside this directory)
@@ -153,23 +154,29 @@ Additive facade features:
 | Family | Features | Pulls |
 | --- | --- | --- |
 | representation | `mesh`, `profiles`, `curves`, `surfaces`, `topology`, `primitives`, `model` | exact/data crates only |
-| algorithms/contracts | `sweeps`, `tessellation`, `spatial`, `measure`, `heal`, `kernel`, `mesh-boolean`, `graph-compile` | selected traits/algorithms |
+| algorithms/contracts | `nurbs`, `tessellation`, `spatial`, `measure`, `heal`, `kernel`, `mesh-boolean`, `graph-compile` | selected traits/algorithms |
 | execution | `cpu`, `parallel`, `simd`, `gpu` | context or operation adapter only |
 | bundles | `discrete`, `parametric`, `advanced`, `full` | named additive sets |
 
 `parallel` and `simd` are opt-in. `gpu` exposes the executor adapter but claims no
 working API-specific compute kernels. Leaf crates remain directly consumable.
 
-Measured 2026-08-19 with `cargo tree -e normal` (unique package count,
-including the `axiolid` facade; not binary size):
+Measured 2026-08-30 as unique Cargo package identities, including the `axiolid`
+facade and excluding repeated `(*)` display rows (not binary size):
 
-| Build | Packages |
-| --- | ---: |
-| core-only (`--no-default-features`) | 3 |
-| default (`mesh + cpu`) | 5 |
-| `parametric` | 10 |
-| `discrete` | 22 |
-| `full` | 30 |
+```bash
+cargo +1.88.0 tree -p axiolid -e normal --prefix none <feature flags> |
+  python3 -c "import sys; print(len({line.strip().removesuffix(' (*)') for line in sys.stdin if line.strip()}))"
+```
+
+| Build | Feature flags | Unique packages |
+| --- | --- | ---: |
+| core-only | `--no-default-features` | 3 |
+| default (`mesh + cpu`) | *(none)* | 5 |
+| `parametric` | `--no-default-features --features parametric` | 21 |
+| `discrete` | `--no-default-features --features discrete` | 21 |
+| `full` bundle | `--no-default-features --features full` | 31 |
+| every facade feature | `--all-features` | 39 |
 
 These are regression baselines, not permanent targets; dependencies must justify
 any increase.
@@ -191,7 +198,7 @@ Completed scaffold:
 Implementation waves:
 
 1. Portable providers: profile triangulation and 2D subtraction first, then
-   tessellation/sweeps, then a separately justified pure-Rust mesh CSG provider.
+   tessellation and a separately justified pure-Rust mesh CSG provider.
 2. Complete IFC graph lowering by family: points/transforms, curves, surfaces,
    topology/B-rep, tessellated sets, half-spaces/CSG, mapped representations.
 3. Add spatial, measurement, and explicit heal providers with corpus invariants.

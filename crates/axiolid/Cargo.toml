@@ -30,6 +30,7 @@ model = [
 ]
 
 # Algorithms. Heavy implementations remain optional.
+nurbs = ["curves", "surfaces", "dep:axiolid-nurbs"]
 tessellation = ["mesh", "curves", "surfaces", "topology", "dep:axiolid-tessellate"]
 spatial = ["mesh", "dep:axiolid-spatial"]
 measure = ["mesh", "dep:axiolid-measure"]
@@ -60,7 +61,7 @@ discrete = [
     "mesh-boolean",
     "cpu",
 ]
-parametric = ["model", "curves", "surfaces", "topology"]
+parametric = ["model", "curves", "surfaces", "topology", "nurbs"]
 advanced = ["discrete", "parametric", "heal"]
 full = ["advanced", "parallel", "simd", "gpu"]
 
@@ -73,6 +74,7 @@ axiolid-surface = { workspace = true, optional = true }
 axiolid-topology = { workspace = true, optional = true }
 axiolid-primitive = { workspace = true, optional = true }
 axiolid-model = { workspace = true, optional = true }
+axiolid-nurbs = { workspace = true, optional = true }
 axiolid-tessellate = { workspace = true, optional = true }
 axiolid-spatial = { workspace = true, optional = true }
 axiolid-measure = { workspace = true, optional = true }

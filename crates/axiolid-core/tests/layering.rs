@@ -23,8 +23,9 @@
 //!                        axiolid-surface, axiolid-topology, axiolid-primitive,
 //!                        axiolid-model
 //!    ^
-//!   L2  algorithms       axiolid-tessellate, axiolid-spatial,
-//!                        axiolid-measure, axiolid-overlay, axiolid-heal, axiolid-kernel
+//!   L2  algorithms       axiolid-nurbs, axiolid-tessellate, axiolid-spatial,
+//!                        axiolid-measure, axiolid-overlay, axiolid-field,
+//!                        axiolid-heal, axiolid-kernel, axiolid-scalar
 //!    ^
 //!   L3  implementations  axiolid-backend-cpu, axiolid-backend-gpu
 //!    ^
@@ -74,6 +75,7 @@ const TIERS: &[(&str, u8)] = &[
     // geometry-only traversal. Algorithms over representations, so L2.
     ("axiolid-field", 2),
     ("axiolid-heal", 2),
+    ("axiolid-nurbs", 2),
     ("axiolid-kernel", 2),
     // The scalar reference implementation (ADR 0012). Consumes the kernel
     // contracts to report certified results; owns algorithms, not scheduling.

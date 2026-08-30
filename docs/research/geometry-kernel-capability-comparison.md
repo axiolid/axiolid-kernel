@@ -611,11 +611,11 @@ locally audited revision rather than a moving branch.
 - Executed compiler families: `crates/axiolid-compile/src/compiler.rs`
 - Faceted B-rep path: `crates/axiolid-compile/src/brep.rs`
 - Adopted booleans and batching: `crates/axiolid-boolmesh/src/`
-- Contract-only provider seams:
+- Geometry provider contracts: `crates/axiolid-kernel/src/`
+- Focused operation/provider seams:
   `crates/axiolid-spatial/src/`,
   `crates/axiolid-measure/src/`,
-  `crates/axiolid-heal/src/`,
-  `crates/axiolid-sweep/src/`, and
+  `crates/axiolid-heal/src/`, and
   `crates/axiolid-tessellate/src/`
 - Differential results: `docs/benchmarks/differential-ifcopenshell.md`
 - Predicate ownership and limits: `docs/adr/0016-predicate-ownership-and-adopted-implementations.md`

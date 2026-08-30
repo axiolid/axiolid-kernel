@@ -26,8 +26,8 @@ L1 representations
   axiolid-topology  axiolid-primitive  axiolid-model
        |
 L2 algorithms and contracts
-  axiolid-tessellate  axiolid-spatial  axiolid-measure
-  axiolid-heal   axiolid-kernel
+  axiolid-tessellate  axiolid-spatial  axiolid-measure  axiolid-overlay
+  axiolid-field  axiolid-heal  axiolid-nurbs  axiolid-kernel  axiolid-scalar
        |
 L3 execution/adapters
   axiolid-backend-cpu  axiolid-backend-gpu

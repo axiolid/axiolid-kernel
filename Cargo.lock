@@ -22,6 +22,7 @@ dependencies = [
  "axiolid-measure",
  "axiolid-mesh",
  "axiolid-model",
+ "axiolid-nurbs",
  "axiolid-overlay",
  "axiolid-primitive",
  "axiolid-profile",
@@ -145,6 +146,17 @@ dependencies = [
  "axiolid-surface",
  "axiolid-topology",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "axiolid-nurbs"
+version = "0.1.0"
+dependencies = [
+ "axiolid-core",
+ "axiolid-curve",
+ "axiolid-kernel",
+ "axiolid-scalar",
+ "axiolid-surface",
 ]
 
 [[package]]

@@ -34,6 +34,12 @@ pub mod surface {
     pub use axiolid_surface::*;
 }
 
+/// General NURBS analysis, inverse-query, and exact transformation algorithms.
+#[cfg(feature = "nurbs")]
+pub mod nurbs {
+    pub use axiolid_nurbs::*;
+}
+
 #[cfg(feature = "topology")]
 pub mod topology {
     pub use axiolid_topology::*;

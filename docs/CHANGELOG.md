@@ -8,6 +8,7 @@ All notable changes to Axiolid are documented in this file.
 - Adaptive analytic `Curve3` directrix sampling and validated `parameter_range` trimming for sweeps, with dimension-generic chord subdivision shared by the 2D and 3D flatteners.
 - Test suites for `axiolid-curve`, `axiolid-surface`, `axiolid-primitive`, `axiolid-profile`, `axiolid-tessellate`, and `axiolid-backend-cpu`, pinning vocabulary contracts, validation refusals, and CPU feature selection.
 - Added analytic rational B-spline surface partials and normals, plus bounded conforming support-surface refinement for pcurve-trimmed curved B-rep faces with holes, periodic charts, guarded structured-grid/Earcut seeds, and shared seam vertices.
+- Added the format-neutral `axiolid-nurbs` algorithm crate and `axiolid/nurbs` facade feature with analytic second-order differential geometry, explicitly budgeted curve/surface projection, verified closed-curve seam wrapping, exact curve knot insertion/reversal/split/Bézier decomposition, and exact surface U/V insertion/reversal.
 
 ### Changed
 - Documented the kernel's direction: Axiolid is striving to be a multipurpose **exact B-rep kernel**, with tessellation as a requested output rather than the model. Surface/surface intersection and geometric inversion are now in scope; see [ADR 0020](./adr/0020-exact-brep-kernel-model.md). Performance work is explicitly parked behind capability work on the roadmap.

@@ -17,7 +17,8 @@ trade capability for benchmarks now.
 - Format-neutral values, meshes, profiles, curves, surfaces, topology, and an immutable geometry graph.
 - Feature-gated facade with a portable scalar reference path and separate CPU/GPU provider seams.
 - Architecture, feature-isolation, and layering gates that keep IFC, source formats, and concrete providers out of the kernel.
-- Validated scalar polynomial/rational B-spline evaluation with analytic first derivatives and bounded conforming pcurve-trimmed curved-face tessellation, including oriented/reordered bounds, holes, guarded structured-grid/Earcut seeds, elementary periodic face charts, and aggregate work budgets; this is a reader/reference capability, not NURBS authoring.
+- A first-class general NURBS algorithm crate with analytic second-order curve/surface jets, differential geometry, bounded projection, verified closed-curve wrapping, and exact shape-preserving insertion/reversal/split/Bézier operations; import and tessellation remain consumers.
+- Bounded conforming pcurve-trimmed curved-face tessellation, including oriented/reordered bounds, holes, guarded structured-grid/Earcut seeds, elementary periodic face charts, and aggregate work budgets.
 - Adaptive analytic curve flattening and point→parameter inversion for the elementary analytic surfaces, both fail-closed on degeneracy.
 
 ## Now: exact geometry through operations
@@ -33,11 +34,12 @@ Closing that is the main line of work.
 ## Next: intersection and inversion
 
 The prerequisites for exact booleans, section curves, offsets, and fillets.
-None of this exists today.
+General intersections do not exist today. Bounded NURBS projection now yields
+honest best candidates, but not globally certified closest points.
 
 - Surface/surface intersection, with an explicit contract for supported pairs, degeneracy policy, and tolerance.
 - Curve/surface and curve/curve intersection beneath it.
-- Projection and closest-point inversion, extending point→parameter inversion beyond the elementary analytic surfaces to splines.
+- Globally certified projection and closest-point inversion, extending the bounded spline candidate search.
 - Independent oracles for each, in mapped 3D rather than parameter space alone.
 
 ## Then: trustworthy discrete geometry
@@ -51,6 +53,7 @@ results, and as a differential oracle for the exact path.
 ## Then: parametric and compiled geometry
 
 - Strengthen exact curve, surface, profile, and topology handling without leaking source-format semantics into the model.
+- Extend the general NURBS kernel with certified projection/intersection methods, knot removal, degree operations, fitting, lofting, and surface-periodic seam semantics only as independently tested slices.
 - Turn geometry graphs into reproducible operation plans with explicit tolerance, memory-budget, and provenance contracts.
 - Keep imported data representable even where an operation provider cannot yet execute it.
 
@@ -77,4 +80,3 @@ The [changelog](./CHANGELOG.md) records user-visible changes. Automated versioni
 - Becoming an IFC, STEP, or CAD file parser.
 - Pulling C++/OpenCascade into the dependency graph.
 - Treating a type, feature flag, or provider seam as evidence that an algorithm is production-ready.
-- General NURBS authoring: knot insertion, degree elevation, refitting.
