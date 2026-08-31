@@ -123,9 +123,12 @@ dependencies = [
  "axiolid-kernel",
  "axiolid-measure",
  "axiolid-mesh",
+ "axiolid-nurbs",
  "axiolid-primitive",
  "axiolid-profile",
  "axiolid-scalar",
+ "axiolid-surface",
+ "axiolid-topology",
  "earcut",
 ]
 
