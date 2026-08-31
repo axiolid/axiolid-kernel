@@ -51,7 +51,7 @@ fn axis_plan(
     multiplicities: &[u32],
     name: &str,
 ) -> GeomResult<AxisPlan> {
-    if knots.is_empty() || knots.len() != multiplicities.len() {
+    if knots.len() < 2 || knots.len() != multiplicities.len() {
         return Err(GeomError::InvalidInput(format!(
             "B-spline surface {name} knots and multiplicities must be nonempty and aligned"
         )));
@@ -76,9 +76,12 @@ fn axis_plan(
             "certified surface refinement requires a clamped {name} axis"
         )));
     }
-    if multiplicities.iter().any(|&m| m == 0 || m as usize > order) {
+    if multiplicities[1..multiplicities.len() - 1]
+        .iter()
+        .any(|&m| m == 0 || usize::try_from(m).map_or(true, |m| m > degree))
+    {
         return Err(GeomError::InvalidInput(format!(
-            "B-spline surface {name} multiplicities are invalid"
+            "B-spline surface {name} internal multiplicities must be between one and the degree"
         )));
     }
     let expanded = multiplicities
@@ -93,10 +96,22 @@ fn axis_plan(
         )));
     }
     let segments = knots.len().checked_sub(1).ok_or_else(allocation_error)?;
-    let insertions = multiplicities[1..multiplicities.len() - 1]
-        .iter()
-        .try_fold(0_usize, |sum, &m| sum.checked_add(degree - m as usize))
-        .ok_or_else(allocation_error)?;
+    let mut insertions = 0usize;
+    for &multiplicity in &multiplicities[1..multiplicities.len() - 1] {
+        let multiplicity = usize::try_from(multiplicity).map_err(|_| {
+            GeomError::InvalidInput(format!(
+                "B-spline surface {name} multiplicity does not fit usize"
+            ))
+        })?;
+        let missing = degree.checked_sub(multiplicity).ok_or_else(|| {
+            GeomError::InvalidInput(format!(
+                "B-spline surface {name} internal multiplicity exceeds its degree"
+            ))
+        })?;
+        insertions = insertions
+            .checked_add(missing)
+            .ok_or_else(allocation_error)?;
+    }
     let refined_controls = control_count
         .checked_add(insertions)
         .ok_or_else(allocation_error)?;

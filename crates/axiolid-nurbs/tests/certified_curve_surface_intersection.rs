@@ -165,6 +165,27 @@ fn options_and_shared_work_budget_are_bounded() {
 }
 
 #[test]
+fn internal_surface_multiplicity_above_degree_is_rejected() {
+    let mut surface = rational_plane();
+    surface.control_points = vec![
+        vec![Point3::new(-1.0, -1.0, 0.0), Point3::new(-1.0, 1.0, 0.0)],
+        vec![Point3::new(-0.5, -1.0, 0.0), Point3::new(-0.5, 1.0, 0.0)],
+        vec![Point3::new(0.5, -1.0, 0.0), Point3::new(0.5, 1.0, 0.0)],
+        vec![Point3::new(1.0, -1.0, 0.0), Point3::new(1.0, 1.0, 0.0)],
+    ];
+    surface.u_knots = vec![0.0, 0.5, 1.0];
+    surface.u_multiplicities = vec![2, 2, 2];
+    surface.weights = None;
+    let error = intersect_curve_surface_certified(
+        &line_through_plane(),
+        &surface,
+        CertifiedCurveSurfaceIntersectionOptions::default(),
+    )
+    .expect_err("internal multiplicity above degree must fail closed");
+    assert!(matches!(error, axiolid_kernel::GeomError::InvalidInput(_)));
+}
+
+#[test]
 fn nonpositive_rational_surface_weight_is_rejected() {
     let mut surface = rational_plane();
     surface.weights.as_mut().unwrap()[1][1] = 0.0;
