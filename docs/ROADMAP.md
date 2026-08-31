@@ -37,10 +37,12 @@ Closing that is the main line of work.
 
 The prerequisites for exact booleans, section curves, offsets, and fillets.
 Certified clamped NURBS curve projection and global curve-pair minimum distance now
-provide exhaustive outward-rounded subdivision bounds. Root isolation,
-intersection enumeration/classification, and surface certification remain open.
+provide exhaustive outward-rounded subdivision bounds. A bounded planar curve/curve
+slice certifies exact-sign lines and contractive transverse polynomial/rational
+Bézier boxes while returning explicit unresolved singular or boundary boxes.
+General root ownership/classification and surface certification remain open.
 
-- Curve/curve root isolation with explicit transverse, tangent, overlap, and degeneracy outcomes.
+- Complete curve/curve boundary ownership, deduplication, and general tangent/overlap classification.
 - Curve/surface and surface/surface intersection, including intersection-curve construction.
 - Globally certified surface projection and closest-point inversion.
 - Independent oracles for each, in mapped 3D rather than parameter space alone.

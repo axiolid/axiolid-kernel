@@ -24,3 +24,4 @@ These records capture durable choices that preserve Axiolid’s format-neutral, 
 | [0023](./0023-solid-generation-is-an-l2-crate.md) | Solid generation is an L2 crate, not part of the compiler |
 | [0024](./0024-exact-brep-result-contracts.md) | Exact B-rep results own analytic supports and trims |
 | [0025](./0025-certified-nurbs-subdivision-oracle.md) | Certified NURBS queries use outward-rounded subdivision |
+| [0026](./0026-certified-planar-nurbs-root-isolation.md) | Planar NURBS roots require interval existence proofs |

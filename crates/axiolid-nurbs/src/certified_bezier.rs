@@ -22,6 +22,37 @@ impl Interval {
         })
     }
 
+    pub(crate) fn bounds(lo: Scalar, hi: Scalar) -> GeomResult<Self> {
+        if !lo.is_finite() || !hi.is_finite() || lo > hi {
+            return Err(GeomError::InvalidInput(
+                "invalid certified interval bounds".to_owned(),
+            ));
+        }
+        Ok(Self { lo, hi })
+    }
+
+    pub(crate) fn hull(values: impl IntoIterator<Item = Self>) -> GeomResult<Self> {
+        let mut lo = Scalar::INFINITY;
+        let mut hi = Scalar::NEG_INFINITY;
+        for value in values {
+            lo = lo.min(value.lo);
+            hi = hi.max(value.hi);
+        }
+        Self::bounds(lo, hi)
+    }
+
+    pub(crate) const fn lower(self) -> Scalar {
+        self.lo
+    }
+
+    pub(crate) const fn upper(self) -> Scalar {
+        self.hi
+    }
+
+    pub(crate) const fn contains_zero(self) -> bool {
+        self.lo <= 0.0 && self.hi >= 0.0
+    }
+
     pub(crate) fn product(left: Scalar, right: Scalar) -> GeomResult<Self> {
         let value = left * right;
         if !value.is_finite() {
@@ -35,7 +66,7 @@ impl Interval {
         })
     }
 
-    fn add(self, other: Self) -> GeomResult<Self> {
+    pub(crate) fn add(self, other: Self) -> GeomResult<Self> {
         let lo = self.lo + other.lo;
         let hi = self.hi + other.hi;
         if !lo.is_finite() || !hi.is_finite() {
@@ -63,7 +94,7 @@ impl Interval {
         })
     }
 
-    fn multiply(self, other: Self) -> GeomResult<Self> {
+    pub(crate) fn multiply(self, other: Self) -> GeomResult<Self> {
         let products = [
             self.lo * other.lo,
             self.lo * other.hi,
@@ -89,6 +120,16 @@ impl Interval {
     #[cfg(test)]
     pub(crate) fn contains(self, value: Scalar) -> bool {
         self.lo <= value && value <= self.hi
+    }
+
+    pub(crate) fn absolute_lower_bound(self) -> Scalar {
+        if self.lo > 0.0 {
+            self.lo
+        } else if self.hi < 0.0 {
+            -self.hi
+        } else {
+            0.0
+        }
     }
 
     fn midpoint(self, other: Self) -> GeomResult<Self> {
@@ -190,6 +231,66 @@ pub(crate) struct Cell {
 }
 
 impl Cell {
+    pub(crate) fn coordinate_intervals(&self) -> GeomResult<[Interval; 3]> {
+        let controls = self
+            .controls
+            .iter()
+            .map(HomogeneousPoint::euclidean)
+            .collect::<GeomResult<Vec<_>>>()?;
+        Ok([
+            Interval::hull(controls.iter().map(|point| point[0]))?,
+            Interval::hull(controls.iter().map(|point| point[1]))?,
+            Interval::hull(controls.iter().map(|point| point[2]))?,
+        ])
+    }
+
+    pub(crate) fn derivative_intervals(&self) -> GeomResult<[Interval; 3]> {
+        let degree =
+            self.controls.len().checked_sub(1).ok_or_else(|| {
+                GeomError::InvalidInput("empty Bézier control polygon".to_owned())
+            })?;
+        if degree == 0 {
+            return Ok([Interval::exact(0.0)?; 3]);
+        }
+        let span = Interval::exact(self.end)?.subtract(Interval::exact(self.start)?)?;
+        let scale = Interval::exact(degree as Scalar)?.divide(span)?;
+        let derivatives = self
+            .controls
+            .windows(2)
+            .map(|pair| {
+                Ok(HomogeneousPoint {
+                    numerator: [
+                        pair[1].numerator[0]
+                            .subtract(pair[0].numerator[0])?
+                            .multiply(scale)?,
+                        pair[1].numerator[1]
+                            .subtract(pair[0].numerator[1])?
+                            .multiply(scale)?,
+                        pair[1].numerator[2]
+                            .subtract(pair[0].numerator[2])?
+                            .multiply(scale)?,
+                    ],
+                    weight: pair[1].weight.subtract(pair[0].weight)?.multiply(scale)?,
+                })
+            })
+            .collect::<GeomResult<Vec<_>>>()?;
+        let weight = Interval::hull(self.controls.iter().map(|control| control.weight))?;
+        let weight_prime = Interval::hull(derivatives.iter().map(|control| control.weight))?;
+        let denominator = weight.multiply(weight)?;
+        let mut result = [Interval::exact(0.0)?; 3];
+        for (axis, value) in result.iter_mut().enumerate() {
+            let numerator =
+                Interval::hull(self.controls.iter().map(|control| control.numerator[axis]))?;
+            let numerator_prime =
+                Interval::hull(derivatives.iter().map(|control| control.numerator[axis]))?;
+            *value = numerator_prime
+                .multiply(weight)?
+                .subtract(numerator.multiply(weight_prime)?)?
+                .divide(denominator)?;
+        }
+        Ok(result)
+    }
+
     pub(crate) fn lower_bound(&self, target: [Scalar; 3], dimensions: usize) -> GeomResult<Scalar> {
         let (lo, hi) = self.coordinate_bounds()?;
         distance_to_box_lower(target, lo, hi, dimensions)

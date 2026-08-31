@@ -390,11 +390,16 @@ mod tests {
                 .expect("refined span evaluates")
                 .euclidean()
                 .expect("positive midpoint weight");
-            let original = bspline_jet2(&curve, parameter)
-                .expect("original evaluates inside the span")
-                .point;
+            let jet = bspline_jet2(&curve, parameter).expect("original evaluates inside the span");
+            let original = jet.point;
             assert!(refined[0].contains(original.x));
             assert!(refined[1].contains(original.y));
+
+            let derivative = cell
+                .derivative_intervals()
+                .expect("rational derivative enclosure is valid");
+            assert!(derivative[0].contains(jet.first.x));
+            assert!(derivative[1].contains(jet.first.y));
         }
 
         let seam = cells[0]

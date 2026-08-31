@@ -44,11 +44,11 @@ non-global multistart projection APIs.
 
 ## Capability boundary
 
-A curve-pair minimum-distance certificate is an intersection prerequisite. It
-is **not** yet root-existence proof, exhaustive intersection enumeration,
-overlap classification, or intersection-curve construction. Those claims need
-interval root isolation and explicit transverse, tangent, coincident, and
-degenerate outcomes.
+At adoption, a curve-pair minimum-distance certificate was only an intersection
+prerequisite, not root-existence proof, enumeration, or overlap classification.
+[ADR 0026](./0026-certified-planar-nurbs-root-isolation.md) now adds a bounded
+planar root slice with strict proof and explicit unresolved outcomes; distance
+certificates themselves still make none of those claims.
 
 Current interval refinement supports clamped continuous B-splines. Periodic and
 unclamped evaluator/editing semantics remain separate future work. The scalar
