@@ -22,6 +22,11 @@ Status: first general-kernel milestone implemented.
   surface partials, strict-interior 3×3 Krawczyk proofs, explicit `t/u/v`
   resolution, retained partial certificates, compact parameter-only DFS work,
   shared hard work ceilings, fallible allocations, and unresolved outcomes.
+- Bounded clamped surface/surface patch-pair exclusion plus complete transverse
+  intersection segments for single-span polynomial affine patches. Affine identity
+  is exact over binary64 controls, normal transversality is outward-interval proved,
+  endpoints retain both native surface charts through strict curve/surface proofs,
+  and all unsupported curved/ownership/degenerate cases remain unresolved.
 - Verified closed-curve seam classification and parameter wrapping.
 - Optional `axiolid/nurbs` facade feature and `parametric` bundle adoption.
 
@@ -29,8 +34,8 @@ Status: first general-kernel milestone implemented.
 
 - Knot removal and degree operations.
 - Ownership-aware boundary roots, full-multiplicity internal span joins, general
-  tangent/overlap classification, surface/surface intersection and tracing, and
-  globally certified surface projection.
+  tangent/overlap classification, curved surface/surface tracing and multispan
+  stitching beyond the affine reference slice, and globally certified surface projection.
 - Surface-periodic seam wrapping.
 - Fitting, interpolation, lofting, and blending operations.
 - Benchmarked optimized providers after scalar differential validation.

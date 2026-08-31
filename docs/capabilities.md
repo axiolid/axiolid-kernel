@@ -62,7 +62,7 @@ any exactness claim as applying to *evaluation*, not to *operation results*.
 | Topology / B-rep vocabulary | Represented | `axiolid-topology` provides generic typed-role topology; `axiolid-brep` provides strict owned analytic catalogs and required native trim spans |
 | Exact B-rep result contract | Implemented contract, no exact constructors yet | `axiolid-brep::ExactBRep` refuses missing supports/spans and generic topology failures; see [ADR 0024](/adr/0024-exact-brep-result-contracts) |
 | Exact B-rep operation results | Planned | The central implementation gap. `GenerationRequest` now distinguishes exact B-rep from explicit tolerance-bearing tessellation; `axiolid-compile` still returns meshes today |
-| Surface/surface intersection | Planned | In scope per [ADR 0020](/adr/0020-exact-brep-kernel-model). Bounded planar curve/curve and clamped transverse curve/surface root slices now exist, but surface/surface solving, tracing, pcurve construction, and B-rep splitting do not |
+| Single-span affine NURBS surface/surface traces | Implemented bounded reference slice | `axiolid-nurbs`; general clamped patch-pair hull exclusion plus complete transverse trace segments only for polynomial degree-1 × degree-1 affine patches. Affineness is proved over exact binary64 values, normal transversality is interval-certified, and endpoints are strict curve/surface Krawczyk roots. Curved tracing, closed loops, tangency/coincidence, boundary ownership, multispan stitching, pcurve construction, and B-rep splitting remain unresolved; see [ADR 0028](/adr/0028-certified-affine-surface-surface-tracing) |
 | Immutable shared geometry DAG | Implemented structural model | `axiolid-model` uses typed IDs and backward references |
 | Sweeps / extrusions / revolutions / lofts | Implemented discrete reference path; exact-result contract ready | `axiolid-generate` does not yet construct exact B-rep sweeps. Its L2 result boundary now requires an explicit exact B-rep or tolerance-bearing tessellation request; exact construction remains L2 and must not return mesh fallbacks |
 | Spatial, measures, healing | Focused crates / staged capability | Consult each crate’s `PLAN.md`; do not infer broad CAD coverage |
@@ -88,8 +88,8 @@ intends to do. These exact/certified forms do not exist today:
 
 - Exact B-rep results carried through operations, rather than meshes between
   graph nodes.
-- Surface/surface intersection, intersection-curve tracing, and general
-  tangent/overlap or seam/trim-owned completion of the bounded curve root slices.
+- General curved surface/surface intersection-curve tracing, closed loops, and
+  tangent/overlap or seam/trim-owned completion beyond the bounded affine trace slice.
 - Globally certified surface projection and closest-point inversion; certified
   clamped curve projection and curve-pair minimum distance now exist, while the
   surface API remains bounded multistart.

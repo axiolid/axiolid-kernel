@@ -25,3 +25,5 @@ These records capture durable choices that preserve Axiolid’s format-neutral, 
 | [0024](./0024-exact-brep-result-contracts.md) | Exact B-rep results own analytic supports and trims |
 | [0025](./0025-certified-nurbs-subdivision-oracle.md) | Certified NURBS queries use outward-rounded subdivision |
 | [0026](./0026-certified-planar-nurbs-root-isolation.md) | Planar NURBS roots require interval existence proofs |
+| [0027](./0027-certified-nurbs-curve-surface-root-isolation.md) | Curve/surface roots require bounded transverse existence proofs |
+| [0028](./0028-certified-affine-surface-surface-tracing.md) | Affine surface/surface traces compose exact identities and certified boundary roots |

@@ -16,6 +16,7 @@ mod certified_curve_surface_intersection;
 mod certified_projection;
 mod certified_refinement;
 mod certified_surface_bezier;
+mod certified_surface_surface_intersection;
 mod curve_analysis;
 mod curve_projection;
 mod periodic;
@@ -40,6 +41,11 @@ pub use certified_projection::{
     CertifiedProjectionOptions, CurveDistanceCertificate2, CurveDistanceCertificate3,
     CurvePairParameterBox, CurveProjectionCertificate2, CurveProjectionCertificate3,
     ParameterInterval,
+};
+pub use certified_surface_surface_intersection::{
+    intersect_surface_surface_certified, CertifiedSurfaceSurfaceIntersection3,
+    CertifiedSurfaceSurfaceIntersectionOptions, SurfaceSurfaceParameterBox,
+    SurfaceSurfaceTraceEndpoint3, TransverseSurfaceSurfaceTrace3,
 };
 pub use curve_analysis::{analyze_curve2, analyze_curve3, CurveDifferential2, CurveDifferential3};
 pub use curve_projection::{project_curve2, project_curve3};
