@@ -34,6 +34,14 @@ impl RefinementBudget {
     }
 }
 
+fn reserve_refinement<T>(values: &mut Vec<T>, additional: usize) -> GeomResult<()> {
+    values
+        .try_reserve_exact(additional)
+        .map_err(|_| GeomError::BudgetExceeded {
+            resource: "certified NURBS refinement allocation",
+        })
+}
+
 fn refinement_work<P>(curve: &BSplineCurve<P>) -> Option<u128> {
     let controls = curve.control_points.len() as u128;
     let degree = u128::from(curve.degree);
@@ -97,11 +105,18 @@ pub(crate) fn piecewise_bezier_cells<P>(
         )));
     }
 
-    let mut cells = Vec::with_capacity(segment_count);
+    let mut cells = Vec::new();
+    reserve_refinement(&mut cells, segment_count)?;
+    let controls_per_cell = degree.checked_add(1).ok_or(GeomError::BudgetExceeded {
+        resource: "certified NURBS refinement allocation",
+    })?;
     for segment in 0..segment_count {
         let first = segment * degree;
+        let mut cell_controls = Vec::new();
+        reserve_refinement(&mut cell_controls, controls_per_cell)?;
+        cell_controls.extend_from_slice(&controls[first..=first + degree]);
         cells.push(Cell {
-            controls: controls[first..=first + degree].to_vec(),
+            controls: cell_controls,
             start: curve.knots[segment],
             end: curve.knots[segment + 1],
             depth: 0,
@@ -177,7 +192,8 @@ fn homogeneous_controls<P>(
             ));
         }
     }
-    let mut controls = Vec::with_capacity(curve.control_points.len());
+    let mut controls = Vec::new();
+    reserve_refinement(&mut controls, curve.control_points.len())?;
     for (index, point) in curve.control_points.iter().enumerate() {
         let coordinate = coordinates(point);
         if coordinate.iter().any(|value| !value.is_finite()) {
@@ -214,9 +230,28 @@ fn expand_knots<P>(curve: &BSplineCurve<P>) -> GeomResult<Vec<Scalar>> {
         .checked_add(usize::from(curve.degree))
         .and_then(|value| value.checked_add(1))
         .ok_or_else(|| GeomError::InvalidInput("NURBS size overflows".to_owned()))?;
-    let mut expanded = Vec::with_capacity(expected);
+    let actual = curve
+        .multiplicities
+        .iter()
+        .try_fold(0usize, |sum, &multiplicity| {
+            let count = usize::try_from(multiplicity).map_err(|_| {
+                GeomError::InvalidInput("NURBS knot multiplicity does not fit usize".to_owned())
+            })?;
+            sum.checked_add(count)
+                .ok_or_else(|| GeomError::InvalidInput("NURBS size overflows".to_owned()))
+        })?;
+    if actual != expected {
+        return Err(GeomError::InvalidInput(format!(
+            "expanded knot count {actual} differs from expected {expected}"
+        )));
+    }
+    let mut expanded = Vec::new();
+    reserve_refinement(&mut expanded, actual)?;
     for (&knot, &multiplicity) in curve.knots.iter().zip(&curve.multiplicities) {
-        expanded.extend(core::iter::repeat_n(knot, multiplicity as usize));
+        let count = usize::try_from(multiplicity).map_err(|_| {
+            GeomError::InvalidInput("NURBS knot multiplicity does not fit usize".to_owned())
+        })?;
+        expanded.extend(core::iter::repeat_n(knot, count));
     }
     Ok(expanded)
 }

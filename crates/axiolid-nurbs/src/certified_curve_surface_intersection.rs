@@ -72,6 +72,7 @@ impl Default for CertifiedCurveSurfaceIntersectionOptions {
 
 /// Native parameter box for a curve and a tensor-product surface patch.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[non_exhaustive]
 pub struct CurveSurfaceParameterBox {
     /// Curve parameter enclosure.
     pub curve: ParameterInterval,
@@ -83,6 +84,7 @@ pub struct CurveSurfaceParameterBox {
 
 /// Existence-and-uniqueness certificate for one transverse intersection.
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub struct TransverseCurveSurfaceIntersection3 {
     /// Certified curve parameter enclosure.
     pub curve_parameter: ParameterInterval,
