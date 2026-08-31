@@ -1,8 +1,10 @@
+use std::collections::BTreeSet;
+
 use axiolid_core::Point3;
 use axiolid_curve::KnotSpec;
 use axiolid_generate::{
     split_surface_pair_certified, CertifiedSurfacePairSplit3, CertifiedSurfacePairSplitOptions,
-    SurfacePairMember, SurfacePairSplitUnresolvedReason,
+    CertifiedTrimmedSurfacePair3, SurfacePairMember, SurfacePairSplitUnresolvedReason,
 };
 use axiolid_nurbs::{
     CertifiedSurfaceSurfaceIntersection3, CertifiedSurfaceSurfaceIntersectionOptions,
@@ -59,6 +61,115 @@ fn options() -> CertifiedSurfacePairSplitOptions {
     .expect("valid split policy")
 }
 
+fn assert_all_generated_entities_are_reachable_and_oriented(split: &CertifiedTrimmedSurfacePair3) {
+    let topology = split.brep.topology();
+    let expected_edges: BTreeSet<_> = (0..topology.edges().len()).collect();
+    let expected_vertices: BTreeSet<_> = (0..topology.vertices().len()).collect();
+    let expected_loops: BTreeSet<_> = (0..topology.loops().len()).collect();
+    let expected_faces: BTreeSet<_> = (0..topology.faces().len()).collect();
+
+    let mut used_edges = BTreeSet::new();
+    for loop_ in topology.loops() {
+        for (index, edge_use) in loop_.edges.iter().enumerate() {
+            used_edges.insert(edge_use.edge.index());
+            let edge = &topology.edges()[edge_use.edge.index()];
+            let head = match edge_use.orientation {
+                Orientation::Forward => edge.end,
+                Orientation::Reversed => edge.start,
+            };
+            let next_use = &loop_.edges[(index + 1) % loop_.edges.len()];
+            let next_edge = &topology.edges()[next_use.edge.index()];
+            let next_tail = match next_use.orientation {
+                Orientation::Forward => next_edge.start,
+                Orientation::Reversed => next_edge.end,
+            };
+            assert_eq!(
+                head, next_tail,
+                "loop edge uses must close in traversal order"
+            );
+        }
+    }
+    assert_eq!(
+        used_edges, expected_edges,
+        "every generated edge must bound a loop"
+    );
+
+    let mut used_vertices = BTreeSet::new();
+    let mut endpoint_pairs = BTreeSet::new();
+    for edge in topology.edges() {
+        used_vertices.insert(edge.start.index());
+        used_vertices.insert(edge.end.index());
+        let pair = if edge.start < edge.end {
+            (edge.start.index(), edge.end.index())
+        } else {
+            (edge.end.index(), edge.start.index())
+        };
+        assert!(
+            endpoint_pairs.insert(pair),
+            "duplicate topological edge endpoints"
+        );
+    }
+    assert_eq!(
+        used_vertices, expected_vertices,
+        "every generated vertex must bound an edge"
+    );
+
+    let mut used_loops = BTreeSet::new();
+    for face in topology.faces() {
+        for bound in &face.bounds {
+            assert!(
+                used_loops.insert(bound.loop_id.index()),
+                "generated loops must have exactly one owning face"
+            );
+        }
+    }
+    assert_eq!(
+        used_loops, expected_loops,
+        "every generated loop must be owned"
+    );
+
+    let result_faces = BTreeSet::from([
+        split.split_faces[0].index(),
+        split.split_faces[1].index(),
+        split.unsplit_face.index(),
+    ]);
+    assert_eq!(
+        result_faces, expected_faces,
+        "the result must own every generated face exactly once"
+    );
+
+    assert_all_generated_geometry_is_referenced(split);
+}
+
+fn assert_all_generated_geometry_is_referenced(split: &CertifiedTrimmedSurfacePair3) {
+    let topology = split.brep.topology();
+    let used_curve3: BTreeSet<_> = topology
+        .edges()
+        .iter()
+        .map(|edge| edge.curve.expect("strict edge carrier").index())
+        .collect();
+    assert_eq!(used_curve3, (0..split.brep.curves3().len()).collect());
+
+    let used_surfaces: BTreeSet<_> = topology
+        .faces()
+        .iter()
+        .map(|face| face.surface.expect("strict face support").index())
+        .collect();
+    assert_eq!(used_surfaces, (0..split.brep.surfaces().len()).collect());
+
+    let mut used_pcurves = BTreeSet::new();
+    for loop_ in topology.loops() {
+        for edge_use in &loop_.edges {
+            assert!(
+                used_pcurves.insert(edge_use.pcurve.expect("strict pcurve").index()),
+                "each face-local edge use must own a distinct pcurve"
+            );
+        }
+    }
+    assert!(used_pcurves.insert(split.embedded_curve.pcurve.index()));
+    assert_eq!(used_pcurves, (0..split.brep.curves2().len()).collect());
+}
+
 #[test]
 fn splits_boundary_owned_face_and_embeds_same_edge_in_containing_face() {
     let first = xy_plane(-1.0, 1.0);
@@ -97,6 +208,7 @@ fn splits_boundary_owned_face_and_embeds_same_edge_in_containing_face() {
     );
     assert_eq!(health.dangling_references, 0);
     assert_eq!(health.open_loops, 0);
+    assert_all_generated_entities_are_reachable_and_oriented(&split);
 
     let mut shared_uses = 0;
     let mut forward_uses = 0;
