@@ -393,6 +393,32 @@ impl Cell {
             .ok_or_else(|| GeomError::InvalidInput("empty Bézier control polygon".to_owned()))
     }
 
+    pub(crate) fn point_at(&self, parameter: Scalar) -> GeomResult<HomogeneousPoint> {
+        if !parameter.is_finite() || parameter < self.start || parameter > self.end {
+            return Err(GeomError::InvalidInput(
+                "Bezier evaluation parameter is outside the native interval".to_owned(),
+            ));
+        }
+        if parameter == self.start {
+            return self
+                .controls
+                .first()
+                .cloned()
+                .ok_or_else(|| GeomError::InvalidInput("empty Bezier control polygon".to_owned()));
+        }
+        if parameter == self.end {
+            return self
+                .controls
+                .last()
+                .cloned()
+                .ok_or_else(|| GeomError::InvalidInput("empty Bezier control polygon".to_owned()));
+        }
+        let (mut left, _) = self.split_at(parameter)?;
+        left.controls
+            .pop()
+            .ok_or_else(|| GeomError::InvalidInput("empty Bezier control polygon".to_owned()))
+    }
+
     pub(crate) fn restrict(&self, start: Scalar, end: Scalar) -> GeomResult<Self> {
         if !start.is_finite()
             || !end.is_finite()
@@ -496,7 +522,7 @@ fn no_split_error(cell: &Cell, parameter: Scalar) -> GeomError {
     ))
 }
 
-fn distance_to_box_lower(
+pub(crate) fn distance_to_box_lower(
     target: [Scalar; 3],
     lo: [Scalar; 3],
     hi: [Scalar; 3],
@@ -609,4 +635,15 @@ fn next_down(value: Scalar) -> Scalar {
     }
     let bits = value.to_bits();
     Scalar::from_bits(if value > 0.0 { bits - 1 } else { bits + 1 })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{distance_to_box_lower, next_down};
+
+    #[test]
+    fn sqrt2_lower_is_outward() {
+        let x = distance_to_box_lower([1., 1., 0.], [0.; 3], [0.; 3], 3).unwrap();
+        assert!(x <= next_down(2f64.sqrt()));
+    }
 }

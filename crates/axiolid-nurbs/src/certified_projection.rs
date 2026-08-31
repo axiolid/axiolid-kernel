@@ -61,6 +61,145 @@ impl CertifiedProjectionOptions {
     }
 }
 
+/// Maximum accepted shared refinement/search work budget for certified surface projection.
+pub const MAX_CERTIFIED_SURFACE_PROJECTION_NODES: u32 = 100_000;
+
+/// Maximum accepted binary subdivision depth for certified surface projection.
+pub const MAX_CERTIFIED_SURFACE_PROJECTION_DEPTH: u16 = 64;
+
+/// Explicit accuracy and work policy for globally certified surface projection.
+///
+/// `distance_tolerance` bounds the certified model-space distance gap.
+/// `parameter_tolerance` independently bounds both native parameter widths;
+/// native parameters are not assumed to have model-space units. `max_nodes`
+/// is one shared cap for Bézier conversion and generated search cells.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CertifiedSurfaceProjectionOptions {
+    distance_tolerance: Tolerance,
+    parameter_tolerance: Scalar,
+    max_nodes: u32,
+    max_depth: u16,
+}
+
+impl CertifiedSurfaceProjectionOptions {
+    /// Construct a non-vacuous, hard-capped certification policy.
+    pub fn new(
+        distance_tolerance: Tolerance,
+        parameter_tolerance: Scalar,
+        max_nodes: u32,
+        max_depth: u16,
+    ) -> GeomResult<Self> {
+        if !parameter_tolerance.is_finite() || parameter_tolerance <= 0.0 {
+            return Err(GeomError::InvalidInput(
+                "surface projection parameter tolerance must be positive and finite".to_owned(),
+            ));
+        }
+        if max_nodes == 0
+            || max_nodes > MAX_CERTIFIED_SURFACE_PROJECTION_NODES
+            || max_depth == 0
+            || max_depth > MAX_CERTIFIED_SURFACE_PROJECTION_DEPTH
+        {
+            return Err(GeomError::InvalidInput(format!(
+                "surface projection budgets must be in 1..={MAX_CERTIFIED_SURFACE_PROJECTION_NODES} nodes and 1..={MAX_CERTIFIED_SURFACE_PROJECTION_DEPTH} depth"
+            )));
+        }
+        Ok(Self {
+            distance_tolerance,
+            parameter_tolerance,
+            max_nodes,
+            max_depth,
+        })
+    }
+
+    /// Required outward upper-minus-lower global distance gap.
+    pub const fn distance_tolerance(self) -> Tolerance {
+        self.distance_tolerance
+    }
+
+    /// Required maximum width of each retained native parameter interval.
+    pub const fn parameter_tolerance(self) -> Scalar {
+        self.parameter_tolerance
+    }
+
+    /// Shared conversion and generated-cell work cap.
+    pub const fn max_nodes(self) -> u32 {
+        self.max_nodes
+    }
+
+    /// Maximum binary subdivision depth of one root Bézier patch.
+    pub const fn max_depth(self) -> u16 {
+        self.max_depth
+    }
+}
+
+/// Closed native `(u, v)` box that may contain a global minimizer.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SurfaceParameterBox {
+    /// Closed native U interval.
+    pub u: ParameterInterval,
+    /// Closed native V interval.
+    pub v: ParameterInterval,
+}
+
+/// Why a valid surface projection remains unresolved without exhausting work.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SurfaceProjectionUnresolvedReason {
+    /// At least one surviving candidate reached the configured depth cap.
+    DepthLimit,
+    /// Binary64 midpoint subdivision no longer advances on surviving candidates.
+    FloatingPointNoProgress,
+}
+
+/// Globally bounded closest-point certificate for a spatial surface.
+///
+/// The representative is a deterministic scalar-oracle evaluation. Its exact
+/// binary64 `(u, v)` parameters are also interval-evaluated, and that enclosure
+/// provides `distance_upper_bound`; the scalar `distance` is descriptive and
+/// is not substituted for the outward certificate bound.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SurfaceProjectionCertificate3 {
+    /// Native U parameter of the attained representative.
+    pub u: Scalar,
+    /// Native V parameter of the attained representative.
+    pub v: Scalar,
+    /// Scalar-oracle approximation of the surface point at `(u, v)`.
+    pub point: Point3,
+    /// Euclidean distance of the scalar-oracle representative.
+    pub distance: Scalar,
+    /// Outward lower bound on the global minimum distance.
+    pub distance_lower_bound: Scalar,
+    /// Outward upper bound from evaluating the exact representative parameters.
+    pub distance_upper_bound: Scalar,
+    /// Closed native boxes whose union contains every global minimizer.
+    pub possible_minimizer_boxes: Vec<SurfaceParameterBox>,
+    /// Number of generated search cells, including root patches.
+    pub visited_nodes: u32,
+}
+
+impl SurfaceProjectionCertificate3 {
+    /// Outward-rounded certified global distance gap.
+    pub fn gap(&self) -> Scalar {
+        crate::certified_bezier::next_up(
+            (self.distance_upper_bound - self.distance_lower_bound).max(0.0),
+        )
+    }
+}
+
+/// Exhaustive bounded outcome for spatial surface projection.
+#[derive(Debug, Clone, PartialEq)]
+pub enum CertifiedSurfaceProjection3 {
+    /// All global-distance and native-parameter proof obligations were met.
+    Complete(SurfaceProjectionCertificate3),
+    /// Bounds and candidates remain sound, but the configured depth or floating
+    /// point parameter resolution prevented completion.
+    Unresolved {
+        /// Retained partial global certificate.
+        certificate: SurfaceProjectionCertificate3,
+        /// Exact reason completion stopped.
+        reason: SurfaceProjectionUnresolvedReason,
+    },
+}
+
 /// Globally bounded closest-point result for a planar curve.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CurveProjectionCertificate2 {

@@ -16,6 +16,7 @@ mod certified_curve_surface_intersection;
 mod certified_projection;
 mod certified_refinement;
 mod certified_surface_bezier;
+mod certified_surface_projection;
 mod certified_surface_surface_intersection;
 mod curve_analysis;
 mod curve_projection;
@@ -38,10 +39,13 @@ pub use certified_curve_surface_intersection::{
     TransverseCurveSurfaceIntersection3,
 };
 pub use certified_projection::{
-    CertifiedProjectionOptions, CurveDistanceCertificate2, CurveDistanceCertificate3,
-    CurvePairParameterBox, CurveProjectionCertificate2, CurveProjectionCertificate3,
-    ParameterInterval,
+    CertifiedProjectionOptions, CertifiedSurfaceProjection3, CertifiedSurfaceProjectionOptions,
+    CurveDistanceCertificate2, CurveDistanceCertificate3, CurvePairParameterBox,
+    CurveProjectionCertificate2, CurveProjectionCertificate3, ParameterInterval,
+    SurfaceParameterBox, SurfaceProjectionCertificate3, SurfaceProjectionUnresolvedReason,
+    MAX_CERTIFIED_SURFACE_PROJECTION_DEPTH, MAX_CERTIFIED_SURFACE_PROJECTION_NODES,
 };
+pub use certified_surface_projection::project_surface_certified;
 pub use certified_surface_surface_intersection::{
     intersect_surface_surface_certified, CertifiedSurfaceSurfaceIntersection3,
     CertifiedSurfaceSurfaceIntersectionOptions, SurfaceSurfaceParameterBox,

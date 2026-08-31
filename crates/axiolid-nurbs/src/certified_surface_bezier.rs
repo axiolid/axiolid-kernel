@@ -282,6 +282,40 @@ impl Patch {
         .midpoint_point()
     }
 
+    pub(crate) fn point_at(&self, u: Scalar, v: Scalar) -> GeomResult<HomogeneousPoint> {
+        if !u.is_finite()
+            || !v.is_finite()
+            || u < self.u_start
+            || u > self.u_end
+            || v < self.v_start
+            || v > self.v_end
+        {
+            return Err(GeomError::InvalidInput(
+                "Bezier patch evaluation parameter is outside the native box".to_owned(),
+            ));
+        }
+        let mut collapsed_v = Vec::new();
+        reserve(&mut collapsed_v, self.controls.len())?;
+        for row in &self.controls {
+            collapsed_v.push(
+                Cell {
+                    controls: clone_controls(row)?,
+                    start: self.v_start,
+                    end: self.v_end,
+                    depth: 0,
+                }
+                .point_at(v)?,
+            );
+        }
+        Cell {
+            controls: collapsed_v,
+            start: self.u_start,
+            end: self.u_end,
+            depth: 0,
+        }
+        .point_at(u)
+    }
+
     pub(crate) fn coordinate_intervals(&self) -> GeomResult<[Interval; 3]> {
         let mut lo = [Scalar::INFINITY; 3];
         let mut hi = [Scalar::NEG_INFINITY; 3];
