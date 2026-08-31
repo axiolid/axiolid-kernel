@@ -15,6 +15,11 @@ Status: first general-kernel milestone implemented.
   native-parameter resolution, distinct zero-length point contact, localized
   structural endpoint tangency/overlap, compact parameter-only DFS work items,
   allocation-safe work ceilings, and unresolved outcomes.
+- Bounded clamped 3D curve/surface isolation for isolated transverse roots,
+  with outward tensor rational-Bézier refinement, conservative native-span
+  surface partials, strict-interior 3×3 Krawczyk proofs, explicit `t/u/v`
+  resolution, retained partial certificates, compact parameter-only DFS work,
+  shared hard work ceilings, fallible allocations, and unresolved outcomes.
 - Verified closed-curve seam classification and parameter wrapping.
 - Optional `axiolid/nurbs` facade feature and `parametric` bundle adoption.
 
@@ -22,7 +27,8 @@ Status: first general-kernel milestone implemented.
 
 - Knot removal and degree operations.
 - Ownership-aware boundary roots, general tangent/overlap classification,
-  higher-dimensional intersections, and globally certified surface projection.
+  surface/surface intersection and tracing, and globally certified surface
+  projection.
 - Surface-periodic seam wrapping.
 - Fitting, interpolation, lofting, and blending operations.
 - Benchmarked optimized providers after scalar differential validation.

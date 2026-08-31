@@ -18,7 +18,7 @@ impl RefinementBudget {
         }
     }
 
-    fn charge(&mut self, work: Option<u128>) -> GeomResult<()> {
+    pub(crate) fn charge(&mut self, work: Option<u128>) -> GeomResult<()> {
         let Some(work) = work else {
             return Err(GeomError::BudgetExceeded {
                 resource: self.resource,
@@ -221,7 +221,7 @@ fn expand_knots<P>(curve: &BSplineCurve<P>) -> GeomResult<Vec<Scalar>> {
     Ok(expanded)
 }
 
-fn insert_homogeneous_once(
+pub(crate) fn insert_homogeneous_once(
     controls: Vec<HomogeneousPoint>,
     knots: Vec<Scalar>,
     degree: usize,
@@ -244,7 +244,19 @@ fn insert_homogeneous_once(
         ));
     }
 
-    let mut refined: Vec<Option<HomogeneousPoint>> = vec![None; controls.len() + 1];
+    let refined_len = controls
+        .len()
+        .checked_add(1)
+        .ok_or(GeomError::BudgetExceeded {
+            resource: "certified NURBS refinement allocation",
+        })?;
+    let mut refined: Vec<Option<HomogeneousPoint>> = Vec::new();
+    refined
+        .try_reserve_exact(refined_len)
+        .map_err(|_| GeomError::BudgetExceeded {
+            resource: "certified NURBS refinement allocation",
+        })?;
+    refined.resize_with(refined_len, || None);
     for index in 0..=span - degree {
         refined[index] = Some(controls[index].clone());
     }
@@ -262,20 +274,33 @@ fn insert_homogeneous_once(
             alpha,
         )?);
     }
-    let refined = refined
-        .into_iter()
-        .enumerate()
-        .map(|(index, control)| {
-            control.ok_or_else(|| {
-                GeomError::Degenerate(format!("knot insertion left refined control {index} unset"))
-            })
-        })
-        .collect::<GeomResult<Vec<_>>>()?;
-    let mut refined_knots = Vec::with_capacity(knots.len() + 1);
+    let mut completed = Vec::new();
+    completed
+        .try_reserve_exact(refined_len)
+        .map_err(|_| GeomError::BudgetExceeded {
+            resource: "certified NURBS refinement allocation",
+        })?;
+    for (index, control) in refined.into_iter().enumerate() {
+        completed.push(control.ok_or_else(|| {
+            GeomError::Degenerate(format!("knot insertion left refined control {index} unset"))
+        })?);
+    }
+    let refined_knot_len = knots
+        .len()
+        .checked_add(1)
+        .ok_or(GeomError::BudgetExceeded {
+            resource: "certified NURBS refinement allocation",
+        })?;
+    let mut refined_knots = Vec::new();
+    refined_knots
+        .try_reserve_exact(refined_knot_len)
+        .map_err(|_| GeomError::BudgetExceeded {
+            resource: "certified NURBS refinement allocation",
+        })?;
     refined_knots.extend_from_slice(&knots[..=span]);
     refined_knots.push(knot);
     refined_knots.extend_from_slice(&knots[span + 1..]);
-    Ok((refined, refined_knots))
+    Ok((completed, refined_knots))
 }
 
 #[cfg(test)]

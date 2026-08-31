@@ -247,15 +247,19 @@ pub(crate) struct Cell {
 
 impl Cell {
     pub(crate) fn coordinate_intervals(&self) -> GeomResult<[Interval; 3]> {
-        let controls = self
-            .controls
-            .iter()
-            .map(HomogeneousPoint::euclidean)
-            .collect::<GeomResult<Vec<_>>>()?;
+        let mut lo = [Scalar::INFINITY; 3];
+        let mut hi = [Scalar::NEG_INFINITY; 3];
+        for control in &self.controls {
+            let point = control.euclidean()?;
+            for axis in 0..3 {
+                lo[axis] = lo[axis].min(point[axis].lower());
+                hi[axis] = hi[axis].max(point[axis].upper());
+            }
+        }
         Ok([
-            Interval::hull(controls.iter().map(|point| point[0]))?,
-            Interval::hull(controls.iter().map(|point| point[1]))?,
-            Interval::hull(controls.iter().map(|point| point[2]))?,
+            Interval::bounds(lo[0], hi[0])?,
+            Interval::bounds(lo[1], hi[1])?,
+            Interval::bounds(lo[2], hi[2])?,
         ])
     }
 
@@ -269,26 +273,28 @@ impl Cell {
         }
         let span = Interval::exact(self.end)?.subtract(Interval::exact(self.start)?)?;
         let scale = Interval::exact(degree as Scalar)?.divide(span)?;
-        let derivatives = self
-            .controls
-            .windows(2)
-            .map(|pair| {
-                Ok(HomogeneousPoint {
-                    numerator: [
-                        pair[1].numerator[0]
-                            .subtract(pair[0].numerator[0])?
-                            .multiply(scale)?,
-                        pair[1].numerator[1]
-                            .subtract(pair[0].numerator[1])?
-                            .multiply(scale)?,
-                        pair[1].numerator[2]
-                            .subtract(pair[0].numerator[2])?
-                            .multiply(scale)?,
-                    ],
-                    weight: pair[1].weight.subtract(pair[0].weight)?.multiply(scale)?,
-                })
-            })
-            .collect::<GeomResult<Vec<_>>>()?;
+        let mut derivatives = Vec::new();
+        derivatives
+            .try_reserve_exact(degree)
+            .map_err(|_| GeomError::BudgetExceeded {
+                resource: "certified Bézier cell allocation",
+            })?;
+        for pair in self.controls.windows(2) {
+            derivatives.push(HomogeneousPoint {
+                numerator: [
+                    pair[1].numerator[0]
+                        .subtract(pair[0].numerator[0])?
+                        .multiply(scale)?,
+                    pair[1].numerator[1]
+                        .subtract(pair[0].numerator[1])?
+                        .multiply(scale)?,
+                    pair[1].numerator[2]
+                        .subtract(pair[0].numerator[2])?
+                        .multiply(scale)?,
+                ],
+                weight: pair[1].weight.subtract(pair[0].weight)?.multiply(scale)?,
+            });
+        }
         let weight = Interval::hull(self.controls.iter().map(|control| control.weight))?;
         let weight_prime = Interval::hull(derivatives.iter().map(|control| control.weight))?;
         let denominator = weight.multiply(weight)?;
@@ -348,10 +354,35 @@ impl Cell {
         Ok((lo, hi))
     }
 
+    fn try_clone_controls(&self) -> GeomResult<Vec<HomogeneousPoint>> {
+        let mut controls = Vec::new();
+        controls
+            .try_reserve_exact(self.controls.len())
+            .map_err(|_| GeomError::BudgetExceeded {
+                resource: "certified Bézier cell allocation",
+            })?;
+        controls.extend(self.controls.iter().cloned());
+        Ok(controls)
+    }
+
+    fn try_clone(&self) -> GeomResult<Self> {
+        Ok(Self {
+            controls: self.try_clone_controls()?,
+            start: self.start,
+            end: self.end,
+            depth: self.depth,
+        })
+    }
+
     pub(crate) fn midpoint_point(&self) -> GeomResult<HomogeneousPoint> {
-        let mut level = self.controls.clone();
+        let mut level = self.try_clone_controls()?;
         while level.len() > 1 {
-            let mut next = Vec::with_capacity(level.len() - 1);
+            let next_len = level.len() - 1;
+            let mut next = Vec::new();
+            next.try_reserve_exact(next_len)
+                .map_err(|_| GeomError::BudgetExceeded {
+                    resource: "certified Bézier cell allocation",
+                })?;
             for pair in level.windows(2) {
                 next.push(pair[0].midpoint(&pair[1])?);
             }
@@ -376,7 +407,7 @@ impl Cell {
         let mut restricted = if start > self.start {
             self.split_at(start)?.1
         } else {
-            self.clone()
+            self.try_clone()?
         };
         if end < restricted.end {
             restricted = restricted.split_at(end)?.0;
@@ -410,13 +441,25 @@ impl Cell {
     }
 
     fn split_with_alpha(&self, parameter: Scalar, alpha: Interval) -> GeomResult<(Self, Self)> {
-        let mut level = self.controls.clone();
-        let mut left = Vec::with_capacity(level.len());
-        let mut right = Vec::with_capacity(level.len());
+        let mut level = self.try_clone_controls()?;
+        let mut left = Vec::new();
+        let mut right = Vec::new();
+        for target in [&mut left, &mut right] {
+            target
+                .try_reserve_exact(level.len())
+                .map_err(|_| GeomError::BudgetExceeded {
+                    resource: "certified Bézier cell allocation",
+                })?;
+        }
         left.push(level[0].clone());
         right.push(level[level.len() - 1].clone());
         while level.len() > 1 {
-            let mut next = Vec::with_capacity(level.len() - 1);
+            let next_len = level.len() - 1;
+            let mut next = Vec::new();
+            next.try_reserve_exact(next_len)
+                .map_err(|_| GeomError::BudgetExceeded {
+                    resource: "certified Bézier cell allocation",
+                })?;
             for pair in level.windows(2) {
                 next.push(HomogeneousPoint::blend(&pair[0], &pair[1], alpha)?);
             }
