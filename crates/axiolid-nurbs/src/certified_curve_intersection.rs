@@ -503,8 +503,10 @@ fn classify_lines(
     let signs = [sign(a, b, c), sign(a, b, d), sign(c, d, a), sign(c, d, b)];
     let first_collinear = signs[0] == Sign::Zero && signs[1] == Sign::Zero;
     if first_collinear {
-        let classification = if boxes_overlap(a, b, c, d) {
+        let classification = if boxes_overlap_positive(a, b, c, d) {
             CurveIntersectionDegeneracy::Overlap
+        } else if boxes_overlap(a, b, c, d) {
+            CurveIntersectionDegeneracy::Tangency
         } else {
             return Ok(CertifiedCurveIntersection2::Complete {
                 intersections: Vec::new(),
@@ -626,6 +628,14 @@ fn boxes_overlap(a: Point2, b: Point2, c: Point2, d: Point2) -> bool {
         a0.min(a1) <= b0.max(b1) && b0.min(b1) <= a0.max(a1)
     };
     overlap(a.x, b.x, c.x, d.x) && overlap(a.y, b.y, c.y, d.y)
+}
+
+fn boxes_overlap_positive(a: Point2, b: Point2, c: Point2, d: Point2) -> bool {
+    let width = |a0: Scalar, a1: Scalar, b0: Scalar, b1: Scalar| {
+        a0.max(a1).min(b0.max(b1)) - a0.min(a1).max(b0.min(b1))
+    };
+    boxes_overlap(a, b, c, d)
+        && (width(a.x, b.x, c.x, d.x) > 0.0 || width(a.y, b.y, c.y, d.y) > 0.0)
 }
 
 fn midpoint(interval: ParameterInterval) -> Scalar {

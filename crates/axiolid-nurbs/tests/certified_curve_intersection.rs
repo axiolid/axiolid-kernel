@@ -149,6 +149,20 @@ fn certifies_disjoint_planar_curves_without_roots() {
 }
 
 #[test]
+fn reports_collinear_endpoint_contact_without_overlap() {
+    let first = bezier(vec![Point2::new(0.0, 0.0), Point2::new(1.0, 0.0)]);
+    let second = bezier(vec![Point2::new(1.0, 0.0), Point2::new(2.0, 0.0)]);
+    let outcome = intersect_curve2_certified(&first, &second, options(1_024)).unwrap();
+    assert!(matches!(
+        outcome,
+        CertifiedCurveIntersection2::Degenerate {
+            classification: CurveIntersectionDegeneracy::Tangency,
+            ..
+        }
+    ));
+}
+
+#[test]
 fn reports_structurally_identical_curves_as_overlap() {
     let curve = bezier(vec![Point2::new(0.0, 0.0), Point2::new(1.0, 1.0)]);
     let outcome = intersect_curve2_certified(&curve, &curve, options(10_000)).unwrap();
