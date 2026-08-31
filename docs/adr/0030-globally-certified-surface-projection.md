@@ -39,10 +39,13 @@ Axiolid will expose global surface closest-point projection through the separate
   parameter tolerance. The result does not claim uniqueness or an exact
   minimizer; all global minimizers remain inside the returned boxes.
 - Depth exhaustion and binary64 no-progress return a sound `Unresolved`
-  certificate with retained boxes and an explicit reason. Shared refinement and
-  search-node exhaustion, counter overflow, or fallible-allocation failure
-  return an error and never a complete certificate.
-- Node and depth options have hard public ceilings. Pending records contain only
+  certificate with retained boxes and an explicit reason. One checked work
+  budget covers Bézier conversion, generated search cells, root/child hull and
+  representative construction, and both child patch restrictions (including
+  temporary de Casteljau controls). The full child charge occurs before either
+  restriction begins. Work exhaustion, counter overflow, or fallible-allocation
+  failure returns an error and never a complete certificate.
+- Work and depth options have hard public ceilings. Pending records contain only
   patch indices, parameter bounds, lower bounds, depth, and deterministic serial
   order; patch control nets are not cloned into the queue.
 

@@ -61,8 +61,8 @@ impl CertifiedProjectionOptions {
     }
 }
 
-/// Maximum accepted shared refinement/search work budget for certified surface projection.
-pub const MAX_CERTIFIED_SURFACE_PROJECTION_NODES: u32 = 100_000;
+/// Maximum accepted shared work budget for certified surface projection.
+pub const MAX_CERTIFIED_SURFACE_PROJECTION_WORK: u32 = 100_000;
 
 /// Maximum accepted binary subdivision depth for certified surface projection.
 pub const MAX_CERTIFIED_SURFACE_PROJECTION_DEPTH: u16 = 64;
@@ -71,13 +71,14 @@ pub const MAX_CERTIFIED_SURFACE_PROJECTION_DEPTH: u16 = 64;
 ///
 /// `distance_tolerance` bounds the certified model-space distance gap.
 /// `parameter_tolerance` independently bounds both native parameter widths;
-/// native parameters are not assumed to have model-space units. `max_nodes`
-/// is one shared cap for Bézier conversion and generated search cells.
+/// native parameters are not assumed to have model-space units. `max_work`
+/// is one shared cap for Bézier conversion, generated search cells, root and
+/// child patch bounds, patch restriction, and representative enclosure.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CertifiedSurfaceProjectionOptions {
     distance_tolerance: Tolerance,
     parameter_tolerance: Scalar,
-    max_nodes: u32,
+    max_work: u32,
     max_depth: u16,
 }
 
@@ -86,7 +87,7 @@ impl CertifiedSurfaceProjectionOptions {
     pub fn new(
         distance_tolerance: Tolerance,
         parameter_tolerance: Scalar,
-        max_nodes: u32,
+        max_work: u32,
         max_depth: u16,
     ) -> GeomResult<Self> {
         if !parameter_tolerance.is_finite() || parameter_tolerance <= 0.0 {
@@ -94,19 +95,19 @@ impl CertifiedSurfaceProjectionOptions {
                 "surface projection parameter tolerance must be positive and finite".to_owned(),
             ));
         }
-        if max_nodes == 0
-            || max_nodes > MAX_CERTIFIED_SURFACE_PROJECTION_NODES
+        if max_work == 0
+            || max_work > MAX_CERTIFIED_SURFACE_PROJECTION_WORK
             || max_depth == 0
             || max_depth > MAX_CERTIFIED_SURFACE_PROJECTION_DEPTH
         {
             return Err(GeomError::InvalidInput(format!(
-                "surface projection budgets must be in 1..={MAX_CERTIFIED_SURFACE_PROJECTION_NODES} nodes and 1..={MAX_CERTIFIED_SURFACE_PROJECTION_DEPTH} depth"
+                "surface projection budgets must be in 1..={MAX_CERTIFIED_SURFACE_PROJECTION_WORK} work units and 1..={MAX_CERTIFIED_SURFACE_PROJECTION_DEPTH} depth"
             )));
         }
         Ok(Self {
             distance_tolerance,
             parameter_tolerance,
-            max_nodes,
+            max_work,
             max_depth,
         })
     }
@@ -121,9 +122,9 @@ impl CertifiedSurfaceProjectionOptions {
         self.parameter_tolerance
     }
 
-    /// Shared conversion and generated-cell work cap.
-    pub const fn max_nodes(self) -> u32 {
-        self.max_nodes
+    /// Shared conversion, search, restriction, and bound-construction work cap.
+    pub const fn max_work(self) -> u32 {
+        self.max_work
     }
 
     /// Maximum binary subdivision depth of one root Bézier patch.

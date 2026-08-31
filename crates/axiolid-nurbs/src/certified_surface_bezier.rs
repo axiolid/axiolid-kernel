@@ -31,6 +31,12 @@ fn allocation_error() -> GeomError {
     }
 }
 
+fn work_overflow() -> GeomError {
+    GeomError::BudgetExceeded {
+        resource: "certified surface refinement work arithmetic",
+    }
+}
+
 fn reserve<T>(target: &mut Vec<T>, additional: usize) -> GeomResult<()> {
     target
         .try_reserve_exact(additional)
@@ -314,6 +320,88 @@ impl Patch {
             depth: 0,
         }
         .point_at(u)
+    }
+
+    /// Conservative work units for restricting this complete tensor patch to an
+    /// arbitrary nonempty subbox and then scanning its coordinate hull.
+    ///
+    /// Restricting one Bézier line may require two de Casteljau splits. A split
+    /// allocates one copied level, two outputs, and every shorter intermediate
+    /// level. The checked formula counts all of those homogeneous-control slots,
+    /// the row/column copies used by tensor restriction, and one full hull scan.
+    pub(crate) fn restriction_bound_work(&self) -> GeomResult<u128> {
+        let u_count = u128::try_from(self.controls.len()).map_err(|_| work_overflow())?;
+        let v_count_usize = self.controls.first().map_or(0, Vec::len);
+        let v_count = u128::try_from(v_count_usize).map_err(|_| work_overflow())?;
+        if u_count == 0
+            || v_count == 0
+            || self.controls.iter().any(|row| row.len() != v_count_usize)
+        {
+            return Err(GeomError::InvalidInput(
+                "Bezier patch control net must be nonempty and rectangular".to_owned(),
+            ));
+        }
+
+        let line_restriction_work = |count: u128| {
+            count.checked_mul(count).and_then(|square| {
+                count
+                    .checked_mul(5)
+                    .and_then(|linear| square.checked_add(linear))
+            })
+        };
+        let u_line = u_count
+            .checked_add(line_restriction_work(u_count).ok_or_else(work_overflow)?)
+            .ok_or_else(work_overflow)?;
+        let v_line = v_count
+            .checked_add(line_restriction_work(v_count).ok_or_else(work_overflow)?)
+            .ok_or_else(work_overflow)?;
+        let restriction = v_count
+            .checked_mul(u_line)
+            .and_then(|columns| {
+                u_count
+                    .checked_mul(v_line)
+                    .and_then(|rows| columns.checked_add(rows))
+            })
+            .ok_or_else(work_overflow)?;
+        let hull_scan = u_count.checked_mul(v_count).ok_or_else(work_overflow)?;
+        restriction.checked_add(hull_scan).ok_or_else(work_overflow)
+    }
+
+    /// Conservative work units for one interval representative and one hull scan.
+    pub(crate) fn representative_bound_work(&self) -> GeomResult<u128> {
+        let u_count = u128::try_from(self.controls.len()).map_err(|_| work_overflow())?;
+        let v_count_usize = self.controls.first().map_or(0, Vec::len);
+        let v_count = u128::try_from(v_count_usize).map_err(|_| work_overflow())?;
+        if u_count == 0
+            || v_count == 0
+            || self.controls.iter().any(|row| row.len() != v_count_usize)
+        {
+            return Err(GeomError::InvalidInput(
+                "Bezier patch control net must be nonempty and rectangular".to_owned(),
+            ));
+        }
+
+        let split_work = |count: u128| {
+            count.checked_mul(3).and_then(|linear| {
+                count
+                    .checked_mul(count.checked_sub(1)?)
+                    .and_then(|product| product.checked_div(2))
+                    .and_then(|triangle| linear.checked_add(triangle))
+            })
+        };
+        let point_work = u_count
+            .checked_mul(v_count)
+            .and_then(|row_copies| {
+                u_count
+                    .checked_mul(split_work(v_count)?)
+                    .and_then(|row_splits| row_copies.checked_add(row_splits))
+            })
+            .and_then(|work| work.checked_add(u_count))
+            .and_then(|work| work.checked_add(split_work(u_count)?))
+            .ok_or_else(work_overflow)?;
+        point_work
+            .checked_add(u_count.checked_mul(v_count).ok_or_else(work_overflow)?)
+            .ok_or_else(work_overflow)
     }
 
     pub(crate) fn coordinate_intervals(&self) -> GeomResult<[Interval; 3]> {
@@ -639,6 +727,22 @@ mod tests {
         assert!(patch.controls[0][0].numerator[0].upper() >= -1.0);
         assert!(patch.controls[1][1].numerator[1].lower() <= 1.0);
         assert!(patch.controls[1][1].numerator[1].upper() >= 1.0);
+    }
+
+    #[test]
+    fn bilinear_restriction_bound_accounts_for_temporaries_and_hull_scan() {
+        let mut budget = RefinementBudget::new(1_000, "surface refinement test");
+        let patch = piecewise_bezier_patches(&plane(), &mut budget)
+            .expect("bilinear surface refines")
+            .pop()
+            .expect("one patch");
+        assert_eq!(patch.restriction_bound_work().expect("work is bounded"), 68);
+        assert_eq!(
+            patch
+                .representative_bound_work()
+                .expect("representative work is bounded"),
+            31
+        );
     }
 
     #[test]

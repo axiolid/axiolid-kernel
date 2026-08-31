@@ -4,7 +4,7 @@ use axiolid_kernel::GeomError;
 use axiolid_nurbs::{
     project_surface_certified, CertifiedSurfaceProjection3, CertifiedSurfaceProjectionOptions,
     SurfaceProjectionCertificate3, SurfaceProjectionUnresolvedReason,
-    MAX_CERTIFIED_SURFACE_PROJECTION_DEPTH, MAX_CERTIFIED_SURFACE_PROJECTION_NODES,
+    MAX_CERTIFIED_SURFACE_PROJECTION_DEPTH, MAX_CERTIFIED_SURFACE_PROJECTION_WORK,
 };
 use axiolid_scalar::surface::bspline_jet;
 use axiolid_surface::BSplineSurface;
@@ -292,12 +292,32 @@ fn rejects_invalid_or_above_hard_cap_options() {
     for parameter in [0.0, -1.0, f64::NAN, f64::INFINITY] {
         assert!(CertifiedSurfaceProjectionOptions::new(tolerance, parameter, 1, 1).is_err());
     }
-    for nodes in [0, MAX_CERTIFIED_SURFACE_PROJECTION_NODES + 1] {
-        assert!(CertifiedSurfaceProjectionOptions::new(tolerance, 1e-4, nodes, 1).is_err());
+    for work in [0, MAX_CERTIFIED_SURFACE_PROJECTION_WORK + 1] {
+        assert!(CertifiedSurfaceProjectionOptions::new(tolerance, 1e-4, work, 1).is_err());
     }
     for depth in [0, MAX_CERTIFIED_SURFACE_PROJECTION_DEPTH + 1] {
         assert!(CertifiedSurfaceProjectionOptions::new(tolerance, 1e-4, 1, depth).is_err());
     }
+}
+
+#[test]
+fn root_bound_and_representative_work_are_precharged() {
+    let result = project_surface_certified(
+        &plane(),
+        Point3::new(0.25, -0.25, 1.0),
+        options(100.0, 10.0, 40, 1),
+    );
+    assert!(matches!(result, Err(GeomError::BudgetExceeded { .. })));
+}
+
+#[test]
+fn child_restriction_work_is_precharged_before_refinement() {
+    let result = project_surface_certified(
+        &plane(),
+        Point3::new(0.25, -0.25, 1.0),
+        options(1e-12, 1e-12, 100, 1),
+    );
+    assert!(matches!(result, Err(GeomError::BudgetExceeded { .. })));
 }
 
 #[test]

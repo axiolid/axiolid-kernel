@@ -59,7 +59,7 @@ pub fn project_surface_certified(
 ) -> GeomResult<CertifiedSurfaceProjection3> {
     validate_query(surface, target)?;
     let target_array = target.to_array();
-    let mut budget = RefinementBudget::new(options.max_nodes(), "certified surface projection");
+    let mut budget = RefinementBudget::new(options.max_work(), "certified surface projection");
     let patches = piecewise_bezier_patches(surface, &mut budget)?;
     if patches.is_empty() {
         return Err(GeomError::InvalidInput(
@@ -79,6 +79,7 @@ pub fn project_surface_certified(
 
     for (patch_index, patch) in patches.iter().enumerate() {
         let domain = patch_domain(patch);
+        budget.charge(Some(patch.representative_bound_work()?))?;
         let lower = patch_lower(patch, target_array)?;
         update_candidate(
             &mut candidate,
@@ -152,7 +153,16 @@ pub fn project_surface_certified(
             GeomError::Degenerate("selected surface parameter box cannot advance".to_owned())
         })?;
         let child_depth = record.depth.checked_add(1).ok_or_else(search_overflow)?;
-        budget.charge(Some(2))?;
+        let patch = patches.get(record.patch_index).ok_or_else(|| {
+            GeomError::Degenerate("surface projection patch index escaped its catalog".to_owned())
+        })?;
+        let child_node_work = patch
+            .restriction_bound_work()?
+            .checked_add(patch.representative_bound_work()?)
+            .and_then(|work| work.checked_add(1))
+            .ok_or_else(search_overflow)?;
+        let child_work = child_node_work.checked_mul(2).ok_or_else(search_overflow)?;
+        budget.charge(Some(child_work))?;
         let child_domains = split_domain(record.domain, axis, midpoint);
         let children = [
             make_pending(
