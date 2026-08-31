@@ -53,14 +53,14 @@ any exactness claim as applying to *evaluation*, not to *operation results*.
 | Analytic curve evaluation and adaptive flattening | Implemented | `axiolid-scalar`; native-parameter evaluation with a chord-error budget, fail-closed on depth exhaustion and unbisectable intervals |
 | Point→parameter inversion, elementary surfaces | Implemented | `axiolid-scalar`; plane/cylinder/cone/sphere/torus with residual validation, refusing degenerate axis/apex/pole points |
 | General NURBS differential analysis | Implemented reference path | `axiolid-nurbs`; curve tangents/curvature and surface fundamental forms, normals, Gaussian/mean/principal curvature; see [ADR 0022](/adr/0022-general-nurbs-kernel-capability) |
-| NURBS inverse queries | Implemented bounded reference path | `axiolid-nurbs`; deterministic multi-start curve/surface projection with per-span, per-start, and aggregate budgets. Results are best candidates, not globally certified minima |
+| NURBS inverse queries | Implemented reference paths | `axiolid-nurbs`; deterministic budgeted multistart curve/surface candidates plus globally certified clamped curve projection and curve-pair minimum distance. Certified results carry outward-rounded lower/upper bounds and unresolved parameter cells; see [ADR 0025](/adr/0025-certified-nurbs-subdivision-oracle) |
 | NURBS exact transformations | Implemented | `axiolid-nurbs`; homogeneous curve knot insertion/reversal/split/Bézier decomposition and surface U/V insertion/reversal preserve the represented shape |
 | Closed-curve seam semantics | Implemented | `axiolid-nurbs`; native-parameter continuity through second derivative and wrapping only after declared closure plus verified position continuity |
 | Trimmed curved-face tessellation | Implemented bounded reference path | `axiolid-compile`; endpoint-inclusive pcurve boundaries and holes, guarded structured-grid/Earcut seeds, topological seam reuse, explicit outer/bound orientation, face-level conforming support-surface refinement, periodic face charts, and fail-closed input/per-edge/per-face/aggregate/depth limits; see [ADR 0019](/adr/0019-validate-and-refine-nurbs-on-the-scalar-read-path) |
 | Topology / B-rep vocabulary | Represented | `axiolid-topology` provides generic typed-role topology; `axiolid-brep` provides strict owned analytic catalogs and required native trim spans |
 | Exact B-rep result contract | Implemented contract, no exact constructors yet | `axiolid-brep::ExactBRep` refuses missing supports/spans and generic topology failures; see [ADR 0024](/adr/0024-exact-brep-result-contracts) |
 | Exact B-rep operation results | Planned | The central implementation gap. `GenerationRequest` now distinguishes exact B-rep from explicit tolerance-bearing tessellation; `axiolid-compile` still returns meshes today |
-| Surface/surface intersection | Planned | In scope per [ADR 0020](/adr/0020-exact-brep-kernel-model). No intersection algorithm exists yet beyond AABB, 2D segment, and triangle/triangle tests |
+| Surface/surface intersection | Planned | In scope per [ADR 0020](/adr/0020-exact-brep-kernel-model). Certified curve-pair minimum-distance pruning now exists, but no root isolation, intersection enumeration, overlap classification, or intersection-curve construction exists yet |
 | Immutable shared geometry DAG | Implemented structural model | `axiolid-model` uses typed IDs and backward references |
 | Sweeps / extrusions / revolutions / lofts | Implemented discrete reference path; exact-result contract ready | `axiolid-generate` does not yet construct exact B-rep sweeps. Its L2 result boundary now requires an explicit exact B-rep or tolerance-bearing tessellation request; exact construction remains L2 and must not return mesh fallbacks |
 | Spatial, measures, healing | Focused crates / staged capability | Consult each crate’s `PLAN.md`; do not infer broad CAD coverage |
@@ -88,7 +88,9 @@ intends to do. These exact/certified forms do not exist today:
   graph nodes.
 - Surface/surface intersection, and the curve/surface and curve/curve cases
   beneath it.
-- Globally certified projection and closest-point inversion; bounded NURBS best-candidate search exists but is not a certificate.
+- Globally certified surface projection and closest-point inversion; certified
+  clamped curve projection and curve-pair minimum distance now exist, while the
+  surface API remains bounded multistart.
 - Exact booleans, section curves, offsets, and fillets, which all sit
   downstream of intersection.
 

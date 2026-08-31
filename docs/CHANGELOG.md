@@ -10,6 +10,7 @@ All notable changes to Axiolid are documented in this file.
 - Test suites for `axiolid-curve`, `axiolid-surface`, `axiolid-primitive`, `axiolid-profile`, `axiolid-tessellate`, and `axiolid-backend-cpu`, pinning vocabulary contracts, validation refusals, and CPU feature selection.
 - Added analytic rational B-spline surface partials and normals, plus bounded conforming support-surface refinement for pcurve-trimmed curved B-rep faces with holes, periodic charts, guarded structured-grid/Earcut seeds, and shared seam vertices.
 - Added the format-neutral `axiolid-nurbs` algorithm crate and `axiolid/nurbs` facade feature with analytic second-order differential geometry, explicitly budgeted curve/surface projection, verified closed-curve seam wrapping, exact curve knot insertion/reversal/split/Bézier decomposition, and exact surface U/V insertion/reversal.
+- Added outward-rounded global certificates for clamped NURBS point-to-curve projection and curve-pair minimum distance in 2D/3D, with interval-aware homogeneous knot refinement, unresolved minimizer cells, deterministic work budgets, and pre-allocation Cartesian guards; see [ADR 0025](./adr/0025-certified-nurbs-subdivision-oracle.md).
 
 ### Changed
 - `axiolid-generate` now defines explicit `GenerationRequest` and `GeneratedGeometry` contracts. Exact B-rep and tolerance-bearing tessellation are separate variants; future exact construction must refuse unsupported cases instead of returning a mesh fallback.

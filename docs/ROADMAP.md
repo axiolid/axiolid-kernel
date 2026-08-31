@@ -17,7 +17,7 @@ trade capability for benchmarks now.
 - Format-neutral values, meshes, profiles, curves, surfaces, topology, and an immutable geometry graph.
 - Feature-gated facade with a portable scalar reference path and separate CPU/GPU provider seams.
 - Architecture, feature-isolation, and layering gates that keep IFC, source formats, and concrete providers out of the kernel.
-- A first-class general NURBS algorithm crate with analytic second-order curve/surface jets, differential geometry, bounded projection, verified closed-curve wrapping, and exact shape-preserving insertion/reversal/split/Bézier operations; import and tessellation remain consumers.
+- A first-class general NURBS algorithm crate with analytic second-order curve/surface jets, differential geometry, bounded local projection, globally certified clamped curve projection and curve-pair minimum distance, verified closed-curve wrapping, and exact shape-preserving insertion/reversal/split/Bézier operations; import and tessellation remain consumers.
 - Bounded conforming pcurve-trimmed curved-face tessellation, including oriented/reordered bounds, holes, guarded structured-grid/Earcut seeds, elementary periodic face charts, and aggregate work budgets.
 - Adaptive analytic curve flattening and point→parameter inversion for the elementary analytic surfaces, both fail-closed on degeneracy.
 
@@ -36,12 +36,13 @@ Closing that is the main line of work.
 ## Next: intersection and inversion
 
 The prerequisites for exact booleans, section curves, offsets, and fillets.
-General intersections do not exist today. Bounded NURBS projection now yields
-honest best candidates, but not globally certified closest points.
+Certified clamped NURBS curve projection and global curve-pair minimum distance now
+provide exhaustive outward-rounded subdivision bounds. Root isolation,
+intersection enumeration/classification, and surface certification remain open.
 
-- Surface/surface intersection, with an explicit contract for supported pairs, degeneracy policy, and tolerance.
-- Curve/surface and curve/curve intersection beneath it.
-- Globally certified projection and closest-point inversion, extending the bounded spline candidate search.
+- Curve/curve root isolation with explicit transverse, tangent, overlap, and degeneracy outcomes.
+- Curve/surface and surface/surface intersection, including intersection-curve construction.
+- Globally certified surface projection and closest-point inversion.
 - Independent oracles for each, in mapped 3D rather than parameter space alone.
 
 ## Then: trustworthy discrete geometry

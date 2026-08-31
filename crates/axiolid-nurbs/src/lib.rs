@@ -8,6 +8,11 @@
 //! tessellators are consumers, not the capability boundary.
 
 mod axis;
+mod certified_bezier;
+mod certified_curve_distance;
+mod certified_curve_projection;
+mod certified_projection;
+mod certified_refinement;
 mod curve_analysis;
 mod curve_projection;
 mod periodic;
@@ -17,6 +22,13 @@ mod surface_projection;
 mod surface_transform;
 mod transform;
 
+pub use certified_curve_distance::{distance_curve2_certified, distance_curve3_certified};
+pub use certified_curve_projection::{project_curve2_certified, project_curve3_certified};
+pub use certified_projection::{
+    CertifiedProjectionOptions, CurveDistanceCertificate2, CurveDistanceCertificate3,
+    CurvePairParameterBox, CurveProjectionCertificate2, CurveProjectionCertificate3,
+    ParameterInterval,
+};
 pub use curve_analysis::{analyze_curve2, analyze_curve3, CurveDifferential2, CurveDifferential3};
 pub use curve_projection::{project_curve2, project_curve3};
 pub use periodic::{

@@ -23,3 +23,4 @@ These records capture durable choices that preserve Axiolid’s format-neutral, 
 | [0022](./0022-general-nurbs-kernel-capability.md) | General NURBS algorithms are a kernel capability |
 | [0023](./0023-solid-generation-is-an-l2-crate.md) | Solid generation is an L2 crate, not part of the compiler |
 | [0024](./0024-exact-brep-result-contracts.md) | Exact B-rep results own analytic supports and trims |
+| [0025](./0025-certified-nurbs-subdivision-oracle.md) | Certified NURBS queries use outward-rounded subdivision |
