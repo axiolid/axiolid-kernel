@@ -21,9 +21,11 @@ evidence that an algorithm exists.
 
 ## Where the implementation stands against the ambition
 
-The kernel today evaluates geometry exactly but **stores results as triangles**:
-`axiolid-compile` memoises every graph node as a `TriMesh`, so a surface it can
-represent exactly is discretised at the first graph edge. For a unit cylinder
+Graph execution today still **stores results as triangles**: `axiolid-compile`
+memoises every graph node as a `TriMesh`, so a surface it can represent exactly
+is discretised at the first graph edge. The focused certified affine trace
+arrangement in `axiolid-generate` now returns an analytic `ExactBRep`, but it is
+not yet carried through the graph. For a unit cylinder
 this under-reports volume by 6.4e-03 at 32 segments and 2.5e-05 at 512, always
 in the same direction, and chained operations compound it.
 
@@ -37,7 +39,7 @@ any exactness claim as applying to *evaluation*, not to *operation results*.
 | Scalar values, frames, transforms, bounds, intervals, tolerance | Implemented | `axiolid-core` |
 | Mesh values, polygon/triangle utilities and views | Implemented | `axiolid-mesh` |
 | Robust-orientation and in-circle / in-sphere predicate reference paths | Implemented | `axiolid-scalar` with degeneracy and filter tests |
-| Scalar mesh generation from profiles and paths | Implemented discrete reference path | `axiolid-generate`; direct extrusion, revolution, lofting, sweep families, centre-line profiles, and bounded half-space clipping. It is model-free and deliberately reports `scalar-generate`. New APIs must select exact B-rep or explicit tolerance-bearing tessellation; see [ADR 0023](/adr/0023-solid-generation-is-an-l2-crate) and [ADR 0024](/adr/0024-exact-brep-result-contracts) |
+| Scalar geometry generation | Implemented broad discrete path plus focused analytic arrangement | `axiolid-generate`; profile/path families remain mesh results. A one-owner certified affine surface trace becomes two closed trimmed faces plus an explicit embedded pcurve on the containing face; see [ADR 0029](/adr/0029-certified-trace-topology-integration) |
 | Scalar graph compilation | Implemented reference path | `axiolid-compile`; DAG traversal, caching, model-driven directrices, and B-rep face tessellation. Consumes `axiolid-generate` rather than owning sweeps. Produces meshes today; see [ADR 0020](/adr/0020-exact-brep-kernel-model) |
 | Polygon triangulation | Implemented provider | `axiolid-tessellate` adopts Earcut under the contract in [ADR 0015](/adr/0015-adopt-earcut-polygon-triangulation) |
 | Mesh Boolean execution | Optional provider | `axiolid-boolmesh`; limited to its mesh contract and tests |
@@ -60,9 +62,9 @@ any exactness claim as applying to *evaluation*, not to *operation results*.
 | Closed-curve seam semantics | Implemented | `axiolid-nurbs`; native-parameter continuity through second derivative and wrapping only after declared closure plus verified position continuity |
 | Trimmed curved-face tessellation | Implemented bounded reference path | `axiolid-compile`; endpoint-inclusive pcurve boundaries and holes, guarded structured-grid/Earcut seeds, topological seam reuse, explicit outer/bound orientation, face-level conforming support-surface refinement, periodic face charts, and fail-closed input/per-edge/per-face/aggregate/depth limits; see [ADR 0019](/adr/0019-validate-and-refine-nurbs-on-the-scalar-read-path) |
 | Topology / B-rep vocabulary | Represented | `axiolid-topology` provides generic typed-role topology; `axiolid-brep` provides strict owned analytic catalogs and required native trim spans |
-| Exact B-rep result contract | Implemented contract, no exact constructors yet | `axiolid-brep::ExactBRep` refuses missing supports/spans and generic topology failures; see [ADR 0024](/adr/0024-exact-brep-result-contracts) |
-| Exact B-rep operation results | Planned | The central implementation gap. `GenerationRequest` now distinguishes exact B-rep from explicit tolerance-bearing tessellation; `axiolid-compile` still returns meshes today |
-| Single-span affine NURBS surface/surface traces | Implemented bounded reference slice | `axiolid-nurbs`; general clamped patch-pair hull exclusion plus complete transverse trace segments only for polynomial degree-1 × degree-1 affine patches. Affineness is proved over exact binary64 values, normal transversality is interval-certified, and endpoints are strict curve/surface Krawczyk roots. Curved tracing, closed loops, tangency/coincidence, boundary ownership, multispan stitching, pcurve construction, and B-rep splitting remain unresolved; see [ADR 0028](/adr/0028-certified-affine-surface-surface-tracing) |
+| Exact B-rep result contract | Implemented contract with one focused constructor | `axiolid-brep::ExactBRep` refuses missing supports/spans and generic topology failures. `axiolid-generate` constructs the certified one-owner affine trace arrangement; see [ADR 0024](/adr/0024-exact-brep-result-contracts) and [ADR 0029](/adr/0029-certified-trace-topology-integration) |
+| Exact B-rep operation results | Focused affine arrangement only; general operations planned | One bounded surface-pair slice returns analytic supports, closed trims, an embedded face curve, native spans, and a residual certificate. Sweeps, booleans, solids, graph persistence, and curved intersections remain unimplemented |
+| Single-span affine NURBS surface/surface traces | Implemented bounded reference slice with focused topology handoff | `axiolid-nurbs` proves affine transverse bounded traces. `axiolid-generate` splits the uniquely boundary-owned rectangular patch and attaches the same edge as an embedded pcurve on the containing face. Dual-boundary ownership, corners, mixed ownership, curved tracing, loops, tangency/coincidence, and multispan stitching remain unresolved; see [ADR 0028](/adr/0028-certified-affine-surface-surface-tracing) and [ADR 0029](/adr/0029-certified-trace-topology-integration) |
 | Immutable shared geometry DAG | Implemented structural model | `axiolid-model` uses typed IDs and backward references |
 | Sweeps / extrusions / revolutions / lofts | Implemented discrete reference path; exact-result contract ready | `axiolid-generate` does not yet construct exact B-rep sweeps. Its L2 result boundary now requires an explicit exact B-rep or tolerance-bearing tessellation request; exact construction remains L2 and must not return mesh fallbacks |
 | Spatial, measures, healing | Focused crates / staged capability | Consult each crate’s `PLAN.md`; do not infer broad CAD coverage |
@@ -84,7 +86,7 @@ architecture is kept clean so optimization stays possible later.
 ## In scope, not yet built
 
 Accepted by [ADR 0020](/adr/0020-exact-brep-kernel-model) as work the kernel
-intends to do. These exact/certified forms do not exist today:
+intends to do. These broader exact/certified forms do not exist today:
 
 - Exact B-rep results carried through operations, rather than meshes between
   graph nodes.

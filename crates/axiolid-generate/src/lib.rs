@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 
-//! Solid generation: turning exact profiles and paths into meshes.
+//! Geometry generation from exact inputs into explicit mesh or focused analytic results.
 //!
 //! # Why this is its own crate
 //!
@@ -22,12 +22,10 @@
 //!
 //! # What this crate does not do
 //!
-//! It produces meshes, not exact B-rep. Per [ADR 0020](
-//! https://axiolid.github.io/axiolid-kernel/adr/0020-exact-brep-kernel-model)
-//! that is a current limitation, not the intended end state: these generators
-//! are the natural place for exact swept-surface output to appear once the
-//! representation exists, and the crate is named for the operation rather
-//! than for its present output type so that change does not require a rename.
+//! Broad sweep/profile families still produce meshes, not exact B-reps. The
+//! certified affine surface-pair arrangement is the first focused analytic
+//! constructor; it does not imply exact sweeps, booleans, or solids. Per ADR
+//! 0020, those broader exact results remain the intended end state.
 
 use axiolid_kernel::BackendId;
 
@@ -48,8 +46,20 @@ pub mod profile;
 pub mod result;
 pub mod revolve;
 pub mod sweep;
+pub mod trimmed_intersection;
+mod trimmed_intersection_assembly;
+mod trimmed_intersection_builder;
+mod trimmed_intersection_classify;
+mod trimmed_intersection_clone_surface;
+mod trimmed_intersection_rectangle;
+mod trimmed_intersection_types;
 
 pub use axiolid_brep::{
     Curve2Id, Curve3Id, ExactBRep, ExactBRepBuilder, ExactBRepError, ExactTopology, SurfaceId,
 };
 pub use result::{GeneratedGeometry, GenerationOutput, GenerationRequest, TessellationRequest};
+pub use trimmed_intersection::{
+    split_surface_pair_certified, CertifiedSurfacePairSplit3, CertifiedSurfacePairSplitOptions,
+    CertifiedTrimmedSurfacePair3, EmbeddedFaceCurve, SurfacePairMember,
+    SurfacePairSplitUnresolvedReason,
+};

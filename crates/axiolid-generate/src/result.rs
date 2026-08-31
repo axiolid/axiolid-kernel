@@ -54,6 +54,10 @@ impl TessellationRequest {
 /// The variant must match the caller's [`GenerationRequest`]. This sum type is
 /// intentionally not coercible: consumers must acknowledge whether they hold
 /// analytic B-rep or a discrete mesh.
+///
+/// `ExactBRep` remains inline for public API compatibility and to avoid an
+/// infallible boxing allocation on certified construction paths.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub enum GeneratedGeometry {

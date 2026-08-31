@@ -26,7 +26,10 @@ Status: first general-kernel milestone implemented.
   intersection segments for single-span polynomial affine patches. Affine identity
   is exact over binary64 controls, normal transversality is outward-interval proved,
   endpoints retain both native surface charts through strict curve/surface proofs,
-  and all unsupported curved/ownership/degenerate cases remain unresolved.
+  and unsupported curved/degenerate cases remain unresolved. `axiolid-generate`
+  can promote the one-owner chord case into two closed trimmed faces plus an
+  explicit embedded pcurve on the containing face; dual-boundary ownership remains
+  unresolved.
 - Verified closed-curve seam classification and parameter wrapping.
 - Optional `axiolid/nurbs` facade feature and `parametric` bundle adoption.
 

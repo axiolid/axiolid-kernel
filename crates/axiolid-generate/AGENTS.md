@@ -1,9 +1,9 @@
 # `axiolid-generate`
 
-Scalar solid-generation algorithms over neutral representations. This is **L2**:
-it accepts exact profiles, curves, primitives, and explicit tolerance policy; it
-creates the current `TriMesh` reference result; it owns no DAG, cache, execution
-context, or operation-provider dispatch.
+Scalar geometry-construction algorithms over neutral representations. This is **L2**:
+it accepts exact profiles, curves, primitives, certified NURBS traces, and explicit
+policy; it creates the current `TriMesh` reference result plus focused analytic B-rep
+arrangements; it owns no DAG, cache, execution context, or operation-provider dispatch.
 
 ## Entry points
 
@@ -11,7 +11,9 @@ context, or operation-provider dispatch.
 - `extrude`, `revolve`, `sweep`, `loft`: place/stitch station rings into solids.
 - `center_line`: turn constant-width centre-line profiles into rings.
 - `half_space`: construct a finite clipping proxy for an unbounded half-space.
-
+- `trimmed_intersection`: promote one certified affine trace into two closed trimmed
+  faces on its boundary-owned patch and an explicit embedded pcurve on the containing
+  unsplit fac...[truncated]
 `BACKEND_ID` is `scalar-generate`. Use it for every diagnostic raised here; do
 not report `scalar-compile` after this split.
 
@@ -26,10 +28,10 @@ not report `scalar-compile` after this split.
 - This crate must not depend on `axiolid-model`, an execution/backend crate, or
   any L3 crate. The executable layering test is
   `axiolid-core/tests/layering.rs`.
-- Generation is deliberately the current **discrete** reference path. Do not
-  claim it preserves exact B-rep output. An eventual exact generator belongs in
-  this layer, not in `axiolid-compile`; see ADR 0020 and ADR 0023.
-
+- Discrete sweeps remain the broad reference path. Exact output is currently limited
+  to the certified affine trimmed-intersection arrangement. Do not generalize that
+  slice to exact sweeps, booleans, dual-boundary ownership, corners, or curved traces;
+  see ADR 0020, ADR 0023,...[truncated]
 ## Tests
 
 Unit-like generation tests live in `tests/` here. Tests that verify a generated

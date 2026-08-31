@@ -7,7 +7,7 @@
 //! and `Surface` catalogs, then requires every support and trim span explicitly.
 //! It does not evaluate, intersect, or tessellate geometry.
 
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::fmt;
 
 use axiolid_core::Interval;
@@ -54,8 +54,8 @@ pub struct ExactBRep {
     curves3: Vec<Curve3>,
     curves2: Vec<Curve2>,
     surfaces: Vec<Surface>,
-    edge_intervals: BTreeMap<EdgeId, Interval>,
-    pcurve_intervals: BTreeMap<(LoopId, usize), Interval>,
+    edge_intervals: HashMap<EdgeId, Interval>,
+    pcurve_intervals: HashMap<(LoopId, usize), Interval>,
 }
 
 impl ExactBRep {
@@ -97,11 +97,28 @@ pub struct ExactBRepBuilder {
     curves3: Vec<Curve3>,
     curves2: Vec<Curve2>,
     surfaces: Vec<Surface>,
-    edge_intervals: BTreeMap<EdgeId, Interval>,
-    pcurve_intervals: BTreeMap<(LoopId, usize), Interval>,
+    edge_intervals: HashMap<EdgeId, Interval>,
+    pcurve_intervals: HashMap<(LoopId, usize), Interval>,
 }
 
 impl ExactBRepBuilder {
+    /// Fallibly reserve owned support and interval catalogs for bounded assembly.
+    pub fn try_reserve(
+        &mut self,
+        curves3: usize,
+        curves2: usize,
+        surfaces: usize,
+        edge_intervals: usize,
+        pcurve_intervals: usize,
+    ) -> Result<(), std::collections::TryReserveError> {
+        self.curves3.try_reserve_exact(curves3)?;
+        self.curves2.try_reserve_exact(curves2)?;
+        self.surfaces.try_reserve_exact(surfaces)?;
+        self.edge_intervals.try_reserve(edge_intervals)?;
+        self.pcurve_intervals.try_reserve(pcurve_intervals)?;
+        Ok(())
+    }
+
     /// Store an exact 3D curve support.
     pub fn add_curve3(&mut self, curve: Curve3) -> Curve3Id {
         let id = Curve3Id::from_index(self.curves3.len());
@@ -248,10 +265,9 @@ fn validate(value: &ExactBRepBuilder) -> Result<(), ExactBRepError> {
         if curve.index() >= value.curves3.len() {
             return Err(ExactBRepError::UnknownCurve3 { edge_index });
         }
-        let edge_id = value
-            .topology
-            .edge_id_at(edge_index)
-            .expect("enumerated edge exists");
+        let Some(edge_id) = value.topology.edge_id_at(edge_index) else {
+            return Err(ExactBRepError::MissingEdgeInterval { edge_index });
+        };
         let Some(interval) = value.edge_intervals.get(&edge_id) else {
             return Err(ExactBRepError::MissingEdgeInterval { edge_index });
         };
@@ -260,10 +276,9 @@ fn validate(value: &ExactBRepBuilder) -> Result<(), ExactBRepError> {
         }
     }
     for (loop_index, loop_) in value.topology.loops().iter().enumerate() {
-        let loop_id = value
-            .topology
-            .loop_id_at(loop_index)
-            .expect("enumerated loop exists");
+        let Some(loop_id) = value.topology.loop_id_at(loop_index) else {
+            return Err(ExactBRepError::Topology(health));
+        };
         for (use_index, use_) in loop_.edges.iter().enumerate() {
             let Some(curve) = use_.pcurve else {
                 return Err(ExactBRepError::MissingPcurve {

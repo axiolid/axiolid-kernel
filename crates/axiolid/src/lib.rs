@@ -82,12 +82,11 @@ pub mod overlay {
     pub use axiolid_overlay::*;
 }
 
-/// Solid generation: profiles, lofts, sweeps, revolutions, half-space clipping.
+/// Geometry generation: discrete sweeps plus focused certified trimmed arrangements.
 ///
-/// These build the current explicit discrete mesh result from exact profile and
-/// path inputs. New APIs select `GenerationRequest::ExactBRep` or explicit
-/// tolerance-bearing tessellation; they never silently substitute one for the
-/// other (ADR 0024).
+/// Broad profile/path generators still return explicit meshes. The certified affine
+/// surface-pair constructor returns an analytic `ExactBRep` arrangement with an
+/// explicit residual certificate and never substitutes a mesh fallback (ADR 0029).
 #[cfg(feature = "generate")]
 pub mod generate {
     pub use axiolid_generate::*;

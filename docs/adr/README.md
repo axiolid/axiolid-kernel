@@ -27,3 +27,4 @@ These records capture durable choices that preserve Axiolid’s format-neutral, 
 | [0026](./0026-certified-planar-nurbs-root-isolation.md) | Planar NURBS roots require interval existence proofs |
 | [0027](./0027-certified-nurbs-curve-surface-root-isolation.md) | Curve/surface roots require bounded transverse existence proofs |
 | [0028](./0028-certified-affine-surface-surface-tracing.md) | Affine surface/surface traces compose exact identities and certified boundary roots |
+| [0029](./0029-certified-trace-topology-integration.md) | Certified finite traces become split faces plus embedded curves |

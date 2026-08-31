@@ -30,6 +30,25 @@ impl<Curve3, Curve2, Surface> Default for BRep<Curve3, Curve2, Surface> {
 }
 
 impl<Curve3, Curve2, Surface> BRep<Curve3, Curve2, Surface> {
+    /// Fallibly reserve append-only arena capacity for bounded construction.
+    pub fn try_reserve(
+        &mut self,
+        vertices: usize,
+        edges: usize,
+        loops: usize,
+        faces: usize,
+        shells: usize,
+        solids: usize,
+    ) -> Result<(), std::collections::TryReserveError> {
+        self.vertices.try_reserve_exact(vertices)?;
+        self.edges.try_reserve_exact(edges)?;
+        self.loops.try_reserve_exact(loops)?;
+        self.faces.try_reserve_exact(faces)?;
+        self.shells.try_reserve_exact(shells)?;
+        self.solids.try_reserve_exact(solids)?;
+        Ok(())
+    }
+
     /// Add a vertex and return its typed handle.
     pub fn add_vertex(&mut self, value: Vertex) -> VertexId {
         let id = VertexId::from_index(self.vertices.len());

@@ -1,14 +1,14 @@
 //! Compile-time API ergonomics expected by downstream Rust clients.
 
 use std::fmt::Debug;
-#[cfg(feature = "model")]
+#[cfg(any(feature = "model", feature = "topology"))]
 use std::fmt::Display;
-#[cfg(feature = "model")]
+#[cfg(any(feature = "model", feature = "topology"))]
 use std::hash::Hash;
 
 fn value<T: Debug + Clone + PartialEq>() {}
 fn default_value<T: Debug + Default>() {}
-#[cfg(feature = "model")]
+#[cfg(any(feature = "model", feature = "topology"))]
 fn id<T: Debug + Display + Copy + Eq + Ord + Hash>() {}
 fn error<T: std::error::Error + Send + Sync + 'static>() {}
 
