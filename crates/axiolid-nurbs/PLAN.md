@@ -10,10 +10,10 @@ Status: first general-kernel milestone implemented.
 - Explicitly budgeted curve/surface inverse queries with honest local status.
 - Outward-rounded globally certified clamped curve projection and curve-pair
   minimum distance, including interval-aware homogeneous knot refinement.
-- Bounded planar clamped curve/curve isolation for exact-sign lines and
-  contractive transverse polynomial/rational Bézier boxes, with explicit
-  native-parameter resolution, structural tangency/overlap, and unresolved
-  outcomes.
+- Bounded planar clamped curve/curve isolation for exact-sign lines and points,
+  and contractive transverse polynomial/rational Bézier boxes, with explicit
+  native-parameter resolution, localized structural tangency/overlap,
+  allocation-safe work ceilings, and unresolved outcomes.
 - Verified closed-curve seam classification and parameter wrapping.
 - Optional `axiolid/nurbs` facade feature and `parametric` bundle adoption.
 

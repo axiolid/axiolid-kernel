@@ -22,6 +22,9 @@ for the residual
 
 - Both curves are validated and refined to positive-weight rational Bézier
   cells under one shared pre-allocation refinement budget from ADR 0025.
+  Policies are capped at 100,000 generated nodes and depth 64; oversized caller
+  budgets are invalid. Initial span pairs are traversed one at a time with a
+  depth-bounded DFS stack rather than materializing cloned Cartesian control nets.
 - Each cell pair is pruned only when an outward-rounded coordinate interval of
   `F` excludes zero.
 - Rational native-parameter derivative intervals are derived in homogeneous
@@ -44,7 +47,10 @@ for the residual
   boxes produce an explicit `Unresolved` outcome. Node exhaustion remains
   `GeomError::BudgetExceeded` and cannot return a partial complete result.
 - Single-span polynomial line segments additionally use Axiolid's exact-sign
-  `orient2d` cascade. Structurally identical curves produce `Overlap`.
+  `orient2d` cascade. Zero-length degree-one curves use exact point/segment
+  predicates and can never establish positive-dimensional overlap. Structurally
+  identical non-constant curves produce `Overlap`, localized to corresponding
+  Bézier-span parameter boxes only.
   A polynomial line and quadratic Bézier sharing an endpoint, tangent control
   direction, and strictly one-sided remaining control produce the narrow
   structurally proven `Tangency` outcome.

@@ -39,6 +39,8 @@ fn intersection_options_reject_vacuous_parameter_resolution() {
     }
     assert!(CertifiedCurveIntersectionOptions::new(1e-6, 0, 1).is_err());
     assert!(CertifiedCurveIntersectionOptions::new(1e-6, 1, 0).is_err());
+    assert!(CertifiedCurveIntersectionOptions::new(1e-6, 100_001, 1).is_err());
+    assert!(CertifiedCurveIntersectionOptions::new(1e-6, 1, 65).is_err());
 }
 
 #[test]
@@ -149,6 +151,44 @@ fn certifies_disjoint_planar_curves_without_roots() {
 }
 
 #[test]
+fn zero_length_line_is_classified_by_exact_point_segment_predicates() {
+    let off_line = bezier(vec![Point2::new(0.5, 0.6), Point2::new(0.5, 0.6)]);
+    let on_line = bezier(vec![Point2::new(0.5, 0.5), Point2::new(0.5, 0.5)]);
+    let diagonal = bezier(vec![Point2::new(0.0, 0.0), Point2::new(1.0, 1.0)]);
+
+    for (first, second) in [(&off_line, &diagonal), (&diagonal, &off_line)] {
+        assert!(matches!(
+            intersect_curve2_certified(first, second, options(1_024)).unwrap(),
+            CertifiedCurveIntersection2::Complete {
+                ref intersections,
+                ..
+            } if intersections.is_empty()
+        ));
+    }
+    for (first, second) in [(&on_line, &diagonal), (&diagonal, &on_line)] {
+        assert!(matches!(
+            intersect_curve2_certified(first, second, options(1_024)).unwrap(),
+            CertifiedCurveIntersection2::Degenerate {
+                classification: CurveIntersectionDegeneracy::Tangency,
+                ..
+            }
+        ));
+    }
+}
+
+#[test]
+fn identical_zero_length_curve_is_not_positive_dimensional_overlap() {
+    let point = bezier(vec![Point2::new(0.5, 0.5), Point2::new(0.5, 0.5)]);
+    assert!(matches!(
+        intersect_curve2_certified(&point, &point, options(1_024)).unwrap(),
+        CertifiedCurveIntersection2::Degenerate {
+            classification: CurveIntersectionDegeneracy::Tangency,
+            ..
+        }
+    ));
+}
+
+#[test]
 fn reports_collinear_endpoint_contact_without_overlap() {
     let first = bezier(vec![Point2::new(0.0, 0.0), Point2::new(1.0, 0.0)]);
     let second = bezier(vec![Point2::new(1.0, 0.0), Point2::new(2.0, 0.0)]);
@@ -174,6 +214,37 @@ fn reports_structurally_identical_curves_as_overlap() {
             ..
         }
     ));
+}
+
+#[test]
+fn identical_multispan_overlap_reports_only_corresponding_parameter_boxes() {
+    let curve = BSplineCurve {
+        degree: 1,
+        control_points: vec![
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 1.0),
+            Point2::new(2.0, 0.0),
+        ],
+        knots: vec![0.0, 1.0, 2.0],
+        multiplicities: vec![2, 1, 2],
+        weights: None,
+        knot_spec: KnotSpec::Unspecified,
+        closed: false,
+        self_intersect: Some(false),
+    };
+    let outcome = intersect_curve2_certified(&curve, &curve, options(1_024)).unwrap();
+    let CertifiedCurveIntersection2::Degenerate {
+        classification: CurveIntersectionDegeneracy::Overlap,
+        candidate_boxes,
+        ..
+    } = outcome
+    else {
+        panic!("an identical curve must be structurally overlapping");
+    };
+    assert_eq!(candidate_boxes.len(), 2);
+    assert!(candidate_boxes
+        .iter()
+        .all(|candidate| candidate.first == candidate.second));
 }
 
 #[test]

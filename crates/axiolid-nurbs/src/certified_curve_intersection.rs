@@ -8,6 +8,9 @@ use axiolid_curve::BSplineCurve2;
 use axiolid_kernel::{GeomError, GeomResult, Sign};
 use axiolid_scalar::{curve::bspline_jet2, orient2d};
 
+const MAX_CERTIFIED_CURVE_INTERSECTION_NODES: u32 = 100_000;
+const MAX_CERTIFIED_CURVE_INTERSECTION_DEPTH: u16 = 64;
+
 /// Accuracy and work policy for certified planar root isolation.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CertifiedCurveIntersectionOptions {
@@ -18,14 +21,19 @@ pub struct CertifiedCurveIntersectionOptions {
 
 impl CertifiedCurveIntersectionOptions {
     /// Construct a finite, non-vacuous root-isolation policy.
+    ///
+    /// `max_nodes` must be at most 100,000 and `max_depth` at most 64 so caller
+    /// policy cannot authorize process-sized allocations.
     pub fn new(parameter_tolerance: Scalar, max_nodes: u32, max_depth: u16) -> GeomResult<Self> {
         if !parameter_tolerance.is_finite()
             || parameter_tolerance <= 0.0
             || max_nodes == 0
+            || max_nodes > MAX_CERTIFIED_CURVE_INTERSECTION_NODES
             || max_depth == 0
+            || max_depth > MAX_CERTIFIED_CURVE_INTERSECTION_DEPTH
         {
             return Err(GeomError::InvalidInput(
-                "curve-intersection tolerance and budgets must be finite and positive".to_owned(),
+                "curve-intersection tolerance must be finite and positive; max_nodes must be in 1..=100000 and max_depth in 1..=64".to_owned(),
             ));
         }
         Ok(Self {
@@ -52,6 +60,7 @@ impl CertifiedCurveIntersectionOptions {
 }
 
 /// One isolated transverse planar intersection.
+#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq)]
 pub struct TransverseCurveIntersection2 {
     /// Certified parameter interval on the first curve.
@@ -67,6 +76,7 @@ pub struct TransverseCurveIntersection2 {
 }
 
 /// Singular or not-yet-isolated curve relationship.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CurveIntersectionDegeneracy {
     /// A structurally proven endpoint tangency.
@@ -77,7 +87,8 @@ pub enum CurveIntersectionDegeneracy {
     Unresolved,
 }
 
-/// Exhaustive planar curve/curve classification under the implemented proof paths.
+/// Planar curve/curve classification under the implemented proof paths.
+#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq)]
 pub enum CertifiedCurveIntersection2 {
     /// Every product-domain cell was excluded or represented by one transverse root.
@@ -122,24 +133,45 @@ pub fn intersect_curve2_certified(
         .ok_or(axiolid_kernel::GeomError::BudgetExceeded {
             resource: "certified curve intersection budget",
         })?;
-    let boxes = product_boxes(&first_cells, &second_cells);
-
     if first == second {
+        let mut candidate_boxes = Vec::new();
+        candidate_boxes
+            .try_reserve_exact(first_cells.len())
+            .map_err(|_| GeomError::BudgetExceeded {
+                resource: "certified curve intersection result allocation",
+            })?;
+        candidate_boxes.extend(
+            first_cells
+                .iter()
+                .zip(&second_cells)
+                .map(|(first_cell, second_cell)| pair_box(first_cell, second_cell)),
+        );
+        let classification = if has_control_point_extent(first) {
+            CurveIntersectionDegeneracy::Overlap
+        } else {
+            CurveIntersectionDegeneracy::Tangency
+        };
         return Ok(CertifiedCurveIntersection2::Degenerate {
-            classification: CurveIntersectionDegeneracy::Overlap,
-            candidate_boxes: boxes,
+            classification,
+            candidate_boxes,
             visited_nodes,
         });
     }
     if structural_start_tangency(first, second) || structural_start_tangency(second, first) {
         return Ok(CertifiedCurveIntersection2::Degenerate {
             classification: CurveIntersectionDegeneracy::Tangency,
-            candidate_boxes: boxes,
+            candidate_boxes: vec![pair_box(&first_cells[0], &second_cells[0])],
             visited_nodes,
         });
     }
     if linear_polynomial(first) && linear_polynomial(second) {
-        return classify_lines(first, second, visited_nodes, boxes, options);
+        return classify_lines(
+            first,
+            second,
+            visited_nodes,
+            vec![pair_box(&first_cells[0], &second_cells[0])],
+            options,
+        );
     }
 
     classify_nonlinear(
@@ -160,79 +192,84 @@ fn classify_nonlinear(
     mut visited_nodes: u32,
     options: CertifiedCurveIntersectionOptions,
 ) -> GeomResult<CertifiedCurveIntersection2> {
-    let mut pending = first_cells
-        .into_iter()
-        .flat_map(|first_cell| {
-            second_cells
-                .iter()
-                .cloned()
-                .map(move |second_cell| (first_cell.clone(), second_cell, 0_u16))
-        })
-        .collect::<Vec<_>>();
+    let mut pending = Vec::new();
+    pending
+        .try_reserve_exact(usize::from(options.max_depth()) + 1)
+        .map_err(|_| GeomError::BudgetExceeded {
+            resource: "certified curve intersection pending allocation",
+        })?;
     let mut intersections = Vec::new();
     let mut unresolved = Vec::new();
 
-    while let Some((first_cell, second_cell, depth)) = pending.pop() {
-        if residual_excludes_zero(&first_cell, &second_cell)? {
-            continue;
-        }
-        if let Some(root) = krawczyk_root(first, second, &first_cell, &second_cell)? {
-            if root.first_parameter.end - root.first_parameter.start
-                <= options.parameter_tolerance()
-                && root.second_parameter.end - root.second_parameter.start
-                    <= options.parameter_tolerance()
-            {
-                intersections.push(root);
-                continue;
+    for first_cell in first_cells {
+        for second_cell in &second_cells {
+            pending.push((first_cell.clone(), second_cell.clone(), 0_u16));
+            while let Some((first_cell, second_cell, depth)) = pending.pop() {
+                if residual_excludes_zero(&first_cell, &second_cell)? {
+                    continue;
+                }
+                if let Some(root) = krawczyk_root(first, second, &first_cell, &second_cell)? {
+                    if root.first_parameter.end - root.first_parameter.start
+                        <= options.parameter_tolerance()
+                        && root.second_parameter.end - root.second_parameter.start
+                            <= options.parameter_tolerance()
+                    {
+                        push_result(&mut intersections, root)?;
+                        continue;
+                    }
+                    if depth >= options.max_depth() {
+                        push_result(
+                            &mut unresolved,
+                            CurvePairParameterBox {
+                                first: root.first_parameter,
+                                second: root.second_parameter,
+                            },
+                        )?;
+                        continue;
+                    }
+                    visited_nodes = visited_nodes
+                        .checked_add(1)
+                        .filter(|&count| count <= options.max_nodes())
+                        .ok_or(GeomError::BudgetExceeded {
+                            resource: "certified curve intersection budget",
+                        })?;
+                    pending.push((
+                        contract_cell(
+                            first_cell,
+                            root.first_parameter,
+                            options.parameter_tolerance(),
+                        )?,
+                        contract_cell(
+                            second_cell,
+                            root.second_parameter,
+                            options.parameter_tolerance(),
+                        )?,
+                        depth.checked_add(1).ok_or_else(|| {
+                            GeomError::Degenerate("curve-intersection depth overflow".to_owned())
+                        })?,
+                    ));
+                    continue;
+                }
+                if depth >= options.max_depth() {
+                    push_result(&mut unresolved, pair_box(&first_cell, &second_cell))?;
+                    continue;
+                }
+                visited_nodes = visited_nodes
+                    .checked_add(2)
+                    .filter(|&count| count <= options.max_nodes())
+                    .ok_or(axiolid_kernel::GeomError::BudgetExceeded {
+                        resource: "certified curve intersection budget",
+                    })?;
+                if first_cell.end - first_cell.start >= second_cell.end - second_cell.start {
+                    let (left, right) = first_cell.split()?;
+                    pending.push((left, second_cell.clone(), depth + 1));
+                    pending.push((right, second_cell, depth + 1));
+                } else {
+                    let (left, right) = second_cell.split()?;
+                    pending.push((first_cell.clone(), left, depth + 1));
+                    pending.push((first_cell, right, depth + 1));
+                }
             }
-            if depth >= options.max_depth() {
-                unresolved.push(CurvePairParameterBox {
-                    first: root.first_parameter,
-                    second: root.second_parameter,
-                });
-                continue;
-            }
-            visited_nodes = visited_nodes
-                .checked_add(1)
-                .filter(|&count| count <= options.max_nodes())
-                .ok_or(GeomError::BudgetExceeded {
-                    resource: "certified curve intersection budget",
-                })?;
-            pending.push((
-                contract_cell(
-                    first_cell,
-                    root.first_parameter,
-                    options.parameter_tolerance(),
-                )?,
-                contract_cell(
-                    second_cell,
-                    root.second_parameter,
-                    options.parameter_tolerance(),
-                )?,
-                depth.checked_add(1).ok_or_else(|| {
-                    GeomError::Degenerate("curve-intersection depth overflow".to_owned())
-                })?,
-            ));
-            continue;
-        }
-        if depth >= options.max_depth() {
-            unresolved.push(pair_box(&first_cell, &second_cell));
-            continue;
-        }
-        visited_nodes = visited_nodes
-            .checked_add(2)
-            .filter(|&count| count <= options.max_nodes())
-            .ok_or(axiolid_kernel::GeomError::BudgetExceeded {
-                resource: "certified curve intersection budget",
-            })?;
-        if first_cell.end - first_cell.start >= second_cell.end - second_cell.start {
-            let (left, right) = first_cell.split()?;
-            pending.push((left, second_cell.clone(), depth + 1));
-            pending.push((right, second_cell, depth + 1));
-        } else {
-            let (left, right) = second_cell.split()?;
-            pending.push((first_cell.clone(), left, depth + 1));
-            pending.push((first_cell, right, depth + 1));
         }
     }
 
@@ -248,6 +285,16 @@ fn classify_nonlinear(
             visited_nodes,
         })
     }
+}
+
+fn push_result<T>(target: &mut Vec<T>, value: T) -> GeomResult<()> {
+    target
+        .try_reserve(1)
+        .map_err(|_| GeomError::BudgetExceeded {
+            resource: "certified curve intersection result allocation",
+        })?;
+    target.push(value);
+    Ok(())
 }
 
 fn residual_excludes_zero(
@@ -500,6 +547,26 @@ fn classify_lines(
 ) -> GeomResult<CertifiedCurveIntersection2> {
     let [a, b] = [first.control_points[0], first.control_points[1]];
     let [c, d] = [second.control_points[0], second.control_points[1]];
+    if a == b || c == d {
+        let intersects = match (a == b, c == d) {
+            (true, true) => a == c,
+            (true, false) => point_on_segment(a, c, d),
+            (false, true) => point_on_segment(c, a, b),
+            (false, false) => unreachable!("a degenerate segment was already established"),
+        };
+        return Ok(if intersects {
+            CertifiedCurveIntersection2::Degenerate {
+                classification: CurveIntersectionDegeneracy::Tangency,
+                candidate_boxes: boxes,
+                visited_nodes,
+            }
+        } else {
+            CertifiedCurveIntersection2::Complete {
+                intersections: Vec::new(),
+                visited_nodes,
+            }
+        });
+    }
     let signs = [sign(a, b, c), sign(a, b, d), sign(c, d, a), sign(c, d, b)];
     let first_collinear = signs[0] == Sign::Zero && signs[1] == Sign::Zero;
     if first_collinear {
@@ -623,6 +690,17 @@ fn same_strict_sign(a: Sign, b: Sign) -> bool {
     a != Sign::Zero && a == b
 }
 
+fn has_control_point_extent(curve: &BSplineCurve2) -> bool {
+    curve
+        .control_points
+        .first()
+        .is_some_and(|first| curve.control_points.iter().any(|point| point != first))
+}
+
+fn point_on_segment(point: Point2, start: Point2, end: Point2) -> bool {
+    sign(start, end, point) == Sign::Zero && boxes_overlap(point, point, start, end)
+}
+
 fn boxes_overlap(a: Point2, b: Point2, c: Point2, d: Point2) -> bool {
     let overlap = |a0: Scalar, a1: Scalar, b0: Scalar, b1: Scalar| {
         a0.min(a1) <= b0.max(b1) && b0.min(b1) <= a0.max(a1)
@@ -704,25 +782,4 @@ fn domain(curve: &BSplineCurve2) -> ParameterInterval {
         start: curve.knots[0],
         end: curve.knots[curve.knots.len() - 1],
     }
-}
-
-fn product_boxes(
-    first: &[crate::certified_bezier::Cell],
-    second: &[crate::certified_bezier::Cell],
-) -> Vec<CurvePairParameterBox> {
-    first
-        .iter()
-        .flat_map(|a| {
-            second.iter().map(move |b| CurvePairParameterBox {
-                first: ParameterInterval {
-                    start: a.start,
-                    end: a.end,
-                },
-                second: ParameterInterval {
-                    start: b.start,
-                    end: b.end,
-                },
-            })
-        })
-        .collect()
 }
