@@ -51,7 +51,7 @@ pub use curve_analysis::{analyze_curve2, analyze_curve3, CurveDifferential2, Cur
 pub use curve_projection::{project_curve2, project_curve3};
 pub use periodic::{
     curve2_seam_continuity, curve3_seam_continuity, wrap_curve2_parameter, wrap_curve3_parameter,
-    SeamContinuity,
+    PeriodicCurve2, PeriodicCurve3, SeamContinuity,
 };
 pub use projection::{
     CurveProjection2, CurveProjection3, ProjectionOptions, ProjectionStatus, SurfaceProjection,
