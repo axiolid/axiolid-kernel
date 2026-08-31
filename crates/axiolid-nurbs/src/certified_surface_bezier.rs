@@ -81,7 +81,7 @@ fn axis_plan(
         .any(|&m| m == 0 || usize::try_from(m).map_or(true, |m| m > degree))
     {
         return Err(GeomError::InvalidInput(format!(
-            "B-spline surface {name} internal multiplicities must be between one and the degree"
+            "certified surface refinement does not support a full-multiplicity internal {name} knot; internal multiplicity must be between one and the degree"
         )));
     }
     let expanded = multiplicities

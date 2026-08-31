@@ -18,7 +18,7 @@ The neutral representations already preserve clamped polynomial/rational B-splin
 
 ## Decision
 
-`axiolid-nurbs` owns `intersect_curve_surface_certified` for finite, clamped 3D NURBS curves and tensor-product NURBS surfaces with finite, strictly positive rational weights.
+`axiolid-nurbs` owns `intersect_curve_surface_certified` for finite, clamped 3D NURBS curves and tensor-product NURBS surfaces with continuous internal span joins (internal knot multiplicity `1..=degree`) and finite, strictly positive rational weights. Full-multiplicity internal knots remain valid neutral NURBS representation but are outside this certified query's accepted domain.
 
 The public result is either:
 
@@ -31,7 +31,7 @@ Public result and certificate types are non-exhaustive. Additive classifications
 
 ## Proof construction
 
-1. Validate compact knot/control/weight structure before amplification. Periodic/unclamped forms are rejected by the clamped-axis contract rather than reinterpreted.
+1. Validate compact knot/control/weight structure and continuous internal span joins before amplification. Periodic/unclamped forms and full-multiplicity internal knots are rejected by this certified-query contract rather than reinterpreted; the latter remain valid neutral NURBS representation.
 2. Refine the curve and both surface axes into outward-rounded homogeneous rational Bézier cells/patches. Surface refinement stays in interval homogeneous coordinates; it does not round-trip through scalar Euclidean controls.
 3. Reject a curve-cell/patch pair when any Euclidean coordinate hull is disjoint.
 4. Reconstruct only the current restricted curve cell and surface patch from immutable base cells plus a native-parameter box.
@@ -57,13 +57,14 @@ Strict interior deliberately excludes roots on a generated subdivision boundary.
 
 ## Consequences
 
-This closes a bounded, reusable reference slice for isolated transverse curve/surface roots over clamped polynomial and rational NURBS, including multispan surfaces. It supplies certificate-bearing input for later topology work.
+This closes a bounded, reusable reference slice for isolated transverse curve/surface roots over clamped polynomial and rational NURBS with continuous internal span joins, including multispan surfaces. It supplies certificate-bearing input for later topology work.
 
 It does **not** implement or claim:
 
 - general tangency, coincidence, or overlap classification;
 - ownership/deduplication for patch, knot, periodic, or trim boundaries;
 - periodic curve/surface solving;
+- full-multiplicity internal knots or discontinuous span joins;
 - surface/surface intersection or intersection-curve tracing;
 - pcurve construction, face splitting, trimming, or watertight B-rep integration;
 - globally certified surface closest-point projection.

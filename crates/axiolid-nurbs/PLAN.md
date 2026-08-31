@@ -15,8 +15,10 @@ Status: first general-kernel milestone implemented.
   native-parameter resolution, distinct zero-length point contact, localized
   structural endpoint tangency/overlap, compact parameter-only DFS work items,
   allocation-safe work ceilings, and unresolved outcomes.
-- Bounded clamped 3D curve/surface isolation for isolated transverse roots,
-  with outward tensor rational-Bézier refinement, conservative native-span
+- Bounded clamped 3D curve/surface isolation with continuous internal span joins
+  (internal knot multiplicity `1..=degree`) for isolated transverse roots; valid
+  full-multiplicity internal knots remain unsupported by this certified query.
+  The path uses outward tensor rational-Bézier refinement, conservative native-span
   surface partials, strict-interior 3×3 Krawczyk proofs, explicit `t/u/v`
   resolution, retained partial certificates, compact parameter-only DFS work,
   shared hard work ceilings, fallible allocations, and unresolved outcomes.
@@ -26,9 +28,9 @@ Status: first general-kernel milestone implemented.
 ## Later
 
 - Knot removal and degree operations.
-- Ownership-aware boundary roots, general tangent/overlap classification,
-  surface/surface intersection and tracing, and globally certified surface
-  projection.
+- Ownership-aware boundary roots, full-multiplicity internal span joins, general
+  tangent/overlap classification, surface/surface intersection and tracing, and
+  globally certified surface projection.
 - Surface-periodic seam wrapping.
 - Fitting, interpolation, lofting, and blending operations.
 - Benchmarked optimized providers after scalar differential validation.

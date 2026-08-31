@@ -1,4 +1,5 @@
-//! Certified transverse intersections between clamped 3D NURBS curves and surfaces.
+//! Certified transverse intersections between internally continuous clamped 3D NURBS
+//! curves and surfaces.
 
 use axiolid_core::{Point3, Scalar};
 use axiolid_curve::BSplineCurve3;
@@ -132,8 +133,10 @@ struct Pending {
 
 /// Certify all isolated transverse roots of `curve(t) = surface(u, v)`.
 ///
-/// The implementation accepts finite, clamped, positive-weight NURBS inputs. A
-/// successful certificate uses outward rational Bézier bounds and a strict
+/// The implementation accepts finite polynomial inputs and rational inputs with
+/// finite, strictly positive weights. All axes must be clamped and have continuous
+/// internal span joins (internal multiplicity `1..=degree`). Full-multiplicity internal knots are valid NURBS representation but are not
+/// supported by this certified query. A successful certificate uses outward rational Bézier bounds and a strict
 /// interior 3D Krawczyk image. Tangential, singular, patch-boundary, and
 /// proof-insufficient cases are returned conservatively as [`Unresolved`](CertifiedCurveSurfaceIntersection3::Unresolved).
 pub fn intersect_curve_surface_certified(

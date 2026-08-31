@@ -165,7 +165,7 @@ fn options_and_shared_work_budget_are_bounded() {
 }
 
 #[test]
-fn internal_surface_multiplicity_above_degree_is_rejected() {
+fn full_multiplicity_internal_surface_knot_is_unsupported() {
     let mut surface = rational_plane();
     surface.control_points = vec![
         vec![Point3::new(-1.0, -1.0, 0.0), Point3::new(-1.0, 1.0, 0.0)],
@@ -181,7 +181,7 @@ fn internal_surface_multiplicity_above_degree_is_rejected() {
         &surface,
         CertifiedCurveSurfaceIntersectionOptions::default(),
     )
-    .expect_err("internal multiplicity above degree must fail closed");
+    .expect_err("full-multiplicity internal knot must be unsupported by this query");
     assert!(matches!(error, axiolid_kernel::GeomError::InvalidInput(_)));
 }
 
