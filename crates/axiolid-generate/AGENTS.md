@@ -13,7 +13,8 @@ arrangements; it owns no DAG, cache, execution context, or operation-provider di
 - `half_space`: construct a finite clipping proxy for an unbounded half-space.
 - `trimmed_intersection`: promote one certified affine trace into two closed trimmed
   faces on its boundary-owned patch and an explicit embedded pcurve on the containing
-  unsplit fac...[truncated]
+  unsplit face; see ADR 0029.
+
 `BACKEND_ID` is `scalar-generate`. Use it for every diagnostic raised here; do
 not report `scalar-compile` after this split.
 
@@ -31,7 +32,8 @@ not report `scalar-compile` after this split.
 - Discrete sweeps remain the broad reference path. Exact output is currently limited
   to the certified affine trimmed-intersection arrangement. Do not generalize that
   slice to exact sweeps, booleans, dual-boundary ownership, corners, or curved traces;
-  see ADR 0020, ADR 0023,...[truncated]
+  see ADR 0020, ADR 0023, ADR 0024, and ADR 0029.
+
 ## Tests
 
 Unit-like generation tests live in `tests/` here. Tests that verify a generated
