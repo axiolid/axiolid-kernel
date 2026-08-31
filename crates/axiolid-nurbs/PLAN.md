@@ -12,7 +12,8 @@ Status: first general-kernel milestone implemented.
   minimum distance, including interval-aware homogeneous knot refinement.
 - Bounded planar clamped curve/curve isolation for exact-sign lines and
   contractive transverse polynomial/rational Bézier boxes, with explicit
-  structural tangency/overlap and unresolved outcomes.
+  native-parameter resolution, structural tangency/overlap, and unresolved
+  outcomes.
 - Verified closed-curve seam classification and parameter wrapping.
 - Optional `axiolid/nurbs` facade feature and `parametric` bundle adoption.
 

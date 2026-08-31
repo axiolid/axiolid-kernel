@@ -1,9 +1,9 @@
-use axiolid_core::{Point2, Tolerance};
+use axiolid_core::Point2;
 use axiolid_curve::{BSplineCurve, KnotSpec};
 use axiolid_kernel::GeomError;
 use axiolid_nurbs::{
-    intersect_curve2_certified, CertifiedCurveIntersection2, CertifiedProjectionOptions,
-    CurveIntersectionDegeneracy,
+    intersect_curve2_certified, CertifiedCurveIntersection2, CertifiedCurveIntersectionOptions,
+    CurveIntersectionDegeneracy, TransverseCurveIntersection2,
 };
 
 fn bezier(points: Vec<Point2>) -> BSplineCurve<Point2> {
@@ -20,8 +20,25 @@ fn bezier(points: Vec<Point2>) -> BSplineCurve<Point2> {
     }
 }
 
-fn options(max_nodes: u32) -> CertifiedProjectionOptions {
-    CertifiedProjectionOptions::new(Tolerance::new(1e-10, 1e-12).unwrap(), max_nodes, 64).unwrap()
+fn options(max_nodes: u32) -> CertifiedCurveIntersectionOptions {
+    CertifiedCurveIntersectionOptions::new(1e-10, max_nodes, 64).unwrap()
+}
+
+fn assert_resolved_to_policy(root: &TransverseCurveIntersection2) {
+    assert!(root.first_parameter.end - root.first_parameter.start <= 1e-10);
+    assert!(root.second_parameter.end - root.second_parameter.start <= 1e-10);
+}
+
+#[test]
+fn intersection_options_reject_vacuous_parameter_resolution() {
+    for tolerance in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+        assert!(matches!(
+            CertifiedCurveIntersectionOptions::new(tolerance, 1, 1),
+            Err(GeomError::InvalidInput(_))
+        ));
+    }
+    assert!(CertifiedCurveIntersectionOptions::new(1e-6, 0, 1).is_err());
+    assert!(CertifiedCurveIntersectionOptions::new(1e-6, 1, 0).is_err());
 }
 
 #[test]
@@ -40,6 +57,7 @@ fn certifies_one_transverse_planar_root() {
 
     assert_eq!(intersections.len(), 1);
     let root = &intersections[0];
+    assert_resolved_to_policy(root);
     assert!(root.first_parameter.start <= 0.5 && root.first_parameter.end >= 0.5);
     assert!(root.second_parameter.start <= 0.5 && root.second_parameter.end >= 0.5);
     assert!(root.residual_upper_bound <= 1e-10);
@@ -58,9 +76,10 @@ fn certifies_a_transverse_root_on_a_nonlinear_curve() {
 
     let outcome = intersect_curve2_certified(&parabola, &vertical, options(100_000)).unwrap();
     let CertifiedCurveIntersection2::Complete { intersections, .. } = outcome else {
-        panic!("a regular nonlinear crossing must be isolated");
+        panic!("a regular nonlinear crossing must be isolated: {outcome:?}");
     };
     assert_eq!(intersections.len(), 1);
+    assert_resolved_to_policy(&intersections[0]);
     assert!(intersections[0].first_parameter.start <= 0.5);
     assert!(intersections[0].first_parameter.end >= 0.5);
     assert!(intersections[0].jacobian_determinant_lower_bound > 0.0);
@@ -89,6 +108,7 @@ fn certifies_a_transverse_root_on_a_rational_quarter_circle() {
         panic!("the rational transverse crossing must be isolated");
     };
     assert_eq!(intersections.len(), 1);
+    assert_resolved_to_policy(&intersections[0]);
     assert!(intersections[0].jacobian_determinant_lower_bound > 0.0);
 }
 
@@ -100,9 +120,7 @@ fn singular_or_boundary_boxes_remain_explicitly_unresolved() {
         Point2::new(1.0, 1.0),
     ]);
     let vertical = bezier(vec![Point2::new(0.0, -1.0), Point2::new(0.0, 1.0)]);
-    let bounded =
-        CertifiedProjectionOptions::new(Tolerance::new(1e-10, 1e-12).unwrap(), 100_000, 20)
-            .unwrap();
+    let bounded = CertifiedCurveIntersectionOptions::new(1e-10, 100_000, 20).unwrap();
 
     let outcome = intersect_curve2_certified(&wide_parabola, &vertical, bounded).unwrap();
     assert!(matches!(

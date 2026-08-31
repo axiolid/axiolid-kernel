@@ -146,6 +146,21 @@ impl Interval {
         })
     }
 
+    pub(crate) fn divide_nonzero(self, denominator: Self) -> GeomResult<Self> {
+        if denominator.contains_zero() {
+            return Err(GeomError::Degenerate(
+                "interval division denominator contains zero".to_owned(),
+            ));
+        }
+        if denominator.hi < 0.0 {
+            let negative = Interval::exact(-1.0)?;
+            return self
+                .multiply(negative)?
+                .divide(denominator.multiply(negative)?);
+        }
+        self.divide(denominator)
+    }
+
     pub(crate) fn divide(self, positive: Self) -> GeomResult<Self> {
         if positive.lo <= 0.0 || !positive.lo.is_finite() || !positive.hi.is_finite() {
             return Err(GeomError::InvalidInput(
@@ -347,7 +362,54 @@ impl Cell {
             .ok_or_else(|| GeomError::InvalidInput("empty Bézier control polygon".to_owned()))
     }
 
+    pub(crate) fn restrict(&self, start: Scalar, end: Scalar) -> GeomResult<Self> {
+        if !start.is_finite()
+            || !end.is_finite()
+            || start < self.start
+            || end > self.end
+            || start >= end
+        {
+            return Err(GeomError::InvalidInput(
+                "Bézier restriction must be a finite nonempty subinterval".to_owned(),
+            ));
+        }
+        let mut restricted = if start > self.start {
+            self.split_at(start)?.1
+        } else {
+            self.clone()
+        };
+        if end < restricted.end {
+            restricted = restricted.split_at(end)?.0;
+        }
+        restricted.depth = self
+            .depth
+            .checked_add(1)
+            .ok_or_else(|| GeomError::Degenerate("Bézier restriction depth overflow".to_owned()))?;
+        Ok(restricted)
+    }
+
     pub(crate) fn split(&self) -> GeomResult<(Self, Self)> {
+        let middle = self.start * 0.5 + self.end * 0.5;
+        if middle <= self.start || middle >= self.end {
+            return Err(no_split_error(self, middle));
+        }
+        self.split_with_alpha(middle, Interval::exact(0.5)?)
+    }
+
+    fn split_at(&self, parameter: Scalar) -> GeomResult<(Self, Self)> {
+        if !parameter.is_finite() || parameter <= self.start || parameter >= self.end {
+            return Err(no_split_error(self, parameter));
+        }
+        let span = Interval::exact(self.end)?.subtract(Interval::exact(self.start)?)?;
+        let mut alpha = Interval::exact(parameter)?
+            .subtract(Interval::exact(self.start)?)?
+            .divide(span)?;
+        alpha.lo = alpha.lo.max(0.0);
+        alpha.hi = alpha.hi.min(1.0);
+        self.split_with_alpha(parameter, alpha)
+    }
+
+    fn split_with_alpha(&self, parameter: Scalar, alpha: Interval) -> GeomResult<(Self, Self)> {
         let mut level = self.controls.clone();
         let mut left = Vec::with_capacity(level.len());
         let mut right = Vec::with_capacity(level.len());
@@ -356,34 +418,39 @@ impl Cell {
         while level.len() > 1 {
             let mut next = Vec::with_capacity(level.len() - 1);
             for pair in level.windows(2) {
-                next.push(pair[0].midpoint(&pair[1])?);
+                next.push(HomogeneousPoint::blend(&pair[0], &pair[1], alpha)?);
             }
             left.push(next[0].clone());
             right.push(next[next.len() - 1].clone());
             level = next;
         }
         right.reverse();
-        let middle = self.start * 0.5 + self.end * 0.5;
-        if !middle.is_finite() || middle <= self.start || middle >= self.end {
-            return Err(GeomError::Degenerate(
-                "parameter subdivision no longer advances".to_owned(),
-            ));
-        }
+        let depth = self
+            .depth
+            .checked_add(1)
+            .ok_or_else(|| GeomError::Degenerate("Bézier subdivision depth overflow".to_owned()))?;
         Ok((
             Self {
                 controls: left,
                 start: self.start,
-                end: middle,
-                depth: self.depth + 1,
+                end: parameter,
+                depth,
             },
             Self {
                 controls: right,
-                start: middle,
+                start: parameter,
                 end: self.end,
-                depth: self.depth + 1,
+                depth,
             },
         ))
     }
+}
+
+fn no_split_error(cell: &Cell, parameter: Scalar) -> GeomError {
+    GeomError::Degenerate(format!(
+        "parameter subdivision no longer advances: [{}, {}] at {}",
+        cell.start, cell.end, parameter
+    ))
 }
 
 fn distance_to_box_lower(

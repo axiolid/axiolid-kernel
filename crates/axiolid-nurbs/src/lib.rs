@@ -25,8 +25,8 @@ mod transform;
 
 pub use certified_curve_distance::{distance_curve2_certified, distance_curve3_certified};
 pub use certified_curve_intersection::{
-    intersect_curve2_certified, CertifiedCurveIntersection2, CurveIntersectionDegeneracy,
-    TransverseCurveIntersection2,
+    intersect_curve2_certified, CertifiedCurveIntersection2, CertifiedCurveIntersectionOptions,
+    CurveIntersectionDegeneracy, TransverseCurveIntersection2,
 };
 pub use certified_curve_projection::{project_curve2_certified, project_curve3_certified};
 pub use certified_projection::{

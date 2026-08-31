@@ -362,6 +362,28 @@ mod tests {
     }
 
     #[test]
+    fn polynomial_derivative_enclosure_uses_native_parameter() {
+        let curve = BSplineCurve {
+            degree: 1,
+            control_points: vec![Point2::ZERO, Point2::new(6.0, 3.0)],
+            knots: vec![2.0, 5.0],
+            multiplicities: vec![2, 2],
+            weights: None,
+            closed: false,
+            self_intersect: Some(false),
+            knot_spec: KnotSpec::PiecewiseBezier,
+        };
+        let mut budget = RefinementBudget::new(100, "test refinement nodes");
+        let cells = piecewise_bezier_cells(&curve, |point| [point.x, point.y, 0.0], &mut budget)
+            .expect("line refines");
+        let derivative = cells[0]
+            .derivative_intervals()
+            .expect("derivative encloses");
+        assert!(derivative[0].contains(2.0));
+        assert!(derivative[1].contains(1.0));
+    }
+
+    #[test]
     fn refined_seam_encloses_the_original_smooth_rational_curve() {
         let curve = BSplineCurve {
             degree: 2,
@@ -398,8 +420,12 @@ mod tests {
             let derivative = cell
                 .derivative_intervals()
                 .expect("rational derivative enclosure is valid");
-            assert!(derivative[0].contains(jet.first.x));
-            assert!(derivative[1].contains(jet.first.y));
+            for fraction in [0.0, 0.25, 0.5, 0.75, 1.0] {
+                let parameter = cell.start * (1.0 - fraction) + cell.end * fraction;
+                let sample = bspline_jet2(&curve, parameter).expect("sample evaluates");
+                assert!(derivative[0].contains(sample.first.x));
+                assert!(derivative[1].contains(sample.first.y));
+            }
         }
 
         let seam = cells[0]

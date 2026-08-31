@@ -1,14 +1,55 @@
 //! Certified planar curve/curve relationship classification.
 
 use crate::certified_bezier::{distance_between_point_intervals_upper, Interval};
-use crate::certified_projection::{
-    CertifiedProjectionOptions, CurvePairParameterBox, ParameterInterval,
-};
+use crate::certified_projection::{CurvePairParameterBox, ParameterInterval};
 use crate::certified_refinement::{piecewise_bezier_cells, RefinementBudget};
 use axiolid_core::{Point2, Scalar};
 use axiolid_curve::BSplineCurve2;
-use axiolid_kernel::{GeomResult, Sign};
+use axiolid_kernel::{GeomError, GeomResult, Sign};
 use axiolid_scalar::{curve::bspline_jet2, orient2d};
+
+/// Accuracy and work policy for certified planar root isolation.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CertifiedCurveIntersectionOptions {
+    parameter_tolerance: Scalar,
+    max_nodes: u32,
+    max_depth: u16,
+}
+
+impl CertifiedCurveIntersectionOptions {
+    /// Construct a finite, non-vacuous root-isolation policy.
+    pub fn new(parameter_tolerance: Scalar, max_nodes: u32, max_depth: u16) -> GeomResult<Self> {
+        if !parameter_tolerance.is_finite()
+            || parameter_tolerance <= 0.0
+            || max_nodes == 0
+            || max_depth == 0
+        {
+            return Err(GeomError::InvalidInput(
+                "curve-intersection tolerance and budgets must be finite and positive".to_owned(),
+            ));
+        }
+        Ok(Self {
+            parameter_tolerance,
+            max_nodes,
+            max_depth,
+        })
+    }
+
+    /// Required maximum native-parameter width of each certified root interval.
+    pub const fn parameter_tolerance(self) -> Scalar {
+        self.parameter_tolerance
+    }
+
+    /// Maximum refinement work and generated product cells.
+    pub const fn max_nodes(self) -> u32 {
+        self.max_nodes
+    }
+
+    /// Maximum subdivision or Krawczyk-contraction depth per product cell.
+    pub const fn max_depth(self) -> u16 {
+        self.max_depth
+    }
+}
 
 /// One isolated transverse planar intersection.
 #[derive(Debug, Clone, PartialEq)]
@@ -40,6 +81,7 @@ pub enum CurveIntersectionDegeneracy {
 #[derive(Debug, Clone, PartialEq)]
 pub enum CertifiedCurveIntersection2 {
     /// Every product-domain cell was excluded or represented by one transverse root.
+    /// Each returned parameter interval is no wider than the requested tolerance.
     Complete {
         /// Isolated transverse roots. Empty means certified disjointness.
         intersections: Vec<TransverseCurveIntersection2>,
@@ -59,15 +101,15 @@ pub enum CertifiedCurveIntersection2 {
 
 /// Classify intersections of two clamped planar B-spline curves.
 ///
-/// The current complete proof path covers single-span polynomial line segments.
-/// It also proves identical-curve overlap and a polynomial quadratic endpoint
-/// tangency pattern from exact orientation signs and the Bézier convex hull.
-/// Other nonlinear candidates return [`CurveIntersectionDegeneracy::Unresolved`];
-/// they are never reported as certified transverse roots.
+/// The complete proof path covers exact-sign single-span polynomial lines and
+/// strict-interior Krawczyk isolation of transverse polynomial or positive-weight
+/// rational Bézier roots. Unsupported singular, tangential, coincident, seam, or
+/// proof-insufficient candidates return [`CurveIntersectionDegeneracy::Unresolved`]
+/// rather than an uncertified root.
 pub fn intersect_curve2_certified(
     first: &BSplineCurve2,
     second: &BSplineCurve2,
-    options: CertifiedProjectionOptions,
+    options: CertifiedCurveIntersectionOptions,
 ) -> GeomResult<CertifiedCurveIntersection2> {
     let mut budget =
         RefinementBudget::new(options.max_nodes(), "certified curve intersection budget");
@@ -97,7 +139,7 @@ pub fn intersect_curve2_certified(
         });
     }
     if linear_polynomial(first) && linear_polynomial(second) {
-        return classify_lines(first, second, visited_nodes, boxes);
+        return classify_lines(first, second, visited_nodes, boxes, options);
     }
 
     classify_nonlinear(
@@ -116,26 +158,76 @@ fn classify_nonlinear(
     first_cells: Vec<crate::certified_bezier::Cell>,
     second_cells: Vec<crate::certified_bezier::Cell>,
     mut visited_nodes: u32,
-    options: CertifiedProjectionOptions,
+    options: CertifiedCurveIntersectionOptions,
 ) -> GeomResult<CertifiedCurveIntersection2> {
     let mut pending = first_cells
         .into_iter()
         .flat_map(|first_cell| {
-            second_cells
-                .iter()
-                .cloned()
-                .map(move |second_cell| (first_cell.clone(), second_cell, 0_u16))
+            second_cells.iter().cloned().map(move |second_cell| {
+                (
+                    first_cell.clone(),
+                    second_cell,
+                    0_u16,
+                    None::<TransverseCurveIntersection2>,
+                )
+            })
         })
         .collect::<Vec<_>>();
     let mut intersections = Vec::new();
     let mut unresolved = Vec::new();
 
-    while let Some((first_cell, second_cell, depth)) = pending.pop() {
+    while let Some((first_cell, second_cell, depth, prior_proof)) = pending.pop() {
+        if let Some(proof) = prior_proof.as_ref() {
+            if cells_resolved(&first_cell, &second_cell, options.parameter_tolerance()) {
+                intersections.push(narrow_proof(proof.clone(), &first_cell, &second_cell));
+                continue;
+            }
+        }
         if residual_excludes_zero(&first_cell, &second_cell)? {
             continue;
         }
         if let Some(root) = krawczyk_root(first, second, &first_cell, &second_cell)? {
-            intersections.push(root);
+            if root.first_parameter.end - root.first_parameter.start
+                <= options.parameter_tolerance()
+                && root.second_parameter.end - root.second_parameter.start
+                    <= options.parameter_tolerance()
+            {
+                intersections.push(root);
+                continue;
+            }
+            if depth >= options.max_depth() {
+                unresolved.push(CurvePairParameterBox {
+                    first: root.first_parameter,
+                    second: root.second_parameter,
+                });
+                continue;
+            }
+            visited_nodes = visited_nodes
+                .checked_add(1)
+                .filter(|&count| count <= options.max_nodes())
+                .ok_or(GeomError::BudgetExceeded {
+                    resource: "certified curve intersection budget",
+                })?;
+            pending.push((
+                contract_cell(
+                    first_cell,
+                    root.first_parameter,
+                    options.parameter_tolerance(),
+                )?,
+                contract_cell(
+                    second_cell,
+                    root.second_parameter,
+                    options.parameter_tolerance(),
+                )?,
+                depth.checked_add(1).ok_or_else(|| {
+                    GeomError::Degenerate("curve-intersection depth overflow".to_owned())
+                })?,
+                Some(root),
+            ));
+            continue;
+        }
+        if prior_proof.is_some() {
+            unresolved.push(pair_box(&first_cell, &second_cell));
             continue;
         }
         if depth >= options.max_depth() {
@@ -150,12 +242,12 @@ fn classify_nonlinear(
             })?;
         if first_cell.end - first_cell.start >= second_cell.end - second_cell.start {
             let (left, right) = first_cell.split()?;
-            pending.push((left, second_cell.clone(), depth + 1));
-            pending.push((right, second_cell, depth + 1));
+            pending.push((left, second_cell.clone(), depth + 1, None));
+            pending.push((right, second_cell, depth + 1, None));
         } else {
             let (left, right) = second_cell.split()?;
-            pending.push((first_cell.clone(), left, depth + 1));
-            pending.push((first_cell, right, depth + 1));
+            pending.push((first_cell.clone(), left, depth + 1, None));
+            pending.push((first_cell, right, depth + 1, None));
         }
     }
 
@@ -361,6 +453,73 @@ fn point_intervals(point: Point2) -> GeomResult<[Interval; 3]> {
     ])
 }
 
+fn cell_interval(cell: &crate::certified_bezier::Cell) -> ParameterInterval {
+    ParameterInterval {
+        start: cell.start,
+        end: cell.end,
+    }
+}
+
+fn narrow_proof(
+    mut proof: TransverseCurveIntersection2,
+    first: &crate::certified_bezier::Cell,
+    second: &crate::certified_bezier::Cell,
+) -> TransverseCurveIntersection2 {
+    proof.first_parameter = cell_interval(first);
+    proof.second_parameter = cell_interval(second);
+    proof
+}
+
+fn cells_resolved(
+    first: &crate::certified_bezier::Cell,
+    second: &crate::certified_bezier::Cell,
+    tolerance: Scalar,
+) -> bool {
+    first.end - first.start <= tolerance && second.end - second.start <= tolerance
+}
+
+fn stable_start(cell: Scalar, root: Scalar, desired: Scalar) -> Scalar {
+    if desired > cell {
+        desired.min(root)
+    } else {
+        root
+    }
+}
+
+fn stable_end(cell: Scalar, root: Scalar, desired: Scalar) -> Scalar {
+    if desired < cell {
+        desired.max(root)
+    } else {
+        root
+    }
+}
+
+fn stable_contraction(
+    cell: &crate::certified_bezier::Cell,
+    root: ParameterInterval,
+    tolerance: Scalar,
+) -> ParameterInterval {
+    let center = midpoint(root);
+    let half = tolerance * 0.5;
+    ParameterInterval {
+        start: stable_start(cell.start, root.start, center - half),
+        end: stable_end(cell.end, root.end, center + half),
+    }
+}
+
+fn contract_cell(
+    cell: crate::certified_bezier::Cell,
+    interval: ParameterInterval,
+    tolerance: Scalar,
+) -> GeomResult<crate::certified_bezier::Cell> {
+    if cell.end - cell.start <= tolerance {
+        Ok(cell)
+    } else {
+        let interval = stable_contraction(&cell, interval, tolerance);
+        cell.restrict(interval.start, interval.end)
+    }
+}
+
 fn linear_combination(
     left_scalar: Scalar,
     left: Interval,
@@ -377,6 +536,7 @@ fn classify_lines(
     second: &BSplineCurve2,
     visited_nodes: u32,
     boxes: Vec<CurvePairParameterBox>,
+    options: CertifiedCurveIntersectionOptions,
 ) -> GeomResult<CertifiedCurveIntersection2> {
     let [a, b] = [first.control_points[0], first.control_points[1]];
     let [c, d] = [second.control_points[0], second.control_points[1]];
@@ -407,14 +567,36 @@ fn classify_lines(
         });
     }
 
-    let r = b - a;
-    let s = d - c;
-    let determinant = r.x * s.y - r.y * s.x;
-    let offset = c - a;
-    let t = ((offset.x * s.y - offset.y * s.x) / determinant).clamp(0.0, 1.0);
-    let u = ((offset.x * r.y - offset.y * r.x) / determinant).clamp(0.0, 1.0);
-    let first_parameter = native_parameter(first, t);
-    let second_parameter = native_parameter(second, u);
+    let rx = Interval::exact(b.x)?.subtract(Interval::exact(a.x)?)?;
+    let ry = Interval::exact(b.y)?.subtract(Interval::exact(a.y)?)?;
+    let sx = Interval::exact(d.x)?.subtract(Interval::exact(c.x)?)?;
+    let sy = Interval::exact(d.y)?.subtract(Interval::exact(c.y)?)?;
+    let determinant = rx.multiply(sy)?.subtract(ry.multiply(sx)?)?;
+    let ox = Interval::exact(c.x)?.subtract(Interval::exact(a.x)?)?;
+    let oy = Interval::exact(c.y)?.subtract(Interval::exact(a.y)?)?;
+    let t = ox
+        .multiply(sy)?
+        .subtract(oy.multiply(sx)?)?
+        .divide_nonzero(determinant)?;
+    let u = ox
+        .multiply(ry)?
+        .subtract(oy.multiply(rx)?)?
+        .divide_nonzero(determinant)?;
+    let first_interval = native_parameter_interval(first, t)?;
+    let second_interval = native_parameter_interval(second, u)?;
+    if !intervals_resolved(
+        first_interval,
+        second_interval,
+        options.parameter_tolerance(),
+    ) {
+        return Ok(unresolved_intervals(
+            first_interval,
+            second_interval,
+            visited_nodes,
+        ));
+    }
+    let first_parameter = midpoint(first_interval);
+    let second_parameter = midpoint(second_interval);
     let first_point = bspline_jet2(first, first_parameter)?.point;
     let second_point = bspline_jet2(second, second_parameter)?.point;
     let residual = distance_between_point_intervals_upper(
@@ -429,8 +611,8 @@ fn classify_lines(
 
     Ok(CertifiedCurveIntersection2::Complete {
         intersections: vec![TransverseCurveIntersection2 {
-            first_parameter: domain(first),
-            second_parameter: domain(second),
+            first_parameter: first_interval,
+            second_parameter: second_interval,
             point,
             residual_upper_bound: residual,
             jacobian_determinant_lower_bound: determinant_lower(a, b, c, d)?,
@@ -486,8 +668,65 @@ fn boxes_overlap(a: Point2, b: Point2, c: Point2, d: Point2) -> bool {
     overlap(a.x, b.x, c.x, d.x) && overlap(a.y, b.y, c.y, d.y)
 }
 
-fn native_parameter(curve: &BSplineCurve2, unit: Scalar) -> Scalar {
-    curve.knots[0] * (1.0 - unit) + curve.knots[curve.knots.len() - 1] * unit
+fn midpoint(interval: ParameterInterval) -> Scalar {
+    interval.start * 0.5 + interval.end * 0.5
+}
+
+fn intervals_resolved(
+    first: ParameterInterval,
+    second: ParameterInterval,
+    tolerance: Scalar,
+) -> bool {
+    first.end - first.start <= tolerance && second.end - second.start <= tolerance
+}
+
+fn unresolved_box(box_: CurvePairParameterBox, visited_nodes: u32) -> CertifiedCurveIntersection2 {
+    CertifiedCurveIntersection2::Degenerate {
+        classification: CurveIntersectionDegeneracy::Unresolved,
+        candidate_boxes: vec![box_],
+        visited_nodes,
+    }
+}
+
+fn unresolved_intervals(
+    first: ParameterInterval,
+    second: ParameterInterval,
+    visited: u32,
+) -> CertifiedCurveIntersection2 {
+    unresolved_box(CurvePairParameterBox { first, second }, visited)
+}
+
+fn checked_parameter_interval(start: Scalar, end: Scalar) -> GeomResult<ParameterInterval> {
+    (start <= end)
+        .then_some(ParameterInterval { start, end })
+        .ok_or_else(|| {
+            GeomError::Degenerate("certified line parameter interval is empty".to_owned())
+        })
+}
+
+fn native_interval(bounds: ParameterInterval, value: Interval) -> GeomResult<ParameterInterval> {
+    checked_parameter_interval(
+        value.lower().max(bounds.start),
+        value.upper().min(bounds.end),
+    )
+}
+
+fn native_parameter_interval_inner(
+    bounds: ParameterInterval,
+    unit: Interval,
+) -> GeomResult<ParameterInterval> {
+    let span = Interval::exact(bounds.end)?.subtract(Interval::exact(bounds.start)?)?;
+    native_interval(
+        bounds,
+        Interval::exact(bounds.start)?.add(unit.multiply(span)?)?,
+    )
+}
+
+fn native_parameter_interval(
+    curve: &BSplineCurve2,
+    unit: Interval,
+) -> GeomResult<ParameterInterval> {
+    native_parameter_interval_inner(domain(curve), unit)
 }
 
 fn domain(curve: &BSplineCurve2) -> ParameterInterval {
