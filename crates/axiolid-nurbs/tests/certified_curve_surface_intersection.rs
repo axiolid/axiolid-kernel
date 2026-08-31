@@ -176,6 +176,44 @@ fn nonpositive_rational_surface_weight_is_rejected() {
     .is_err());
 }
 
+#[test]
+fn unresolved_result_retains_previously_certified_roots() {
+    let curve = BSplineCurve3 {
+        degree: 1,
+        control_points: vec![
+            Point3::new(0.25, -0.5, -1.0),
+            Point3::new(0.25, -0.5, 1.0),
+            Point3::new(0.25, -0.5, 0.0),
+            Point3::new(0.25, -0.5, 0.0),
+        ],
+        knots: vec![0.0, 1.0, 2.0, 3.0],
+        multiplicities: vec![2, 1, 1, 2],
+        weights: None,
+        closed: false,
+        knot_spec: KnotSpec::Unspecified,
+        self_intersect: None,
+    };
+    let mut surface = rational_plane();
+    surface.weights = None;
+    let result = intersect_curve_surface_certified(
+        &curve,
+        &surface,
+        CertifiedCurveSurfaceIntersectionOptions::new(1.0e-6, 10_000, 8).unwrap(),
+    )
+    .expect("mixed query terminates");
+    match result {
+        CertifiedCurveSurfaceIntersection3::Unresolved {
+            intersections,
+            candidate_boxes,
+            ..
+        } => {
+            assert_eq!(intersections.len(), 1);
+            assert!(!candidate_boxes.is_empty());
+        }
+        other => panic!("expected mixed unresolved result, got {other:?}"),
+    }
+}
+
 fn two_span_plane() -> BSplineSurface {
     BSplineSurface {
         u_degree: 1,
