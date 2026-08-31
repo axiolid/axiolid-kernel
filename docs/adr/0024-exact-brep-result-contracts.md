@@ -96,8 +96,9 @@ polylines.
 `audit_brep` supplies the current exact, coordinate-free adjacency policy. An
 open exact sheet is valid when `BRepHealth::is_tessellable()` holds. A generator
 MUST call a result a **closed-manifold exact solid** only when it selects a
-`Solid` root and the selected outer/void shells satisfy
-`BRepHealth::is_closed_manifold()`: no dangling references, open/empty loops,
+`Solid` root whose outer/void shells are the only shells in the result and the
+result satisfies `BRepHealth::is_closed_manifold()`: no dangling references,
+open/empty loops,
 missing or duplicate outer bounds, unpaired edge uses, overused edges, or false
 closure claims. Geometric containment of voids, self-intersection, orientability
 at singularities, and curve/pcurve/surface coincidence are deliberately not
@@ -190,8 +191,10 @@ finite linear directrix, an exact extrusion is accepted only if it constructs:
 - face-local `Curve2` pcurves and intervals for every edge use on every cap and
   side face, including separate pcurves for the same shared edge on adjacent
   faces;
-- one selected outer shell, plus a selected void shell when the profile has a
-  hole, whose complete topology passes `BRepHealth::is_closed_manifold()`.
+- one selected outer shell whose cap inner bounds and side faces form the
+  through-passage for a profile hole, and whose complete topology passes
+  `BRepHealth::is_closed_manifold()`. An additional `Solid::voids` shell is used
+  only for an enclosed internal cavity, not for a through-hole.
 
 The result is `GeneratedGeometry::ExactBRep`. Producing the existing `TriMesh`
 extrusion instead is valid only under an explicit `TessellationRequest`.
@@ -210,10 +213,10 @@ seam by sampling, or substitute a faceted cylinder for an exact request.
 
 If a sweep needs B-spline surface inversion, curve/surface intersection, or a
 pcurve that the generator cannot construct and certify, an `ExactBRep` request
-produces the structured unsupported/certification failure. The caller may issue
-a separate
-`tessellation` request to obtain the already-supported discrete path; the exact
-request itself still never succeeds with a mesh.
+produces the structured unsupported/certification failure. The caller may issue a
+separate `GenerationRequest::Tessellation(...)` request to obtain the
+already-supported discrete path; the exact request itself still never succeeds
+with a mesh.
 
 ## Consequences
 
