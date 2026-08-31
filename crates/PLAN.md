@@ -124,7 +124,7 @@ Trait implementation is capability proof; descriptor booleans are forbidden.
 ```text
 L0 values            axiolid-core
 L1 representations   axiolid-mesh, axiolid-profile, axiolid-curve, axiolid-surface,
-                     axiolid-topology, axiolid-primitive, axiolid-model
+                     axiolid-topology, axiolid-brep, axiolid-primitive, axiolid-model
 L2 algorithms/traits axiolid-tessellate, axiolid-spatial, axiolid-measure,
                      axiolid-overlay, axiolid-field, axiolid-heal, axiolid-nurbs,
                      axiolid-scalar, axiolid-generate, axiolid-kernel
@@ -154,7 +154,7 @@ Additive facade features:
 
 | Family | Features | Pulls |
 | --- | --- | --- |
-| representation | `mesh`, `profiles`, `curves`, `surfaces`, `topology`, `primitives`, `model` | exact/data crates only |
+| representation | `mesh`, `profiles`, `curves`, `surfaces`, `topology`, `brep`, `primitives`, `model` | exact/data crates only |
 | algorithms/contracts | `nurbs`, `generate`, `tessellation`, `spatial`, `measure`, `heal`, `kernel`, `mesh-boolean`, `graph-compile` | selected traits/algorithms |
 | execution | `cpu`, `parallel`, `simd`, `gpu` | context or operation adapter only |
 | bundles | `discrete`, `parametric`, `advanced`, `full` | named additive sets |

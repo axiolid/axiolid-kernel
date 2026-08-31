@@ -18,6 +18,7 @@ profiles = ["dep:axiolid-profile"]
 curves = ["dep:axiolid-curve"]
 surfaces = ["curves", "dep:axiolid-surface"]
 topology = ["curves", "surfaces", "dep:axiolid-topology"]
+brep = ["topology", "dep:axiolid-brep"]
 primitives = ["dep:axiolid-primitive"]
 model = [
     "mesh",
@@ -41,7 +42,7 @@ heal = ["mesh", "dep:axiolid-heal"]
 kernel = ["dep:axiolid-kernel"]
 mesh-boolean = ["kernel", "mesh", "axiolid-kernel/mesh-boolean"]
 graph-compile = ["kernel", "model", "mesh", "axiolid-kernel/model"]
-generate = ["mesh", "profiles", "curves", "primitives", "kernel", "dep:axiolid-generate"]
+generate = ["mesh", "profiles", "curves", "primitives", "kernel", "brep", "dep:axiolid-generate"]
 
 # Execution contexts and operation adapters. CPU stays portable by default;
 # optimized paths are selected at runtime, never by building the whole crate for
@@ -74,6 +75,7 @@ axiolid-profile = { workspace = true, optional = true }
 axiolid-curve = { workspace = true, optional = true }
 axiolid-surface = { workspace = true, optional = true }
 axiolid-topology = { workspace = true, optional = true }
+axiolid-brep = { workspace = true, optional = true }
 axiolid-primitive = { workspace = true, optional = true }
 axiolid-model = { workspace = true, optional = true }
 axiolid-nurbs = { workspace = true, optional = true }

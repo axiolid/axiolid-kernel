@@ -26,6 +26,7 @@ axiolid-profile = { path = "crates/axiolid-profile", version = "0.1.0" }
 axiolid-curve = { path = "crates/axiolid-curve", version = "0.1.0" }
 axiolid-surface = { path = "crates/axiolid-surface", version = "0.1.0" }
 axiolid-topology = { path = "crates/axiolid-topology", version = "0.1.0" }
+axiolid-brep = { path = "crates/axiolid-brep", version = "0.1.0" }
 axiolid-tessellate = { path = "crates/axiolid-tessellate", version = "0.1.0" }
 axiolid-spatial = { path = "crates/axiolid-spatial", version = "0.1.0" }
 axiolid-measure = { path = "crates/axiolid-measure", version = "0.1.0" }

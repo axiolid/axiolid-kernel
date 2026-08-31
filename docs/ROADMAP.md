@@ -27,7 +27,9 @@ The kernel evaluates exactly but stores every graph node as triangles, so
 exactness is lost at the first edge ([ADR 0020](./adr/0020-exact-brep-kernel-model.md)).
 Closing that is the main line of work.
 
-- Define the exact B-rep result type and migrate the compiler away from a mesh-only cache, so a cylinder survives an operation as a cylinder.
+- [x] Define the strict exact B-rep result contract: typed analytic support catalogs, generic topology roles, and required native edge/pcurve spans in `axiolid-brep` (ADR 0024).
+- Migrate the compiler away from a mesh-only cache, so a cylinder survives an operation as a cylinder.
+- Implement exact construction families in `axiolid-generate` only where all supports and trims can be populated without approximation.
 - Make tessellation an explicit, tolerance-carrying output rather than the currency between nodes.
 - Keep operations fail-closed: refuse what cannot be done exactly instead of silently substituting an approximation.
 

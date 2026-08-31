@@ -7,16 +7,16 @@ use crate::{
 /// Owned B-rep. Generic geometry handles avoid a dependency cycle with the
 /// model graph that stores exact curves and surfaces.
 #[derive(Debug, Clone, PartialEq)]
-pub struct BRep<G> {
+pub struct BRep<Curve3, Curve2 = Curve3, Surface = Curve3> {
     vertices: Vec<Vertex>,
-    edges: Vec<Edge<G>>,
-    loops: Vec<Loop<G>>,
-    faces: Vec<Face<G>>,
+    edges: Vec<Edge<Curve3>>,
+    loops: Vec<Loop<Curve2>>,
+    faces: Vec<Face<Surface>>,
     shells: Vec<Shell>,
     solids: Vec<Solid>,
 }
 
-impl<G> Default for BRep<G> {
+impl<Curve3, Curve2, Surface> Default for BRep<Curve3, Curve2, Surface> {
     fn default() -> Self {
         Self {
             vertices: Vec::new(),
@@ -29,7 +29,7 @@ impl<G> Default for BRep<G> {
     }
 }
 
-impl<G> BRep<G> {
+impl<Curve3, Curve2, Surface> BRep<Curve3, Curve2, Surface> {
     /// Add a vertex and return its typed handle.
     pub fn add_vertex(&mut self, value: Vertex) -> VertexId {
         let id = VertexId::from_index(self.vertices.len());
@@ -38,21 +38,21 @@ impl<G> BRep<G> {
     }
 
     /// Add an edge and return its typed handle.
-    pub fn add_edge(&mut self, value: Edge<G>) -> EdgeId {
+    pub fn add_edge(&mut self, value: Edge<Curve3>) -> EdgeId {
         let id = EdgeId::from_index(self.edges.len());
         self.edges.push(value);
         id
     }
 
     /// Add a loop and return its typed handle.
-    pub fn add_loop(&mut self, value: Loop<G>) -> LoopId {
+    pub fn add_loop(&mut self, value: Loop<Curve2>) -> LoopId {
         let id = LoopId::from_index(self.loops.len());
         self.loops.push(value);
         id
     }
 
     /// Add a face and return its typed handle.
-    pub fn add_face(&mut self, value: Face<G>) -> FaceId {
+    pub fn add_face(&mut self, value: Face<Surface>) -> FaceId {
         let id = FaceId::from_index(self.faces.len());
         self.faces.push(value);
         id
@@ -77,18 +77,33 @@ impl<G> BRep<G> {
         &self.vertices
     }
 
-    /// Edges in stable insertion order.
-    pub fn edges(&self) -> &[Edge<G>] {
+    /// Edge handle at a dense arena index, if present.
+    pub fn edge_id_at(&self, index: usize) -> Option<EdgeId> {
+        (index < self.edges.len()).then(|| EdgeId::from_index(index))
+    }
+
+    /// Loop handle at a dense arena index, if present.
+    pub fn loop_id_at(&self, index: usize) -> Option<LoopId> {
+        (index < self.loops.len()).then(|| LoopId::from_index(index))
+    }
+
+    /// All edges in insertion order.
+    pub fn edges(&self) -> &[Edge<Curve3>] {
         &self.edges
     }
 
     /// Loops in stable insertion order.
-    pub fn loops(&self) -> &[Loop<G>] {
+    pub fn loops(&self) -> &[Loop<Curve2>] {
         &self.loops
     }
 
-    /// Faces in stable insertion order.
-    pub fn faces(&self) -> &[Face<G>] {
+    /// Face handle at a dense arena index, if present.
+    pub fn face_id_at(&self, index: usize) -> Option<FaceId> {
+        (index < self.faces.len()).then(|| FaceId::from_index(index))
+    }
+
+    /// All faces in insertion order.
+    pub fn faces(&self) -> &[Face<Surface>] {
         &self.faces
     }
 

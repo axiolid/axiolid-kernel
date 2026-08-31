@@ -10,6 +10,7 @@ homepage.workspace = true
 readme.workspace = true
 
 [dependencies]
+axiolid-brep.workspace = true
 axiolid-core.workspace = true
 axiolid-curve.workspace = true
 axiolid-kernel = { workspace = true, features = ["mesh-boolean"] }

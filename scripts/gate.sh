@@ -15,7 +15,7 @@ step "clippy" cargo clippy --workspace --all-targets -- -D warnings
 step "clippy --all-features" cargo clippy --workspace --all-targets --all-features -- -D warnings
 step "doc" env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 step "feature matrix" scripts/geometry-feature-matrix.sh
-for c in axiolid-core axiolid-mesh axiolid-profile axiolid-curve axiolid-surface axiolid-topology axiolid-model axiolid-primitive axiolid-tessellate axiolid-spatial axiolid-measure axiolid-heal axiolid-nurbs axiolid-kernel axiolid-backend-cpu axiolid-backend-gpu axiolid; do step "isolated build -p $c" cargo build -p "$c"; done
+for c in axiolid-core axiolid-mesh axiolid-profile axiolid-curve axiolid-surface axiolid-topology axiolid-brep axiolid-model axiolid-primitive axiolid-tessellate axiolid-spatial axiolid-measure axiolid-heal axiolid-nurbs axiolid-kernel axiolid-backend-cpu axiolid-backend-gpu axiolid; do step "isolated build -p $c" cargo build -p "$c"; done
 echo
 [ "$fail" -eq 0 ] && echo "GATE PASSED" || echo "GATE FAILED"
 exit "$fail"

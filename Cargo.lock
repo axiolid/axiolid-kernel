@@ -14,6 +14,7 @@ version = "0.1.0"
 dependencies = [
  "axiolid-backend-cpu",
  "axiolid-backend-gpu",
+ "axiolid-brep",
  "axiolid-core",
  "axiolid-curve",
  "axiolid-field",
@@ -62,6 +63,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "axiolid-brep"
+version = "0.1.0"
+dependencies = [
+ "axiolid-core",
+ "axiolid-curve",
+ "axiolid-surface",
+ "axiolid-topology",
+]
+
+[[package]]
 name = "axiolid-compile"
 version = "0.1.0"
 dependencies = [
@@ -106,6 +117,7 @@ dependencies = [
 name = "axiolid-generate"
 version = "0.1.0"
 dependencies = [
+ "axiolid-brep",
  "axiolid-core",
  "axiolid-curve",
  "axiolid-kernel",

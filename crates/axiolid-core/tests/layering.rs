@@ -60,6 +60,7 @@ const TIERS: &[(&str, u8)] = &[
     ("axiolid-curve", 1),
     ("axiolid-surface", 1),
     ("axiolid-topology", 1),
+    ("axiolid-brep", 1),
     ("axiolid-primitive", 1),
     // `axiolid-model` is the format-neutral item graph every front end lowers into
     // and every kernel consumes. It sits at the top of L1 because it is a

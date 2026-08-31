@@ -19,6 +19,7 @@ const adrs = [
   ["0021-capability-seams-live-in-the-kernel", 21, "Capability seams (superseded)"],
   ["0022-general-nurbs-kernel-capability", 22, "General NURBS kernel capability"],
   ["0023-solid-generation-is-an-l2-crate", 23, "Solid generation at L2"],
+  ["0024-exact-brep-result-contracts", 24, "Exact B-rep result contracts"],
 ] as const;
 
 const adrIcon = `<svg class="adr-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg>`;

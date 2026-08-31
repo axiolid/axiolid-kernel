@@ -23,7 +23,7 @@ L0 values
        |
 L1 representations
   axiolid-mesh  axiolid-profile  axiolid-curve  axiolid-surface
-  axiolid-topology  axiolid-primitive  axiolid-model
+  axiolid-topology  axiolid-brep  axiolid-primitive  axiolid-model
        |
 L2 algorithms and contracts
   axiolid-tessellate  axiolid-spatial  axiolid-measure  axiolid-overlay
@@ -51,6 +51,9 @@ unification cannot leak an implementation into `ifc-geometry`.
 - `axiolid-kernel`: narrow operation traits (`GeometryCompiler`, `MeshBoolean`),
   identity descriptors, execution policy, structured errors. Implementing an
   operation trait is the only capability claim; never duplicate it with flags.
+- `axiolid-brep`: strict exact B-rep result vocabulary: typed analytic support
+  catalogs, topology, and explicit native trim spans. It is L1 composition only;
+  no tessellation or geometric solving.
 - `axiolid-generate`: model-free scalar construction algorithms — profiles,
   lofts, sweeps, revolutions, extrusion, and bounded half-space clipping. It is
   L2: consumes representations, chooses no provider, and produces the current
@@ -67,8 +70,10 @@ unification cannot leak an implementation into `ifc-geometry`.
   circles, NURBS, profiles, booleans, or placements in a source adapter.
 - Keep n-gons and holes as `PolygonMesh`; emit `TriMesh` only after explicit
   triangulation.
-- Keep topology separate from geometry. `BRep<G>` uses typed handles and a
-  caller-chosen geometry handle.
+- Keep topology separate from geometry. `BRep<Curve3, Curve2, Surface>` uses
+  distinct caller-chosen handle types for 3D edge curves, face-use pcurves, and
+  face surfaces. `axiolid-brep::ExactBRep` owns the strict analytic catalogs and
+  native trim spans; a partial generic `BRep` is never an exact result.
 - Reuse geometry via DAG `NodeId` and `Instance`; do not recursively clone
   mapped geometry.
 - Units are already resolved when data enters this package. Generic geometry

@@ -45,6 +45,13 @@ pub mod topology {
     pub use axiolid_topology::*;
 }
 
+/// Strict exact B-rep results with typed analytic support catalogs and native
+/// trim intervals. Tessellation remains an explicit, tolerance-bearing output.
+#[cfg(feature = "brep")]
+pub mod brep {
+    pub use axiolid_brep::*;
+}
+
 #[cfg(feature = "model")]
 pub mod model {
     pub use axiolid_model::*;
@@ -77,8 +84,10 @@ pub mod overlay {
 
 /// Solid generation: profiles, lofts, sweeps, revolutions, half-space clipping.
 ///
-/// These build meshes from exact profile and path inputs. They own no graph
-/// and no cache, so they are usable without the compiler (ADR 0023).
+/// These build the current explicit discrete mesh result from exact profile and
+/// path inputs. New APIs select `GenerationRequest::ExactBRep` or explicit
+/// tolerance-bearing tessellation; they never silently substitute one for the
+/// other (ADR 0024).
 #[cfg(feature = "generate")]
 pub mod generate {
     pub use axiolid_generate::*;

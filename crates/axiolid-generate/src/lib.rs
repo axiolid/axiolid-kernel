@@ -45,5 +45,11 @@ pub mod extrude;
 pub mod half_space;
 pub mod loft;
 pub mod profile;
+pub mod result;
 pub mod revolve;
 pub mod sweep;
+
+pub use axiolid_brep::{
+    Curve2Id, Curve3Id, ExactBRep, ExactBRepBuilder, ExactBRepError, ExactTopology, SurfaceId,
+};
+pub use result::{GeneratedGeometry, GenerationOutput, GenerationRequest, TessellationRequest};

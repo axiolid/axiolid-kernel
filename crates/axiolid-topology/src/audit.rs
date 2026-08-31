@@ -64,7 +64,7 @@ impl BRepHealth {
 /// Pure topology: no tolerance, no coordinates. Every check is a statement
 /// about handles and adjacency, so the result is exact and reproducible.
 #[must_use]
-pub fn audit_brep<G>(brep: &BRep<G>) -> BRepHealth {
+pub fn audit_brep<Curve3, Curve2, Surface>(brep: &BRep<Curve3, Curve2, Surface>) -> BRepHealth {
     let mut health = BRepHealth::default();
     let vertices = brep.vertices().len();
     let edges = brep.edges().len();
@@ -170,7 +170,10 @@ pub fn audit_brep<G>(brep: &BRep<G>) -> BRepHealth {
 }
 
 /// Ordered endpoints of one oriented edge use.
-fn endpoints<G>(brep: &BRep<G>, use_: &crate::EdgeUse<G>) -> (crate::VertexId, crate::VertexId) {
+fn endpoints<Curve3, Curve2, Surface>(
+    brep: &BRep<Curve3, Curve2, Surface>,
+    use_: &crate::EdgeUse<Curve2>,
+) -> (crate::VertexId, crate::VertexId) {
     let edge = &brep.edges()[use_.edge.index()];
     match use_.orientation {
         Orientation::Forward => (edge.start, edge.end),
