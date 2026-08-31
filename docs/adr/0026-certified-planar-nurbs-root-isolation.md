@@ -32,8 +32,9 @@ for the residual
 - A nonlinear root is accepted only when the outward-rounded Krawczyk image is
   strictly inside the source parameter box and the interval Jacobian
   determinant excludes zero. This proves one transverse root in that box.
-- A proven Krawczyk image is carried with its contracted cell. Stored Bézier
-  cells are not contracted below the requested parameter width, avoiding
+- A proven Krawczyk image contracts the next search cell, which is re-proved
+  before completion. Stored Bézier cells are not contracted below the requested
+  parameter width, avoiding
   derivative-enclosure inflation from dividing ulp-scale control uncertainty by
   a smaller native span.
 - A `Complete` result means every initial span pair was either excluded or

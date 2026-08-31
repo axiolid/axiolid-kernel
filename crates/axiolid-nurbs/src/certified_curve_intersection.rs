@@ -163,26 +163,16 @@ fn classify_nonlinear(
     let mut pending = first_cells
         .into_iter()
         .flat_map(|first_cell| {
-            second_cells.iter().cloned().map(move |second_cell| {
-                (
-                    first_cell.clone(),
-                    second_cell,
-                    0_u16,
-                    None::<TransverseCurveIntersection2>,
-                )
-            })
+            second_cells
+                .iter()
+                .cloned()
+                .map(move |second_cell| (first_cell.clone(), second_cell, 0_u16))
         })
         .collect::<Vec<_>>();
     let mut intersections = Vec::new();
     let mut unresolved = Vec::new();
 
-    while let Some((first_cell, second_cell, depth, prior_proof)) = pending.pop() {
-        if let Some(proof) = prior_proof.as_ref() {
-            if cells_resolved(&first_cell, &second_cell, options.parameter_tolerance()) {
-                intersections.push(narrow_proof(proof.clone(), &first_cell, &second_cell));
-                continue;
-            }
-        }
+    while let Some((first_cell, second_cell, depth)) = pending.pop() {
         if residual_excludes_zero(&first_cell, &second_cell)? {
             continue;
         }
@@ -222,12 +212,7 @@ fn classify_nonlinear(
                 depth.checked_add(1).ok_or_else(|| {
                     GeomError::Degenerate("curve-intersection depth overflow".to_owned())
                 })?,
-                Some(root),
             ));
-            continue;
-        }
-        if prior_proof.is_some() {
-            unresolved.push(pair_box(&first_cell, &second_cell));
             continue;
         }
         if depth >= options.max_depth() {
@@ -242,12 +227,12 @@ fn classify_nonlinear(
             })?;
         if first_cell.end - first_cell.start >= second_cell.end - second_cell.start {
             let (left, right) = first_cell.split()?;
-            pending.push((left, second_cell.clone(), depth + 1, None));
-            pending.push((right, second_cell, depth + 1, None));
+            pending.push((left, second_cell.clone(), depth + 1));
+            pending.push((right, second_cell, depth + 1));
         } else {
             let (left, right) = second_cell.split()?;
-            pending.push((first_cell.clone(), left, depth + 1, None));
-            pending.push((first_cell, right, depth + 1, None));
+            pending.push((first_cell.clone(), left, depth + 1));
+            pending.push((first_cell, right, depth + 1));
         }
     }
 
@@ -451,31 +436,6 @@ fn point_intervals(point: Point2) -> GeomResult<[Interval; 3]> {
         Interval::exact(point.y)?,
         Interval::exact(0.0)?,
     ])
-}
-
-fn cell_interval(cell: &crate::certified_bezier::Cell) -> ParameterInterval {
-    ParameterInterval {
-        start: cell.start,
-        end: cell.end,
-    }
-}
-
-fn narrow_proof(
-    mut proof: TransverseCurveIntersection2,
-    first: &crate::certified_bezier::Cell,
-    second: &crate::certified_bezier::Cell,
-) -> TransverseCurveIntersection2 {
-    proof.first_parameter = cell_interval(first);
-    proof.second_parameter = cell_interval(second);
-    proof
-}
-
-fn cells_resolved(
-    first: &crate::certified_bezier::Cell,
-    second: &crate::certified_bezier::Cell,
-    tolerance: Scalar,
-) -> bool {
-    first.end - first.start <= tolerance && second.end - second.start <= tolerance
 }
 
 fn stable_start(cell: Scalar, root: Scalar, desired: Scalar) -> Scalar {
