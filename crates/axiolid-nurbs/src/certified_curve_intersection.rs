@@ -79,6 +79,8 @@ pub struct TransverseCurveIntersection2 {
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CurveIntersectionDegeneracy {
+    /// A structurally proven contact involving a zero-length curve.
+    PointContact,
     /// A structurally proven endpoint tangency.
     Tangency,
     /// A structurally proven positive-dimensional overlap.
@@ -112,11 +114,11 @@ pub enum CertifiedCurveIntersection2 {
 
 /// Classify intersections of two clamped planar B-spline curves.
 ///
-/// The complete proof path covers exact-sign single-span polynomial lines and
-/// strict-interior Krawczyk isolation of transverse polynomial or positive-weight
-/// rational Bézier roots. Unsupported singular, tangential, coincident, seam, or
-/// proof-insufficient candidates return [`CurveIntersectionDegeneracy::Unresolved`]
-/// rather than an uncertified root.
+/// The complete proof path covers exact-sign single-span polynomial lines,
+/// zero-length line `PointContact`s, and strict-interior Krawczyk isolation of
+/// transverse polynomial or positive-weight rational Bézier roots. Unsupported
+/// singular, tangential, coincident, seam, or proof-insufficient candidates return
+/// [`CurveIntersectionDegeneracy::Unresolved`] rather than an uncertified root.
 pub fn intersect_curve2_certified(
     first: &BSplineCurve2,
     second: &BSplineCurve2,
@@ -149,7 +151,7 @@ pub fn intersect_curve2_certified(
         let classification = if has_control_point_extent(first) {
             CurveIntersectionDegeneracy::Overlap
         } else {
-            CurveIntersectionDegeneracy::Tangency
+            CurveIntersectionDegeneracy::PointContact
         };
         return Ok(CertifiedCurveIntersection2::Degenerate {
             classification,
@@ -184,6 +186,14 @@ pub fn intersect_curve2_certified(
     )
 }
 
+#[derive(Debug, Clone, Copy)]
+struct PendingCurvePair {
+    first_index: usize,
+    second_index: usize,
+    parameters: CurvePairParameterBox,
+    depth: u16,
+}
+
 fn classify_nonlinear(
     first: &BSplineCurve2,
     second: &BSplineCurve2,
@@ -201,10 +211,22 @@ fn classify_nonlinear(
     let mut intersections = Vec::new();
     let mut unresolved = Vec::new();
 
-    for first_cell in first_cells {
-        for second_cell in &second_cells {
-            pending.push((first_cell.clone(), second_cell.clone(), 0_u16));
-            while let Some((first_cell, second_cell, depth)) = pending.pop() {
+    for (first_index, first_base) in first_cells.iter().enumerate() {
+        for (second_index, second_base) in second_cells.iter().enumerate() {
+            pending.push(PendingCurvePair {
+                first_index,
+                second_index,
+                parameters: pair_box(first_base, second_base),
+                depth: 0,
+            });
+            while let Some(current) = pending.pop() {
+                let first_cell = first_cells[current.first_index]
+                    .restrict(current.parameters.first.start, current.parameters.first.end)?;
+                let second_cell = second_cells[current.second_index].restrict(
+                    current.parameters.second.start,
+                    current.parameters.second.end,
+                )?;
+                let depth = current.depth;
                 if residual_excludes_zero(&first_cell, &second_cell)? {
                     continue;
                 }
@@ -233,21 +255,25 @@ fn classify_nonlinear(
                         .ok_or(GeomError::BudgetExceeded {
                             resource: "certified curve intersection budget",
                         })?;
-                    pending.push((
-                        contract_cell(
-                            first_cell,
-                            root.first_parameter,
-                            options.parameter_tolerance(),
-                        )?,
-                        contract_cell(
-                            second_cell,
-                            root.second_parameter,
-                            options.parameter_tolerance(),
-                        )?,
-                        depth.checked_add(1).ok_or_else(|| {
+                    pending.push(PendingCurvePair {
+                        first_index: current.first_index,
+                        second_index: current.second_index,
+                        parameters: CurvePairParameterBox {
+                            first: contract_interval(
+                                &first_cell,
+                                root.first_parameter,
+                                options.parameter_tolerance(),
+                            ),
+                            second: contract_interval(
+                                &second_cell,
+                                root.second_parameter,
+                                options.parameter_tolerance(),
+                            ),
+                        },
+                        depth: depth.checked_add(1).ok_or_else(|| {
                             GeomError::Degenerate("curve-intersection depth overflow".to_owned())
                         })?,
-                    ));
+                    });
                     continue;
                 }
                 if depth >= options.max_depth() {
@@ -261,13 +287,41 @@ fn classify_nonlinear(
                         resource: "certified curve intersection budget",
                     })?;
                 if first_cell.end - first_cell.start >= second_cell.end - second_cell.start {
-                    let (left, right) = first_cell.split()?;
-                    pending.push((left, second_cell.clone(), depth + 1));
-                    pending.push((right, second_cell, depth + 1));
+                    let (left, right) = split_parameter_interval(current.parameters.first)?;
+                    pending.push(PendingCurvePair {
+                        parameters: CurvePairParameterBox {
+                            first: left,
+                            ..current.parameters
+                        },
+                        depth: depth + 1,
+                        ..current
+                    });
+                    pending.push(PendingCurvePair {
+                        parameters: CurvePairParameterBox {
+                            first: right,
+                            ..current.parameters
+                        },
+                        depth: depth + 1,
+                        ..current
+                    });
                 } else {
-                    let (left, right) = second_cell.split()?;
-                    pending.push((first_cell.clone(), left, depth + 1));
-                    pending.push((first_cell, right, depth + 1));
+                    let (left, right) = split_parameter_interval(current.parameters.second)?;
+                    pending.push(PendingCurvePair {
+                        parameters: CurvePairParameterBox {
+                            second: left,
+                            ..current.parameters
+                        },
+                        depth: depth + 1,
+                        ..current
+                    });
+                    pending.push(PendingCurvePair {
+                        parameters: CurvePairParameterBox {
+                            second: right,
+                            ..current.parameters
+                        },
+                        depth: depth + 1,
+                        ..current
+                    });
                 }
             }
         }
@@ -514,17 +568,40 @@ fn stable_contraction(
     }
 }
 
-fn contract_cell(
-    cell: crate::certified_bezier::Cell,
+fn contract_interval(
+    cell: &crate::certified_bezier::Cell,
     interval: ParameterInterval,
     tolerance: Scalar,
-) -> GeomResult<crate::certified_bezier::Cell> {
+) -> ParameterInterval {
     if cell.end - cell.start <= tolerance {
-        Ok(cell)
+        ParameterInterval {
+            start: cell.start,
+            end: cell.end,
+        }
     } else {
-        let interval = stable_contraction(&cell, interval, tolerance);
-        cell.restrict(interval.start, interval.end)
+        stable_contraction(cell, interval, tolerance)
     }
+}
+
+fn split_parameter_interval(
+    interval: ParameterInterval,
+) -> GeomResult<(ParameterInterval, ParameterInterval)> {
+    let split = midpoint(interval);
+    if split <= interval.start || split >= interval.end {
+        return Err(GeomError::Degenerate(
+            "certified curve intersection parameter split did not advance".to_owned(),
+        ));
+    }
+    Ok((
+        ParameterInterval {
+            start: interval.start,
+            end: split,
+        },
+        ParameterInterval {
+            start: split,
+            end: interval.end,
+        },
+    ))
 }
 
 fn linear_combination(
@@ -556,7 +633,7 @@ fn classify_lines(
         };
         return Ok(if intersects {
             CertifiedCurveIntersection2::Degenerate {
-                classification: CurveIntersectionDegeneracy::Tangency,
+                classification: CurveIntersectionDegeneracy::PointContact,
                 candidate_boxes: boxes,
                 visited_nodes,
             }
@@ -781,5 +858,18 @@ fn domain(curve: &BSplineCurve2) -> ParameterInterval {
     ParameterInterval {
         start: curve.knots[0],
         end: curve.knots[curve.knots.len() - 1],
+    }
+}
+
+#[cfg(test)]
+mod pending_storage_tests {
+    use super::{CurvePairParameterBox, PendingCurvePair};
+
+    #[test]
+    fn pending_curve_pairs_store_only_indices_parameters_and_depth() {
+        let raw = 2 * size_of::<usize>() + size_of::<CurvePairParameterBox>() + size_of::<u16>();
+        let alignment = align_of::<PendingCurvePair>();
+        let expected = raw.next_multiple_of(alignment);
+        assert_eq!(size_of::<PendingCurvePair>(), expected);
     }
 }

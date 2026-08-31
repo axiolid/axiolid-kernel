@@ -23,8 +23,10 @@ for the residual
 - Both curves are validated and refined to positive-weight rational Bézier
   cells under one shared pre-allocation refinement budget from ADR 0025.
   Policies are capped at 100,000 generated nodes and depth 64; oversized caller
-  budgets are invalid. Initial span pairs are traversed one at a time with a
-  depth-bounded DFS stack rather than materializing cloned Cartesian control nets.
+  budgets are invalid. Initial span pairs are traversed one at a time. The
+  depth-bounded DFS stack stores only base-cell indices and parameter boxes;
+  restricted control nets are reconstructed for the current item and never
+  retained in deferred work.
 - Each cell pair is pruned only when an outward-rounded coordinate interval of
   `F` excludes zero.
 - Rational native-parameter derivative intervals are derived in homogeneous
@@ -48,9 +50,10 @@ for the residual
   `GeomError::BudgetExceeded` and cannot return a partial complete result.
 - Single-span polynomial line segments additionally use Axiolid's exact-sign
   `orient2d` cascade. Zero-length degree-one curves use exact point/segment
-  predicates and can never establish positive-dimensional overlap. Structurally
-  identical non-constant curves produce `Overlap`, localized to corresponding
-  Bézier-span parameter boxes only.
+  predicates and report a distinct zero-dimensional `PointContact`; they can
+  never establish positive-dimensional overlap. Structurally identical
+  non-constant curves produce `Overlap`, localized to corresponding Bézier-span
+  parameter boxes only.
   A polynomial line and quadratic Bézier sharing an endpoint, tangent control
   direction, and strictly one-sided remaining control produce the narrow
   structurally proven `Tangency` outcome.
@@ -64,7 +67,7 @@ residual.
 This decision implements bounded planar clamped curve/curve classification for:
 
 - complete disjoint results;
-- exact-sign single-span line intersections;
+- exact-sign single-span line intersections and zero-length `PointContact` cases;
 - contractive transverse polynomial and positive-weight rational Bézier roots;
 - the narrow structural overlap and endpoint-tangency cases above;
 - explicit unresolved boxes everywhere else.

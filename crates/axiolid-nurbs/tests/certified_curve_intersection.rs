@@ -169,7 +169,7 @@ fn zero_length_line_is_classified_by_exact_point_segment_predicates() {
         assert!(matches!(
             intersect_curve2_certified(first, second, options(1_024)).unwrap(),
             CertifiedCurveIntersection2::Degenerate {
-                classification: CurveIntersectionDegeneracy::Tangency,
+                classification: CurveIntersectionDegeneracy::PointContact,
                 ..
             }
         ));
@@ -182,7 +182,7 @@ fn identical_zero_length_curve_is_not_positive_dimensional_overlap() {
     assert!(matches!(
         intersect_curve2_certified(&point, &point, options(1_024)).unwrap(),
         CertifiedCurveIntersection2::Degenerate {
-            classification: CurveIntersectionDegeneracy::Tangency,
+            classification: CurveIntersectionDegeneracy::PointContact,
             ..
         }
     ));
