@@ -28,3 +28,5 @@ These records capture durable choices that preserve Axiolid’s format-neutral, 
 | [0027](./0027-certified-nurbs-curve-surface-root-isolation.md) | Curve/surface roots require bounded transverse existence proofs |
 | [0028](./0028-certified-affine-surface-surface-tracing.md) | Affine surface/surface traces compose exact identities and certified boundary roots |
 | [0029](./0029-certified-trace-topology-integration.md) | Certified finite traces become split faces plus embedded curves |
+| [0030](./0030-globally-certified-surface-projection.md) | Surface closest-point certificates require bounded global branch-and-bound |
+| [0031](./0031-verified-periodic-curve-views.md) | Periodic curve behavior is an opt-in verified view |

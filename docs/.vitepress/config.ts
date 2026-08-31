@@ -20,6 +20,13 @@ const adrs = [
   ["0022-general-nurbs-kernel-capability", 22, "General NURBS kernel capability"],
   ["0023-solid-generation-is-an-l2-crate", 23, "Solid generation at L2"],
   ["0024-exact-brep-result-contracts", 24, "Exact B-rep result contracts"],
+  ["0025-certified-nurbs-subdivision-oracle", 25, "Certified NURBS subdivision"],
+  ["0026-certified-planar-nurbs-root-isolation", 26, "Planar NURBS roots"],
+  ["0027-certified-nurbs-curve-surface-root-isolation", 27, "Curve/surface roots"],
+  ["0028-certified-affine-surface-surface-tracing", 28, "Affine surface tracing"],
+  ["0029-certified-trace-topology-integration", 29, "Trace topology integration"],
+  ["0030-globally-certified-surface-projection", 30, "Certified surface projection"],
+  ["0031-verified-periodic-curve-views", 31, "Verified periodic curve views"],
 ] as const;
 
 const adrIcon = `<svg class="adr-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg>`;
