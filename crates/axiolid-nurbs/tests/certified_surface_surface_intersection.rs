@@ -192,15 +192,17 @@ fn options_and_refinement_work_are_bounded() {
 fn exact_dyadic_affine_check_rejects_rounded_near_parallelogram() {
     let mut second = xz_plane();
     second.control_points = vec![
-        vec![Point3::new(0.0, 0.0, -1.0), Point3::new(0.0, 0.0, 1.0)],
         vec![
-            Point3::new(1.0e16, 0.0, -1.0),
-            Point3::new(1.0e16, 0.0, 1.0),
+            Point3::new(0.00038395656557033093, 0.0, -1.0),
+            Point3::new(1.1935775435669205e-20, 0.0, 1.0),
+        ],
+        vec![
+            Point3::new(5.941960404966601e-11, 0.0, -1.0),
+            Point3::new(-0.0003839565061507269, 0.0, 1.0),
         ],
     ];
-    // Adding 1.0 to 1e16 rounds away in binary64. A tolerance or naively rounded
-    // cross-difference could therefore misclassify this exact control net.
-    second.control_points[0][1].x = 1.0;
+    // Left-associative binary64 evaluates `p11 - p10 - p01 + p00` as zero,
+    // while the exact dyadic sum is nonzero. The stored net is therefore not affine.
 
     let result = intersect_surface_surface_certified(
         &xy_plane(),
