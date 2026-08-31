@@ -1,5 +1,6 @@
 [package]
-name = "axiolid-compile"
+name = "axiolid-generate"
+description = "Solid generation: profiles, lofts, sweeps, revolutions and half-space clipping"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -7,27 +8,19 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 readme.workspace = true
-authors.workspace = true
-description = "Scalar reference GeometryCompiler: profiles, extrusion, transforms, boolean dispatch."
 
 [dependencies]
 axiolid-core.workspace = true
+axiolid-curve.workspace = true
+axiolid-kernel = { workspace = true, features = ["mesh-boolean"] }
 axiolid-mesh.workspace = true
-axiolid-model.workspace = true
-axiolid-topology.workspace = true
 axiolid-primitive.workspace = true
 axiolid-profile.workspace = true
-axiolid-curve.workspace = true
-axiolid-generate.workspace = true
-axiolid-kernel = { workspace = true, features = ["mesh-boolean", "model"] }
 axiolid-scalar.workspace = true
-axiolid-surface.workspace = true
 earcut = "0.4"
-
 [dev-dependencies]
 # The measurement oracle. `volume_properties` audits closed-two-manifoldness
-# before it integrates, so using it makes the extrusion tests assert
+# before it integrates, so using it makes the generation tests assert
 # watertightness and volume in one call instead of trusting a hand-rolled
 # divergence sum that would happily integrate a broken mesh.
 axiolid-measure.workspace = true
-axiolid-boolmesh.workspace = true

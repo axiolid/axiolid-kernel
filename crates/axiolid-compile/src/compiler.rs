@@ -12,8 +12,8 @@ use axiolid_kernel::{
 use axiolid_mesh::TriMesh;
 use axiolid_model::{GeometryGraph, GeometryNode, NodeId, SolidOperation};
 
-use crate::extrude::extrude_profile;
-use crate::profile::profile_rings;
+use axiolid_generate::extrude::extrude_profile;
+use axiolid_generate::profile::profile_rings;
 
 /// Scalar reference compiler.
 ///
@@ -99,7 +99,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
         &self,
         graph: &GeometryGraph,
         id: NodeId,
-    ) -> GeomResult<crate::profile::Rings> {
+    ) -> GeomResult<axiolid_generate::profile::Rings> {
         let node = self.node(graph, id)?;
         let GeometryNode::Curve2(curve) = node else {
             return Err(GeomError::InvalidInput(format!(
@@ -119,7 +119,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                         "half-space boundary needs at least 3 distinct points".to_owned(),
                     ));
                 }
-                Ok(crate::profile::Rings {
+                Ok(axiolid_generate::profile::Rings {
                     outer: pts,
                     holes: Vec::new(),
                 })
@@ -162,7 +162,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
             axiolid_model::SurfaceRelation::LinearExtrusion { direction, .. },
         )) = graph.get(id)
         {
-            return crate::sweep::linear_extrusion_normals(path, *direction);
+            return axiolid_generate::sweep::linear_extrusion_normals(path, *direction);
         }
         let surface = Self::surface_of(graph, id)?;
         path.iter()
@@ -179,7 +179,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
         id: NodeId,
         options: &ExecutionOptions,
         what: &str,
-    ) -> GeomResult<crate::profile::Rings> {
+    ) -> GeomResult<axiolid_generate::profile::Rings> {
         let node = self.node(graph, id)?;
         let GeometryNode::Profile(shape) = node else {
             return Err(GeomError::InvalidInput(format!(
@@ -380,7 +380,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                     )));
                 };
                 let rings = profile_rings(shape, chord_error(options), options.tolerance())?;
-                crate::revolve::revolve(
+                axiolid_generate::revolve::revolve(
                     &rings,
                     *axis_origin,
                     *axis_direction,
@@ -396,7 +396,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
             } => {
                 let a = self.rings_of(graph, *start_profile, options, "taper start profile")?;
                 let b = self.rings_of(graph, *end_profile, options, "taper end profile")?;
-                crate::sweep::tapered_extrude(&a, &b, *direction, *depth)
+                axiolid_generate::sweep::tapered_extrude(&a, &b, *direction, *depth)
             }
             SolidOperation::TaperedRevolution {
                 start_profile,
@@ -407,7 +407,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
             } => {
                 let a = self.rings_of(graph, *start_profile, options, "taper start profile")?;
                 let b = self.rings_of(graph, *end_profile, options, "taper end profile")?;
-                crate::sweep::tapered_revolve(
+                axiolid_generate::sweep::tapered_revolve(
                     &a,
                     &b,
                     *axis_origin,
@@ -424,7 +424,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                 fillet_radius,
             } => {
                 let path = self.directrix_points(graph, *directrix, *parameter_range, options)?;
-                crate::sweep::swept_disk(
+                axiolid_generate::sweep::swept_disk(
                     &path,
                     *radius,
                     *inner_radius,
@@ -440,7 +440,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
             } => {
                 let rings = self.rings_of(graph, *profile, options, "sweep profile")?;
                 let path = self.directrix_points(graph, *directrix, *parameter_range, options)?;
-                crate::sweep::fixed_reference_sweep(&rings, &path, *reference_direction)
+                axiolid_generate::sweep::fixed_reference_sweep(&rings, &path, *reference_direction)
             }
             SolidOperation::SurfaceCurveSweep {
                 profile,
@@ -452,7 +452,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                     self.rings_of(graph, *profile, options, "surface curve sweep profile")?;
                 let path = self.directrix_points(graph, *directrix, *parameter_range, options)?;
                 let normals = self.surface_normals(graph, *reference_surface, &path, options)?;
-                crate::sweep::surface_curve_sweep(&rings, &path, &normals)
+                axiolid_generate::sweep::surface_curve_sweep(&rings, &path, &normals)
             }
             SolidOperation::SectionedSpine { spine, sections } => {
                 let path = self.directrix_points(graph, *spine, None, options)?;
@@ -482,7 +482,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                         .collect();
                     placed.push((rings, pts));
                 }
-                crate::sweep::sectioned_spine(&placed)
+                axiolid_generate::sweep::sectioned_spine(&placed)
             }
             SolidOperation::BoundedHalfSpace {
                 half_space,
@@ -500,7 +500,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                 // an unbounded half-space extends before it can be meshed.
                 let margin = axiolid_primitive::ClipMargin::new(2.0)
                     .expect("2.0 is a valid positive clip margin");
-                let mesh = crate::half_space::bounded_half_space(
+                let mesh = axiolid_generate::half_space::bounded_half_space(
                     &rings,
                     hs.boundary,
                     hs.agreement,
@@ -517,7 +517,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                 let subject = self.cached(cache, *left, options.tolerance())?;
                 let right_node = self.node(graph, *right)?;
                 let bounded_tool = if let GeometryNode::HalfSpace(hs) = right_node {
-                    Some(crate::half_space::for_subject(
+                    Some(axiolid_generate::half_space::for_subject(
                         subject,
                         *hs,
                         options.tolerance(),

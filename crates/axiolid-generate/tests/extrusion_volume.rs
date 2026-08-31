@@ -18,10 +18,10 @@
 //! curve evaluation moved into `axiolid-scalar`: ellipse and B-spline contours
 //! were a hard `Unsupported` before.
 
-use axiolid_compile::extrude::extrude_profile;
-use axiolid_compile::profile::profile_rings;
 use axiolid_core::{Frame2, Interval, Point2, Scalar, Tolerance, Vec2, Vec3};
 use axiolid_curve::{BSplineCurve2, Curve2, Ellipse2, KnotSpec, Polyline2};
+use axiolid_generate::extrude::extrude_profile;
+use axiolid_generate::profile::profile_rings;
 use axiolid_mesh::TriMesh;
 use axiolid_profile::{
     CircleProfile, Contour, ContourProfile, EllipseProfile, Profile, ProfileSegment,
@@ -65,7 +65,7 @@ fn tolerance_for(chord: Scalar) -> Tolerance {
 ///
 /// `signed_area2` returns *twice* the signed area (the raw shoelace sum), so
 /// the halving is not a fudge factor -- it is the definition.
-fn ring_area(rings: &axiolid_compile::profile::Rings) -> Scalar {
+fn ring_area(rings: &axiolid_generate::profile::Rings) -> Scalar {
     let mut a = signed_area2(&rings.outer).abs();
     for hole in &rings.holes {
         a -= signed_area2(hole).abs();
@@ -328,46 +328,6 @@ fn a_tighter_chord_budget_converges_on_the_true_cylinder() {
         );
         previous = error;
     }
-}
-
-// --- the boolean stack accepts what extrusion produces -----------------------
-
-#[test]
-fn an_extruded_solid_is_accepted_by_the_conformance_gated_boolean() {
-    use axiolid_boolmesh::BoolmeshBoolean;
-    use axiolid_core::BooleanOperator;
-    use axiolid_kernel::{ExecutionOptions, MeshBoolean};
-
-    let disc = Profile::Circle(CircleProfile {
-        radius: 2.0,
-        thickness: None,
-    });
-    let rings = profile_rings(&disc, 1e-4, Tolerance::MILLIMETRE).unwrap();
-    let cylinder = extrude_profile(&rings, Vec3::Z, 4.0, Tolerance::MILLIMETRE).unwrap();
-
-    let bar = Profile::Rectangle(RectangleProfile {
-        x: 1.0,
-        y: 8.0,
-        thickness: None,
-        outer_radius: None,
-        inner_radius: None,
-    });
-    let bar_rings = profile_rings(&bar, 1e-4, Tolerance::MILLIMETRE).unwrap();
-    let block = extrude_profile(&bar_rings, Vec3::Z, 2.0, Tolerance::MILLIMETRE).unwrap();
-
-    let options = ExecutionOptions::new(Tolerance::MILLIMETRE);
-    let outcome = BoolmeshBoolean::new()
-        .boolean(&cylinder, &block, BooleanOperator::Difference, &options)
-        .expect("extruded solids must satisfy the boolean preconditions");
-
-    // The cut removed material but did not annihilate the cylinder.
-    let cut = volume_at(&outcome.mesh, tolerance_for(1e-4));
-    let whole = volume_at(&cylinder, tolerance_for(1e-4));
-    assert!(
-        cut > 0.0 && cut < whole,
-        "difference volume {cut} must be between 0 and {whole}"
-    );
-    assert_closed_manifold(&outcome.mesh, "boolean result");
 }
 
 // --- refusals ---------------------------------------------------------------

@@ -21,6 +21,7 @@ axiolid-model = { path = "crates/axiolid-model", version = "0.1.0" }
 axiolid-primitive = { path = "crates/axiolid-primitive", version = "0.1.0" }
 axiolid-heal = { path = "crates/axiolid-heal", version = "0.1.0" }
 axiolid-nurbs = { path = "crates/axiolid-nurbs", version = "0.1.0" }
+axiolid-generate = { path = "crates/axiolid-generate", version = "0.1.0" }
 axiolid-profile = { path = "crates/axiolid-profile", version = "0.1.0" }
 axiolid-curve = { path = "crates/axiolid-curve", version = "0.1.0" }
 axiolid-surface = { path = "crates/axiolid-surface", version = "0.1.0" }

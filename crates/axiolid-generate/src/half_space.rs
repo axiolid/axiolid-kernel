@@ -102,7 +102,7 @@ pub fn bounded_half_space(
     loft::loft(boundary, &stations, false)
 }
 
-pub(crate) fn for_subject(
+pub fn for_subject(
     subject: &TriMesh,
     half_space: HalfSpace,
     tolerance: Tolerance,

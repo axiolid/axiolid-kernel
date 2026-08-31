@@ -4,9 +4,9 @@
 //! and inverted sides simultaneously: it is positive exactly when the solid is
 //! closed and outward-oriented, and its magnitude is `area * depth`.
 
-use axiolid_compile::extrude::{extrude, extrude_profile, outward_orientation};
-use axiolid_compile::profile::{profile_rings, triangulate, Rings};
 use axiolid_core::{Tolerance, Vec3};
+use axiolid_generate::extrude::{extrude, extrude_profile, outward_orientation};
+use axiolid_generate::profile::{profile_rings, triangulate, Rings};
 use axiolid_mesh::TriMesh;
 use axiolid_profile::{CircleProfile, Profile, RectangleProfile};
 
@@ -170,10 +170,10 @@ fn a_hollow_section_is_edge_manifold() {
 mod contour_and_mirror {
     use super::{assert_edge_manifold, volume};
 
-    use axiolid_compile::extrude::extrude_profile;
-    use axiolid_compile::profile::profile_rings;
     use axiolid_core::{Point2, Scalar, Tolerance, Transform2, Vec2, Vec3};
     use axiolid_curve::{Curve2, Polyline2};
+    use axiolid_generate::extrude::extrude_profile;
+    use axiolid_generate::profile::profile_rings;
     use axiolid_profile::{Contour, ContourProfile, Profile, ProfileSegment, RectangleProfile};
 
     /// One closed polyline segment covering a whole ring.

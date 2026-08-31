@@ -6,9 +6,9 @@
 //! how good each half looks alone.
 
 use axiolid_boolmesh::BoolmeshBoolean;
-use axiolid_compile::extrude::extrude;
-use axiolid_compile::profile::{profile_rings, triangulate, Rings};
 use axiolid_core::{BooleanOperator, Point3, Tolerance, Vec3};
+use axiolid_generate::extrude::extrude;
+use axiolid_generate::profile::{profile_rings, triangulate, Rings};
 use axiolid_kernel::{ExecutionOptions, MeshBoolean};
 use axiolid_mesh::TriMesh;
 use axiolid_profile::{Profile, RectangleProfile};

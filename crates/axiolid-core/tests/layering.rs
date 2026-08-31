@@ -80,6 +80,11 @@ const TIERS: &[(&str, u8)] = &[
     // The scalar reference implementation (ADR 0012). Consumes the kernel
     // contracts to report certified results; owns algorithms, not scheduling.
     ("axiolid-scalar", 2),
+    // Solid generation: profiles, lofts, sweeps, revolutions, half-space
+    // clipping. Algorithms over L1 representations that produce meshes; it
+    // owns no graph, no cache and no dispatch, so it is L2 beside the other
+    // algorithm crates rather than L3 with the compiler (ADR 0022).
+    ("axiolid-generate", 2),
     // L3 -- execution contexts and operation adapters.
     // L3 -- concrete implementations. `axiolid-boolmesh` adapts an adopted
     // upstream crate (ADR 0014); it is an implementation, not a contract.

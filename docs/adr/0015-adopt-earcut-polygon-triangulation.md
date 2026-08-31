@@ -73,8 +73,8 @@ gates.
 
 ## Relation to existing code
 
-- `crates/axiolid-compile/src/profile.rs` — flattening and the earcut
-  call; the only site that names the dependency.
-- `crates/axiolid-compile/tests/oracle.rs` — the differential gate.
+- `crates/axiolid-generate/src/profile.rs` — flattening and the Earcut
+  call; the only solid-generation site that names the dependency.
+- `crates/axiolid-generate/tests/oracle.rs` — the differential gate.
 - `crates/axiolid-scalar/src/polygon.rs` — certified simple-polygon
   triangulation, retained as the oracle.

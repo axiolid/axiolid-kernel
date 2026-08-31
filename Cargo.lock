@@ -17,6 +17,7 @@ dependencies = [
  "axiolid-core",
  "axiolid-curve",
  "axiolid-field",
+ "axiolid-generate",
  "axiolid-heal",
  "axiolid-kernel",
  "axiolid-measure",
@@ -67,6 +68,7 @@ dependencies = [
  "axiolid-boolmesh",
  "axiolid-core",
  "axiolid-curve",
+ "axiolid-generate",
  "axiolid-kernel",
  "axiolid-measure",
  "axiolid-mesh",
@@ -98,6 +100,21 @@ name = "axiolid-field"
 version = "0.1.0"
 dependencies = [
  "axiolid-core",
+]
+
+[[package]]
+name = "axiolid-generate"
+version = "0.1.0"
+dependencies = [
+ "axiolid-core",
+ "axiolid-curve",
+ "axiolid-kernel",
+ "axiolid-measure",
+ "axiolid-mesh",
+ "axiolid-primitive",
+ "axiolid-profile",
+ "axiolid-scalar",
+ "earcut",
 ]
 
 [[package]]

@@ -37,7 +37,8 @@ any exactness claim as applying to *evaluation*, not to *operation results*.
 | Scalar values, frames, transforms, bounds, intervals, tolerance | Implemented | `axiolid-core` |
 | Mesh values, polygon/triangle utilities and views | Implemented | `axiolid-mesh` |
 | Robust-orientation and in-circle / in-sphere predicate reference paths | Implemented | `axiolid-scalar` with degeneracy and filter tests |
-| Scalar graph compilation | Implemented reference path | `axiolid-compile`; intended as an oracle, not a performance claim. Produces meshes today; see [ADR 0020](/adr/0020-exact-brep-kernel-model) |
+| Scalar mesh generation from profiles and paths | Implemented discrete reference path | `axiolid-generate`; direct extrusion, revolution, lofting, sweep families, centre-line profiles, and bounded half-space clipping. It is model-free and deliberately reports `scalar-generate`; see [ADR 0023](/adr/0023-solid-generation-is-an-l2-crate) |
+| Scalar graph compilation | Implemented reference path | `axiolid-compile`; DAG traversal, caching, model-driven directrices, and B-rep face tessellation. Consumes `axiolid-generate` rather than owning sweeps. Produces meshes today; see [ADR 0020](/adr/0020-exact-brep-kernel-model) |
 | Polygon triangulation | Implemented provider | `axiolid-tessellate` adopts Earcut under the contract in [ADR 0015](/adr/0015-adopt-earcut-polygon-triangulation) |
 | Mesh Boolean execution | Optional provider | `axiolid-boolmesh`; limited to its mesh contract and tests |
 
@@ -60,7 +61,8 @@ any exactness claim as applying to *evaluation*, not to *operation results*.
 | Exact B-rep operation results | Planned | The central gap. Accepted in [ADR 0020](/adr/0020-exact-brep-kernel-model); `axiolid-compile` returns meshes today |
 | Surface/surface intersection | Planned | In scope per [ADR 0020](/adr/0020-exact-brep-kernel-model). No intersection algorithm exists yet beyond AABB, 2D segment, and triangle/triangle tests |
 | Immutable shared geometry DAG | Implemented structural model | `axiolid-model` uses typed IDs and backward references |
-| Sweeps, spatial, measures, healing | Focused crates / staged capability | Consult each crate’s `PLAN.md`; do not infer broad CAD coverage |
+| Sweeps / extrusions / revolutions / lofts | Implemented discrete reference path | `axiolid-generate`, not an exact B-rep sweep result yet. Future exact generation stays in the L2 generation layer; it must not be folded back into DAG compilation |
+| Spatial, measures, healing | Focused crates / staged capability | Consult each crate’s `PLAN.md`; do not infer broad CAD coverage |
 
 ## Execution and acceleration
 

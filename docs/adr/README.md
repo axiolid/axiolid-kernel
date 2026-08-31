@@ -19,4 +19,6 @@ These records capture durable choices that preserve Axiolid’s format-neutral, 
 | [0018](./0018-curve-evaluation-in-the-scalar-reference.md) | Curve evaluation belongs to the scalar reference |
 | [0019](./0019-validate-and-refine-nurbs-on-the-scalar-read-path.md) | Validate and refine NURBS on the scalar read path |
 | [0020](./0020-exact-brep-kernel-model.md) | Exact B-rep is the kernel model; tessellation is an output |
-| [0021](./0021-capability-seams-live-in-the-kernel.md) | Capability seams live in `axiolid-kernel`; retire `axiolid-sweep` |
+| [0021](./0021-capability-seams-live-in-the-kernel.md) | ~~Capability seams live in `axiolid-kernel`; retire `axiolid-sweep`~~ — superseded by 0023 |
+| [0022](./0022-general-nurbs-kernel-capability.md) | General NURBS algorithms are a kernel capability |
+| [0023](./0023-solid-generation-is-an-l2-crate.md) | Solid generation is an L2 crate, not part of the compiler |

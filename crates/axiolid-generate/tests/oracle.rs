@@ -6,8 +6,8 @@
 //! audit earcut on the hole-free case, which is where a silent regression in an
 //! upstream dependency would otherwise go unnoticed.
 
-use axiolid_compile::profile::{triangulate, Rings};
 use axiolid_core::Point2;
+use axiolid_generate::profile::{triangulate, Rings};
 use axiolid_scalar::{signed_area2, triangulate_simple};
 
 fn area_of(points: &[Point2], tris: &[[u32; 3]]) -> f64 {

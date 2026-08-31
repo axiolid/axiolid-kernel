@@ -41,6 +41,7 @@ heal = ["mesh", "dep:axiolid-heal"]
 kernel = ["dep:axiolid-kernel"]
 mesh-boolean = ["kernel", "mesh", "axiolid-kernel/mesh-boolean"]
 graph-compile = ["kernel", "model", "mesh", "axiolid-kernel/model"]
+generate = ["mesh", "profiles", "curves", "primitives", "kernel", "dep:axiolid-generate"]
 
 # Execution contexts and operation adapters. CPU stays portable by default;
 # optimized paths are selected at runtime, never by building the whole crate for
@@ -59,6 +60,7 @@ discrete = [
     "spatial",
     "measure",
     "mesh-boolean",
+    "generate",
     "cpu",
 ]
 parametric = ["model", "curves", "surfaces", "topology", "nurbs"]
@@ -82,5 +84,6 @@ axiolid-overlay = { workspace = true, optional = true }
 axiolid-field = { workspace = true, optional = true }
 axiolid-heal = { workspace = true, optional = true }
 axiolid-kernel = { workspace = true, optional = true }
+axiolid-generate = { workspace = true, optional = true }
 axiolid-backend-cpu = { workspace = true, optional = true }
 axiolid-backend-gpu = { workspace = true, optional = true }

@@ -127,8 +127,9 @@ L1 representations   axiolid-mesh, axiolid-profile, axiolid-curve, axiolid-surfa
                      axiolid-topology, axiolid-primitive, axiolid-model
 L2 algorithms/traits axiolid-tessellate, axiolid-spatial, axiolid-measure,
                      axiolid-overlay, axiolid-field, axiolid-heal, axiolid-nurbs,
-                     axiolid-kernel, axiolid-scalar
-L3 execution/adapters axiolid-backend-cpu, axiolid-backend-gpu
+                     axiolid-scalar, axiolid-generate, axiolid-kernel
+L3 execution/adapters axiolid-boolmesh, axiolid-compile, axiolid-backend-cpu,
+                     axiolid-backend-gpu
 L4 facade             axiolid
 L5 format bridges     ifc-geometry and future adapters (outside this directory)
 ```
@@ -154,7 +155,7 @@ Additive facade features:
 | Family | Features | Pulls |
 | --- | --- | --- |
 | representation | `mesh`, `profiles`, `curves`, `surfaces`, `topology`, `primitives`, `model` | exact/data crates only |
-| algorithms/contracts | `nurbs`, `tessellation`, `spatial`, `measure`, `heal`, `kernel`, `mesh-boolean`, `graph-compile` | selected traits/algorithms |
+| algorithms/contracts | `nurbs`, `generate`, `tessellation`, `spatial`, `measure`, `heal`, `kernel`, `mesh-boolean`, `graph-compile` | selected traits/algorithms |
 | execution | `cpu`, `parallel`, `simd`, `gpu` | context or operation adapter only |
 | bundles | `discrete`, `parametric`, `advanced`, `full` | named additive sets |
 

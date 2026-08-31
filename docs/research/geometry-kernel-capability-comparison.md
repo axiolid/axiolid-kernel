@@ -608,6 +608,7 @@ locally audited revision rather than a moving branch.
   `crates/axiolid-curve/src/` and
   `crates/axiolid-surface/src/`
 - Exact predicates and scalar polygon work: `crates/axiolid-scalar/src/`
+- Executed solid generation: `crates/axiolid-generate/src/`
 - Executed compiler families: `crates/axiolid-compile/src/compiler.rs`
 - Faceted B-rep path: `crates/axiolid-compile/src/brep.rs`
 - Adopted booleans and batching: `crates/axiolid-boolmesh/src/`

@@ -27,10 +27,11 @@ L1 representations
        |
 L2 algorithms and contracts
   axiolid-tessellate  axiolid-spatial  axiolid-measure  axiolid-overlay
-  axiolid-field  axiolid-heal  axiolid-nurbs  axiolid-kernel  axiolid-scalar
+  axiolid-field  axiolid-heal  axiolid-nurbs  axiolid-scalar
+  axiolid-generate  axiolid-kernel
        |
-L3 execution/adapters
-  axiolid-backend-cpu  axiolid-backend-gpu
+L3 execution/adapters and reference compilation
+  axiolid-boolmesh  axiolid-compile  axiolid-backend-cpu  axiolid-backend-gpu
        |
 L4 opt-in facade
   axiolid
@@ -50,6 +51,12 @@ unification cannot leak an implementation into `ifc-geometry`.
 - `axiolid-kernel`: narrow operation traits (`GeometryCompiler`, `MeshBoolean`),
   identity descriptors, execution policy, structured errors. Implementing an
   operation trait is the only capability claim; never duplicate it with flags.
+- `axiolid-generate`: model-free scalar construction algorithms — profiles,
+  lofts, sweeps, revolutions, extrusion, and bounded half-space clipping. It is
+  L2: consumes representations, chooses no provider, and produces the current
+  mesh reference result. It must not depend on `axiolid-model`, a backend, or
+  any L3 crate. Future exact B-rep generation belongs beside it, not in a DAG
+  compiler; see ADR 0023.
 - Backend crates: runtime hardware contexts or operation-specific adapters. They
   do not implement an operation trait until a working algorithm exists.
 - `axiolid`: convenience reexports and semantic feature bundles only.

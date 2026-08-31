@@ -75,6 +75,15 @@ pub mod overlay {
     pub use axiolid_overlay::*;
 }
 
+/// Solid generation: profiles, lofts, sweeps, revolutions, half-space clipping.
+///
+/// These build meshes from exact profile and path inputs. They own no graph
+/// and no cache, so they are usable without the compiler (ADR 0023).
+#[cfg(feature = "generate")]
+pub mod generate {
+    pub use axiolid_generate::*;
+}
+
 /// Frame-neutral sampled layered fields.
 ///
 /// Coverage, morphology, and clearance are always available with this feature.

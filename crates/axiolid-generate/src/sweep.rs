@@ -166,7 +166,7 @@ fn frames_along(path: &[Point3], up: impl Fn(usize) -> Vec3) -> GeomResult<Vec<F
     Ok(frames)
 }
 
-pub(crate) fn linear_extrusion_normals(path: &[Point3], direction: Vec3) -> GeomResult<Vec<Vec3>> {
+pub fn linear_extrusion_normals(path: &[Point3], direction: Vec3) -> GeomResult<Vec<Vec3>> {
     if path.len() < 2 {
         return Err(GeomError::InvalidInput(
             "a linear-extrusion surface needs at least two directrix points".into(),
@@ -238,7 +238,7 @@ pub fn swept_disk(
 ) -> GeomResult<TriMesh> {
     if fillet_radius.is_some() {
         return Err(GeomError::Unsupported {
-            backend: axiolid_kernel::BackendId::new("scalar-sweep"),
+            backend: crate::BACKEND_ID,
             operation: axiolid_kernel::Operation::Sweep,
         });
     }

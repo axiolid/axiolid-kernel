@@ -4,9 +4,9 @@
 //! the axis has volume `2*pi*R*A`. That constant comes from outside this
 //! crate, so it is a real oracle rather than the code agreeing with itself.
 
-use axiolid_compile::profile::profile_rings;
-use axiolid_compile::revolve::revolve;
 use axiolid_core::{Point3, Scalar, Tolerance, Vec3};
+use axiolid_generate::profile::profile_rings;
+use axiolid_generate::revolve::revolve;
 use axiolid_measure::volume_properties;
 use axiolid_mesh::TriMesh;
 use axiolid_profile::{Profile, RectangleProfile};
@@ -38,9 +38,9 @@ fn rect(x: Scalar, y: Scalar) -> Profile {
 /// The profile is authored in its own z = 0 plane. Revolving about the Y
 /// axis sweeps the x offset into the major radius, so the offset is what
 /// makes this a torus rather than a degenerate self-intersecting sweep.
-fn shift(rings: &axiolid_compile::profile::Rings, dx: Scalar) -> axiolid_compile::profile::Rings {
+fn shift(rings: &axiolid_generate::profile::Rings, dx: Scalar) -> axiolid_generate::profile::Rings {
     let f = |p: &axiolid_core::Point2| axiolid_core::Point2::new(p.x + dx, p.y);
-    axiolid_compile::profile::Rings {
+    axiolid_generate::profile::Rings {
         outer: rings.outer.iter().map(f).collect(),
         holes: rings
             .holes
