@@ -56,9 +56,12 @@ manifold gates as the detection mechanism.
 
 ## Measured behaviour
 
-Benchmarks (`cargo bench -p axiolid-scalar`, Xeon w7-3565X, 200k samples/tier).
-Throughput and escalation rate are reported together because neither number is
-interpretable alone.
+Historical benchmarks (`cargo bench -p axiolid-scalar`, Xeon w7-3565X,
+200k samples/tier) are retained below as provenance. They predate the 2026-09-01
+correction that made `orient3d` exact escalation preserve coordinate-difference
+tails, so they are not a current post-fix performance claim. Throughput and
+escalation rate were reported together because neither number is interpretable
+alone.
 
 | predicate | 0% | 0.01% | 1% | 10% |
 | --- | --- | --- | --- | --- |
@@ -72,8 +75,10 @@ Escalation tracks the injected degeneracy rate to four decimal places
 The answer to "does robustness collapse on bad data": **no, it degrades
 proportionally.** `orient2d` is essentially flat — its exact path is cheap
 enough to disappear into measurement noise even at 10% degeneracy. `orient3d`
-costs 2.3x at 10%, because its exact path builds three expansion cofactors and
-allocates. That is a real cost and it is bounded: a 10% exactly-coplanar rate
+costs more at high degeneracy, because its exact path builds expansion cofactors
+and, when coordinate subtraction has a nonzero tail, multiplies complete
+difference expansions. That is a real cost and it is bounded by the finite
+expansion sizes for this fixed-degree predicate: a 10% exactly-coplanar rate
 is far beyond authored building models, and the price of the alternative
 (a wrong sign) is a corrupt mesh.
 

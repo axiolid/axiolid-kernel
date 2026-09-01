@@ -6,7 +6,7 @@
 
 use axiolid_core::Point3;
 use axiolid_kernel::Sign;
-use axiolid_scalar::{orient3d, orient3d_filter};
+use axiolid_scalar::{orient3d, orient3d_filter, two_sum};
 
 fn p(x: i64, y: i64, z: i64) -> Point3 {
     Point3::new(x as f64, y as f64, z as f64)
@@ -47,6 +47,44 @@ fn obvious_orientations_are_correct() {
         .sign()
         .expect("certified");
     assert_eq!(flipped, Sign::Negative);
+}
+
+#[test]
+fn exact_coplanarity_survives_inexact_coordinate_differences() {
+    // Each coordinate satisfies d = a + b - c exactly as a binary rational,
+    // but several plain `point - d` operations round. The exact path must carry
+    // those subtraction tails instead of applying Sterbenz without its ratio
+    // precondition.
+    let a = Point3::new(
+        -16_777_216.000_015_26,
+        2.793_967_723_846_435_5e-9,
+        33_554_431.999_999_996,
+    );
+    let b = Point3::new(
+        -6_442_450_944.0,
+        -1.907_348_632_814_235e-6,
+        -0.000_122_070_312_5,
+    );
+    let c = Point3::new(
+        68_719_476_736.062_48,
+        3.337_860_107_421_875_4e-6,
+        -9.536_743_164_062_5e-7,
+    );
+    let d = Point3::new(
+        -75_178_704_896.062_5,
+        -5.242_414_772_512_264e-6,
+        33_554_431.999_878_88,
+    );
+
+    for (left, right) in [
+        ((a.x, b.x), (c.x, d.x)),
+        ((a.y, b.y), (c.y, d.y)),
+        ((a.z, b.z), (c.z, d.z)),
+    ] {
+        assert_eq!(two_sum(left.0, left.1), two_sum(right.0, right.1));
+    }
+    assert!(!orient3d_filter(a, b, c, d).is_certain());
+    assert_eq!(orient3d(a, b, c, d).sign(), Some(Sign::Zero));
 }
 
 #[test]

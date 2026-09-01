@@ -94,6 +94,19 @@ pub fn scale_expansion(e: &[f64], b: f64) -> Vec<f64> {
     out
 }
 
+/// Multiply two expansions exactly.
+///
+/// Each component of `b` scales `a` exactly; the partial expansions are then
+/// accumulated without rounding away any component.
+#[must_use]
+pub fn expansion_product(a: &[f64], b: &[f64]) -> Vec<f64> {
+    let mut out = Vec::from([0.0]);
+    for &component in b {
+        out = expansion_sum(&out, &scale_expansion(a, component));
+    }
+    out
+}
+
 /// Negate every component. Exact: negation is always representable.
 #[must_use]
 pub fn negate_expansion(e: &[f64]) -> Vec<f64> {

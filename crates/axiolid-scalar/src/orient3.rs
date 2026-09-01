@@ -19,8 +19,11 @@
 use axiolid_core::Point3;
 use axiolid_kernel::{Certified, Precision, Sign};
 
-use crate::arithmetic::{expansion_sign, expansion_sum, grow_expansion, scale_expansion};
-use crate::expansion::two_product;
+use crate::arithmetic::{
+    expansion_product, expansion_sign, expansion_sum, grow_expansion, negate_expansion,
+    scale_expansion,
+};
+use crate::expansion::{two_diff, two_product};
 
 /// Machine epsilon for binary64.
 const EPSILON: f64 = f64::EPSILON / 2.0;
@@ -85,27 +88,82 @@ pub fn orient3d_filter(a: Point3, b: Point3, c: Point3, d: Point3) -> Certified 
 
 /// Exact sign of the 3x3 determinant.
 ///
-/// The coordinate differences are computed in plain f64. That is not a
-/// shortcut: this path is only reached when the filter was uncertain, which
-/// means the points are nearly coplanar and the differences are exact by
-/// Sterbenz's lemma. The 2x2 cofactors and their combination carry every bit.
+/// Every coordinate difference includes the tail recovered by [`two_diff`].
+/// Cofactors and their remaining products operate on complete expansions, so
+/// the result is the determinant of the input binary64 coordinates rather than
+/// of rounded coordinate differences.
 #[must_use]
 fn orient3d_exact(a: Point3, b: Point3, c: Point3, d: Point3) -> Sign {
-    let (adx, ady, adz) = (a.x - d.x, a.y - d.y, a.z - d.z);
-    let (bdx, bdy, bdz) = (b.x - d.x, b.y - d.y, b.z - d.z);
-    let (cdx, cdy, cdz) = (c.x - d.x, c.y - d.y, c.z - d.z);
+    let (adx, adx_error) = two_diff(a.x, d.x);
+    let (ady, ady_error) = two_diff(a.y, d.y);
+    let (adz, adz_error) = two_diff(a.z, d.z);
+    let (bdx, bdx_error) = two_diff(b.x, d.x);
+    let (bdy, bdy_error) = two_diff(b.y, d.y);
+    let (bdz, bdz_error) = two_diff(b.z, d.z);
+    let (cdx, cdx_error) = two_diff(c.x, d.x);
+    let (cdy, cdy_error) = two_diff(c.y, d.y);
+    let (cdz, cdz_error) = two_diff(c.z, d.z);
 
-    // Each 2x2 cofactor exactly, as a four-component expansion.
-    let bc = orient3d_cofactor(bdx, cdy, cdx, bdy);
-    let ca = orient3d_cofactor(cdx, ady, adx, cdy);
-    let ab = orient3d_cofactor(adx, bdy, bdx, ady);
+    let errors = [
+        adx_error, ady_error, adz_error, bdx_error, bdy_error, bdz_error, cdx_error, cdy_error,
+        cdz_error,
+    ];
+    if errors.iter().all(|error| *error == 0.0) {
+        return orient3d_exact_differences([adx, ady, adz], [bdx, bdy, bdz], [cdx, cdy, cdz]);
+    }
 
-    // Scale each by the remaining z difference and sum. Every step is exact.
+    let adx = difference_expansion(adx, adx_error);
+    let ady = difference_expansion(ady, ady_error);
+    let adz = difference_expansion(adz, adz_error);
+    let bdx = difference_expansion(bdx, bdx_error);
+    let bdy = difference_expansion(bdy, bdy_error);
+    let bdz = difference_expansion(bdz, bdz_error);
+    let cdx = difference_expansion(cdx, cdx_error);
+    let cdy = difference_expansion(cdy, cdy_error);
+    let cdz = difference_expansion(cdz, cdz_error);
+
+    let bc = orient3d_expansion_cofactor(&bdx, &cdy, &cdx, &bdy);
+    let ca = orient3d_expansion_cofactor(&cdx, &ady, &adx, &cdy);
+    let ab = orient3d_expansion_cofactor(&adx, &bdy, &bdx, &ady);
+
     let total = expansion_sum(
-        &expansion_sum(&scale_expansion(&bc, adz), &scale_expansion(&ca, bdz)),
-        &scale_expansion(&ab, cdz),
+        &expansion_sum(&expansion_product(&bc, &adz), &expansion_product(&ca, &bdz)),
+        &expansion_product(&ab, &cdz),
     );
     expansion_sign(&total)
+}
+
+/// Evaluate the determinant when all coordinate differences are already exact.
+#[must_use]
+fn orient3d_exact_differences(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> Sign {
+    let bc = orient3d_cofactor(b[0], c[1], c[0], b[1]);
+    let ca = orient3d_cofactor(c[0], a[1], a[0], c[1]);
+    let ab = orient3d_cofactor(a[0], b[1], b[0], a[1]);
+    let total = expansion_sum(
+        &expansion_sum(&scale_expansion(&bc, a[2]), &scale_expansion(&ca, b[2])),
+        &scale_expansion(&ab, c[2]),
+    );
+    expansion_sign(&total)
+}
+
+#[must_use]
+fn difference_expansion(difference: f64, error: f64) -> Vec<f64> {
+    let mut expansion = Vec::new();
+    if error != 0.0 {
+        expansion.push(error);
+    }
+    if difference != 0.0 || expansion.is_empty() {
+        expansion.push(difference);
+    }
+    expansion
+}
+
+#[must_use]
+fn orient3d_expansion_cofactor(p: &[f64], q: &[f64], r: &[f64], s: &[f64]) -> Vec<f64> {
+    expansion_sum(
+        &expansion_product(p, q),
+        &negate_expansion(&expansion_product(r, s)),
+    )
 }
 
 /// Exact `p*q - r*s` as an expansion.
