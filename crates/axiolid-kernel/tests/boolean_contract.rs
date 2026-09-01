@@ -153,6 +153,31 @@ fn admissibility_levels_are_cumulative() {
     assert!(SolidRequirements::Oriented.validate(&good, "s").is_ok());
 }
 
+#[test]
+fn solid_admission_rejects_positive_infinite_signed_volume() {
+    let magnitude = 1.0e308;
+    let epsilon = 1.0e-308;
+    let overflow = TriMesh::new(
+        vec![
+            [epsilon, epsilon, 1.0].into(),
+            [magnitude, 1.0, epsilon].into(),
+            [epsilon, magnitude, 1.0].into(),
+        ],
+        vec![0, 1, 2],
+    );
+
+    let six_volume = overflow.positions[0].dot(overflow.positions[1].cross(overflow.positions[2]));
+    assert!(six_volume == f64::INFINITY, "fixture produced {six_volume}");
+
+    let error = SolidRequirements::Oriented
+        .validate(&overflow, "subject")
+        .unwrap_err();
+    assert!(
+        matches!(error, GeomError::InvalidInput(ref detail) if detail.contains("non-finite signed volume")),
+        "positive-infinite signed volume must fail closed, got {error:?}"
+    );
+}
+
 // --- Section 3: evidence ----------------------------------------------
 
 #[test]

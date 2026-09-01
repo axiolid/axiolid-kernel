@@ -141,6 +141,36 @@ fn registry_rejects_open_or_dirty_solids_before_dispatch() {
 }
 
 #[test]
+fn registry_rejects_non_finite_signed_volume_before_dispatch() {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let registry = registry(Arc::clone(&calls), ScratchRequirement::None);
+    let magnitude = 1.0e308;
+    let extreme = TriMesh::new(
+        vec![
+            Point3::ZERO,
+            Point3::new(magnitude, 0.0, 0.0),
+            Point3::new(0.0, magnitude, 0.0),
+            Point3::new(0.0, 0.0, magnitude),
+        ],
+        vec![
+            0, 2, 1, // base, outward -z
+            0, 1, 3, // side, outward -y
+            0, 3, 2, // side, outward -x
+            1, 2, 3, // sloped face, outward +xyz
+        ],
+    );
+
+    let error = registry
+        .section(&extreme, frame(), limits(), &options())
+        .unwrap_err();
+    assert!(
+        matches!(error, GeomError::InvalidInput(ref detail) if detail.contains("non-finite signed volume")),
+        "extreme finite source must fail closed, got {error:?}"
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 0);
+}
+
+#[test]
 fn memory_budget_is_admitted_before_allocating_topology_audit() {
     let calls = Arc::new(AtomicUsize::new(0));
     let registry = registry(Arc::clone(&calls), ScratchRequirement::None);

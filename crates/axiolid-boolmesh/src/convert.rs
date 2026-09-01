@@ -13,7 +13,7 @@
 //! So orientation is checked here, on the way in, using the divergence theorem.
 
 use axiolid_core::Point3;
-use axiolid_kernel::GeomError;
+use axiolid_kernel::{GeomError, SolidRequirements};
 use axiolid_mesh::TriMesh;
 use boolmesh::prelude::Manifold;
 
@@ -43,30 +43,7 @@ pub(crate) fn six_signed_volume(positions: &[Point3], indices: &[u32]) -> f64 {
 /// `role` names the argument for the diagnostic, so a caller learns *which*
 /// mesh was wrong rather than that some mesh was.
 pub(crate) fn to_manifold(mesh: &TriMesh, role: &str) -> Result<Manifold, GeomError> {
-    mesh.validate_structure()
-        .map_err(|error| GeomError::InvalidInput(format!("{role}: {error}")))?;
-
-    if mesh.indices.is_empty() {
-        return Err(GeomError::InvalidInput(format!(
-            "{role}: mesh has no triangles"
-        )));
-    }
-
-    // Orientation gate. A zero signed volume means the mesh encloses nothing
-    // (flat, or self-cancelling), which no set operation can interpret.
-    let six_volume = six_signed_volume(&mesh.positions, &mesh.indices);
-    if six_volume == 0.0 {
-        return Err(GeomError::Degenerate(format!(
-            "{role}: mesh encloses zero signed volume, so it has no interior"
-        )));
-    }
-    if six_volume < 0.0 {
-        return Err(GeomError::InvalidInput(format!(
-            "{role}: mesh is inside-out (signed volume {:.6} < 0); \
-             boolean operations would silently invert",
-            six_volume / 6.0
-        )));
-    }
+    SolidRequirements::Oriented.validate(mesh, role)?;
 
     let positions: Vec<f64> = mesh
         .positions

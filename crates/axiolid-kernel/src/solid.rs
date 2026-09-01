@@ -28,7 +28,10 @@ pub enum SolidRequirements {
     ///
     /// The floor. An operand failing this is malformed data, not geometry.
     Structural,
-    /// Structural, plus a non-zero enclosed volume.
+    /// Structural, plus a finite, non-zero enclosed signed volume.
+    ///
+    /// Volume accumulation that overflows or otherwise becomes non-finite is
+    /// rejected rather than treated as evidence of a valid interior.
     ///
     /// A flat or self-cancelling shell has no interior, so no set operation on
     /// it has a defined meaning.
@@ -78,6 +81,11 @@ impl SolidRequirements {
         }
 
         let six_volume = six_signed_volume(mesh);
+        if !six_volume.is_finite() {
+            return Err(GeomError::InvalidInput(format!(
+                "{role}: mesh has non-finite signed volume"
+            )));
+        }
         if six_volume == 0.0 {
             return Err(GeomError::Degenerate(format!(
                 "{role}: mesh encloses zero signed volume, so it has no interior"

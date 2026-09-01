@@ -51,6 +51,12 @@ fn check_result(result: &TriMesh, operation: BooleanOperator) -> GeomResult<()> 
         return Ok(());
     }
     let six_volume = six_signed_volume(&result.positions, &result.indices);
+    if !six_volume.is_finite() {
+        return Err(GeomError::BackendContractViolation {
+            backend: BoolmeshBoolean::ID,
+            detail: format!("{operation:?} returned non-finite signed volume"),
+        });
+    }
     if six_volume < 0.0 {
         return Err(GeomError::BackendContractViolation {
             backend: BoolmeshBoolean::ID,
@@ -325,6 +331,19 @@ mod tests {
         TriMesh::new(positions, indices)
     }
 
+    fn positive_infinite_volume() -> TriMesh {
+        let large = 1.0e308;
+        let small = 1.0e-308;
+        TriMesh::new(
+            vec![
+                Point3::new(small, small, 1.0),
+                Point3::new(large, 1.0, small),
+                Point3::new(small, large, 1.0),
+            ],
+            vec![0, 1, 2],
+        )
+    }
+
     /// `check_result` guards against an upstream regression that inverts its
     /// output. With validated inputs the current `boolmesh` release never does
     /// this -- verified by instrumenting the branch across the whole suite and
@@ -341,6 +360,17 @@ mod tests {
             }
             other => panic!("must blame the backend, not the caller: {other:?}"),
         }
+    }
+
+    #[test]
+    fn a_non_finite_result_is_blamed_on_the_backend() {
+        let error = check_result(&positive_infinite_volume(), BooleanOperator::Union)
+            .expect_err("a non-finite result volume must be rejected");
+        assert!(
+            matches!(error, GeomError::BackendContractViolation { backend, ref detail }
+                if backend == BoolmeshBoolean::ID && detail.contains("non-finite signed volume")),
+            "must blame the backend, got {error:?}"
+        );
     }
 
     /// An empty result is legitimate (tool fully contains subject) and must not
