@@ -21,6 +21,7 @@ All notable changes to Axiolid are documented in this file.
 - Added a backend-neutral mesh plane-section contract and portable scalar oracle with exact binary64 plane-side classification, source-topology contour stitching, explicit mesh-approximation evidence, bounded output and scratch, cancellation, and fail-closed coplanar/non-manifold handling; see [ADR 0033](./adr/0033-mesh-plane-section-contract.md).
 
 ### Changed
+- `axiolid-compile` now converts already-triangular `PolygonMesh` faces directly to `TriMesh` without retriangulation, while continuing to refuse n-gons and faces with holes until an explicit tessellation provider is selected.
 - `axiolid-generate` now defines explicit `GenerationRequest` and `GeneratedGeometry` contracts. Exact B-rep and tolerance-bearing tessellation are separate variants; future exact construction must refuse unsupported cases instead of returning a mesh fallback.
 - Documented the kernel's direction: Axiolid is striving to be a multipurpose **exact B-rep kernel**, with tessellation as a requested output rather than the model. Surface/surface intersection and geometric inversion are now in scope; see [ADR 0020](./adr/0020-exact-brep-kernel-model.md). Performance work is explicitly parked behind capability work on the roadmap.
 - Topology audit and planar B-rep compilation now reject empty loops or outer shells, invalid outer-bound cardinality, undersized bounds, and zero/non-finite-area bounds instead of silently emitting empty or filled geometry; `BRepHealth` exposes dedicated empty-loop and multiple-outer counters.

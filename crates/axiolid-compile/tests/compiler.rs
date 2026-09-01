@@ -8,7 +8,7 @@ use axiolid_compile::ScalarCompiler;
 use axiolid_core::{BooleanOperator, Plane3, Point3, Tolerance, Transform3, Vec3};
 use axiolid_curve::{Curve3, Polyline3};
 use axiolid_kernel::{ExecutionOptions, GeomError, GeometryCompiler, Operation};
-use axiolid_mesh::TriMesh;
+use axiolid_mesh::{PolygonFace, PolygonMesh, TriMesh};
 use axiolid_model::{GeometryGraphBuilder, GeometryNode, Instance, SolidOperation};
 use axiolid_primitive::HalfSpace;
 use axiolid_profile::{CircleProfile, Profile, RectangleProfile};
@@ -152,6 +152,110 @@ fn compile_batch_into_appends_and_matches_compile_batch() {
         .expect("into");
     assert_eq!(destination.len(), 2, "must append, never clear");
     assert!((volume(&destination[1]) - 2.0).abs() < 1e-9);
+}
+
+#[test]
+fn authored_triangle_faces_compile_without_retriangulation() {
+    let positions = vec![
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(1.0, 0.0, 0.0),
+        Point3::new(0.0, 1.0, 0.0),
+        Point3::new(1.0, 1.0, 0.0),
+    ];
+    let mut b = GeometryGraphBuilder::new();
+    let triangles = b
+        .push(GeometryNode::PolygonMesh(PolygonMesh {
+            positions: positions.clone(),
+            faces: vec![
+                PolygonFace {
+                    outer: vec![0, 1, 2],
+                    holes: Vec::new(),
+                },
+                PolygonFace {
+                    outer: vec![2, 1, 3],
+                    holes: Vec::new(),
+                },
+            ],
+        }))
+        .unwrap();
+    let graph = b.finish(vec![triangles]).unwrap();
+
+    let mesh = compiler()
+        .compile(&graph, triangles, &options())
+        .expect("authored triangles compile by exact index conversion");
+    assert_eq!(mesh.positions, positions);
+    assert_eq!(mesh.indices, vec![0, 1, 2, 2, 1, 3]);
+}
+
+#[test]
+fn polygon_faces_still_require_a_tessellation_provider() {
+    let mut b = GeometryGraphBuilder::new();
+    let polygon = b
+        .push(GeometryNode::PolygonMesh(PolygonMesh {
+            positions: vec![
+                Point3::new(0.0, 0.0, 0.0),
+                Point3::new(1.0, 0.0, 0.0),
+                Point3::new(1.0, 1.0, 0.0),
+                Point3::new(0.0, 1.0, 0.0),
+            ],
+            faces: vec![PolygonFace {
+                outer: vec![0, 1, 2, 3],
+                holes: Vec::new(),
+            }],
+        }))
+        .unwrap();
+    let graph = b.finish(vec![polygon]).unwrap();
+
+    assert!(matches!(
+        compiler().compile(&graph, polygon, &options()),
+        Err(GeomError::Unsupported {
+            operation: Operation::Tessellation,
+            ..
+        })
+    ));
+}
+
+#[test]
+fn polygon_faces_with_holes_still_require_a_tessellation_provider() {
+    let mut b = GeometryGraphBuilder::new();
+    let polygon = b
+        .push(GeometryNode::PolygonMesh(PolygonMesh {
+            positions: vec![Point3::ZERO; 6],
+            faces: vec![PolygonFace {
+                outer: vec![0, 1, 2],
+                holes: vec![vec![3, 4, 5]],
+            }],
+        }))
+        .unwrap();
+    let graph = b.finish(vec![polygon]).unwrap();
+
+    assert!(matches!(
+        compiler().compile(&graph, polygon, &options()),
+        Err(GeomError::Unsupported {
+            operation: Operation::Tessellation,
+            ..
+        })
+    ));
+}
+
+#[test]
+fn malformed_authored_triangle_indices_are_rejected() {
+    let mut b = GeometryGraphBuilder::new();
+    let triangles = b
+        .push(GeometryNode::PolygonMesh(PolygonMesh {
+            positions: vec![Point3::ZERO; 3],
+            faces: vec![PolygonFace {
+                outer: vec![0, 1, 7],
+                holes: Vec::new(),
+            }],
+        }))
+        .unwrap();
+    let graph = b.finish(vec![triangles]).unwrap();
+
+    assert!(matches!(
+        compiler().compile(&graph, triangles, &options()),
+        Err(GeomError::InvalidInput(_))
+    ));
 }
 
 /// An unsupported family must name the capability it would need, so a caller

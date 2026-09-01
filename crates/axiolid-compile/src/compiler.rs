@@ -286,6 +286,63 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
             .ok_or_else(|| GeomError::InvalidInput(format!("root {root:?} produced no mesh")))
     }
 
+    /// Convert authored triangular faces by preserving their exact corner order.
+    fn compile_authored_triangles(&self, mesh: &axiolid_mesh::PolygonMesh) -> GeomResult<TriMesh> {
+        if mesh
+            .faces
+            .iter()
+            .any(|face| face.outer.len() != 3 || !face.holes.is_empty())
+        {
+            return Err(GeomError::Unsupported {
+                backend: self.descriptor().id,
+                operation: Operation::Tessellation,
+            });
+        }
+
+        let position_count = mesh.positions.len();
+        if let Some(index) = mesh
+            .faces
+            .iter()
+            .flat_map(|face| face.outer.iter().copied())
+            .find(|&index| index as usize >= position_count)
+        {
+            return Err(GeomError::InvalidInput(format!(
+                "authored triangle index {index} exceeds position count {position_count}"
+            )));
+        }
+
+        let mut positions = Vec::new();
+        positions
+            .try_reserve_exact(position_count)
+            .map_err(|_| GeomError::BudgetExceeded {
+                resource: "authored triangle positions",
+            })?;
+        positions.extend_from_slice(&mesh.positions);
+
+        let index_count = mesh
+            .faces
+            .len()
+            .checked_mul(3)
+            .ok_or(GeomError::BudgetExceeded {
+                resource: "authored triangle indices",
+            })?;
+        let mut indices = Vec::new();
+        indices
+            .try_reserve_exact(index_count)
+            .map_err(|_| GeomError::BudgetExceeded {
+                resource: "authored triangle indices",
+            })?;
+        for face in &mesh.faces {
+            indices.extend_from_slice(&face.outer);
+        }
+
+        let triangles = TriMesh::new(positions, indices);
+        triangles.validate_structure().map_err(|error| {
+            GeomError::InvalidInput(format!("invalid authored triangle mesh: {error}"))
+        })?;
+        Ok(triangles)
+    }
+
     /// Build one node, assuming its mesh dependencies are already cached.
     fn build(
         &self,
@@ -298,6 +355,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
         let node = self.node(graph, id)?;
         match node {
             GeometryNode::TriMesh(mesh) => Ok(mesh.clone()),
+            GeometryNode::PolygonMesh(mesh) => self.compile_authored_triangles(mesh),
             GeometryNode::Instance(instance) => {
                 let source_tolerance =
                     instance_local_tolerance(instance.transform, options.tolerance())?;
