@@ -7,7 +7,7 @@
 
 use axiolid_core::{Point2, Point3};
 use axiolid_kernel::Sign;
-use axiolid_scalar::{incircle, incircle_filter, insphere, insphere_filter};
+use axiolid_reference::{incircle, incircle_filter, insphere, insphere_filter};
 
 fn sign_of(v: i128) -> Sign {
     match v.signum() {

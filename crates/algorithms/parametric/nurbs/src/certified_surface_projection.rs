@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use axiolid_core::{Point3, Scalar};
 use axiolid_kernel::{BackendId, GeomError, GeomResult, Operation};
-use axiolid_scalar::surface::bspline_jet;
+use axiolid_reference::surface::bspline_jet;
 use axiolid_surface::BSplineSurface;
 
 use crate::{

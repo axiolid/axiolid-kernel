@@ -3,7 +3,7 @@
 use axiolid_core::{Point3, Scalar};
 use axiolid_curve::BSplineCurve;
 use axiolid_kernel::GeomResult;
-use axiolid_scalar::surface::bspline_jet;
+use axiolid_reference::surface::bspline_jet;
 use axiolid_surface::BSplineSurface;
 
 use crate::{axis::reverse_axis, transform::insert_knot3};

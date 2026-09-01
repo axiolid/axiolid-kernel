@@ -7,7 +7,7 @@
 
 ## Context
 
-`axiolid-scalar` now owns a certified predicate suite: `orient2d`, `orient3d`,
+`axiolid-reference` now owns a certified predicate suite: `orient2d`, `orient3d`,
 `incircle`, `insphere`, plus static filters. Their filtered cascades escalate
 to exact arithmetic, so they return a *proven* sign rather than a plausible
 one. `orient3d` normally uses expansion arithmetic; finite exponent ranges
@@ -34,12 +34,12 @@ Our predicates serve three roles, none of which require displacing an adopted
 implementation.
 
 **1. They are the substrate for algorithms we own.** Ear-clipping orientation
-in `axiolid-scalar::polygon` already calls `orient2d`. Any future spatial index,
+in `axiolid-reference::polygon` already calls `orient2d`. Any future spatial index,
 sweep, or healing pass built here uses them by default. This is the primary
 role and it needs no negotiation with anyone's licence.
 
 **2. They are the audit oracle for adopted implementations.** ADR 0012 makes
-`axiolid-scalar` the correctness reference. An adopted crate is *verified, not
+`axiolid-reference` the correctness reference. An adopted crate is *verified, not
 trusted*: `axiolid-compile/tests/oracle.rs` already checks `earcut` against our
 certified triangulator on every hole-free polygon. The predicate suite extends
 that pattern to geometric decisions — we can assert that an adopted result is
@@ -58,7 +58,7 @@ manifold gates as the detection mechanism.
 
 ## Measured behaviour
 
-Historical benchmarks (`cargo bench -p axiolid-scalar`, Xeon w7-3565X,
+Historical benchmarks (`cargo bench -p axiolid-reference`, Xeon w7-3565X,
 200k samples/tier) are retained below as provenance. They predate the 2026-09-01
 correction that made `orient3d` exact escalation preserve coordinate-difference
 tails, so they are not a current post-fix performance claim. Throughput and

@@ -317,7 +317,7 @@ The following classification was checked against production source and tests at
   (`axiolid-model`). Representation breadth here is not algorithm breadth.
 - Certified `orient2d`, `orient3d`, `incircle`, and `insphere`, static filters,
   arbitrary-length expansion arithmetic, exact-path differential gates, and
-  degeneracy-controlled benchmarks (`axiolid-scalar`).
+  degeneracy-controlled benchmarks (`axiolid-reference`).
 - Simple polygon triangulation and ring orientation, plus adopted `earcut`
   differential coverage for polygon/profile work.
 - Rectangle, circle, arbitrary contour, holes, and derived-profile extrusion to
@@ -325,7 +325,7 @@ The following classification was checked against production source and tests at
 - Planar faceted B-rep tessellation with shared topology (`axiolid-compile::brep`).
 - Triangle-mesh union/intersection/difference through the adopted `boolmesh`
   provider, including a measured disjoint-cutter `subtract_many` override
-  (`axiolid-boolmesh`).
+  (`axiolid-mesh-boolean-boolmesh`).
 - DAG compilation with memoization, deep-graph iteration, instance transforms,
   mirrored-winding repair, collections, booleans, extrusions, and faceted B-reps.
 - IFC lowering, mapped instances, placement-chain application, relationship-level

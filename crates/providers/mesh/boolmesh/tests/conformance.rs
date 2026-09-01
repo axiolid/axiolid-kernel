@@ -13,9 +13,9 @@
 use axiolid_core::{BooleanOperator, Tolerance};
 use axiolid_kernel::conformance::{self, box_at, volume};
 use axiolid_kernel::{ExecutionOptions, GeomError, MeshBoolean};
-use axiolid_scalar::ScalarBoolean;
+use axiolid_reference::ScalarBoolean;
 
-use axiolid_boolmesh::BoolmeshBoolean;
+use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
 
 fn options() -> ExecutionOptions {
     ExecutionOptions::new(Tolerance::METRE)

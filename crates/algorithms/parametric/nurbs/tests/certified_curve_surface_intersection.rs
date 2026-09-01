@@ -4,7 +4,7 @@ use axiolid_nurbs::{
     intersect_curve_surface_certified, CertifiedCurveSurfaceIntersection3,
     CertifiedCurveSurfaceIntersectionOptions,
 };
-use axiolid_scalar::{curve::bspline_jet3, surface::bspline_jet};
+use axiolid_reference::{curve::bspline_jet3, surface::bspline_jet};
 use axiolid_surface::BSplineSurface;
 
 fn line_through_plane() -> BSplineCurve3 {

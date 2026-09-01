@@ -89,7 +89,7 @@ pub mod overlay {
 /// explicit residual certificate and never substitutes a mesh fallback (ADR 0029).
 #[cfg(feature = "generate")]
 pub mod generate {
-    pub use axiolid_generate::*;
+    pub use axiolid_construct::*;
 }
 
 /// Frame-neutral sampled layered fields.

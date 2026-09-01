@@ -512,7 +512,7 @@ fn seed_grid_vertices(
             let u = patch.u_start + patch.du * iu as Scalar;
             let v = patch.v_start + patch.dv * iv as Scalar;
             let uv = Point2::new(u, v);
-            let point = axiolid_scalar::surface::evaluate(surface, u, v)?;
+            let point = axiolid_reference::surface::evaluate(surface, u, v)?;
             let mesh = state.push_face_position(point)?;
             let local = take_local_vertex(&mut next_local)?;
             grid.push(SurfaceVertex { uv, mesh, local });
@@ -674,10 +674,10 @@ fn edge_sample_count(
             "curved-edge chord tolerance must be positive and finite".to_owned(),
         ));
     }
-    let domain = axiolid_scalar::curve::domain2(curve);
+    let domain = axiolid_reference::curve::domain2(curve);
     let at = |t: Scalar| -> GeomResult<Vec3> {
-        let p = axiolid_scalar::curve::evaluate2(curve, t)?;
-        axiolid_scalar::surface::evaluate(surface, p.x, p.y)
+        let p = axiolid_reference::curve::evaluate2(curve, t)?;
+        axiolid_reference::surface::evaluate(surface, p.x, p.y)
     };
     // Powers of two keep the count stable: a face arriving later computes
     // the same value from the same inputs.
@@ -711,11 +711,11 @@ fn edge_sample_count(
 /// point when appending the edge to a loop; the next edge contributes that
 /// junction.
 fn trim_samples(curve: &axiolid_curve::Curve2, n: usize) -> GeomResult<Vec<axiolid_core::Point2>> {
-    let domain = axiolid_scalar::curve::domain2(curve);
+    let domain = axiolid_reference::curve::domain2(curve);
     let mut out = Vec::with_capacity(n + 1);
     for i in 0..=n {
         let t = domain.start + (domain.end - domain.start) * (i as Scalar) / (n as Scalar);
-        out.push(axiolid_scalar::curve::evaluate2(curve, t)?);
+        out.push(axiolid_reference::curve::evaluate2(curve, t)?);
     }
     Ok(out)
 }
@@ -958,7 +958,7 @@ fn curved_boundary(
             // 3D points, and they are interned under the edge.
             let points: Vec<Vec3> = params
                 .iter()
-                .map(|p| axiolid_scalar::surface::evaluate(surface, p.x, p.y))
+                .map(|p| axiolid_reference::surface::evaluate(surface, p.x, p.y))
                 .collect::<GeomResult<_>>()?;
             let edge = brep
                 .edges()
@@ -1345,7 +1345,7 @@ fn split_at_centroid(
     let [a, b, c] = triangle.vertices;
     let uv = (a.uv + b.uv + c.uv) / 3.0;
     state.reserve_face_vertices(1)?;
-    let exact = axiolid_scalar::surface::evaluate(surface, uv.x, uv.y)?;
+    let exact = axiolid_reference::surface::evaluate(surface, uv.x, uv.y)?;
     let center = SurfaceVertex {
         uv,
         mesh: state.push_face_position(exact)?,
@@ -1581,7 +1581,7 @@ fn curved_triangle_errors(
     for (edge, edge_error) in edge_errors.iter_mut().enumerate() {
         let (a, b) = triangle_edge(vertices, edge);
         let uv = (a.uv + b.uv) * 0.5;
-        let exact = axiolid_scalar::surface::evaluate(surface, uv.x, uv.y)?;
+        let exact = axiolid_reference::surface::evaluate(surface, uv.x, uv.y)?;
         let chord = (mesh.positions[a.mesh as usize] + mesh.positions[b.mesh as usize]) * 0.5;
         *edge_error = (exact - chord).length();
         if !edge_error.is_finite() {
@@ -1592,7 +1592,7 @@ fn curved_triangle_errors(
     }
 
     let uv = (vertices[0].uv + vertices[1].uv + vertices[2].uv) / 3.0;
-    let exact = axiolid_scalar::surface::evaluate(surface, uv.x, uv.y)?;
+    let exact = axiolid_reference::surface::evaluate(surface, uv.x, uv.y)?;
     let linear = (mesh.positions[vertices[0].mesh as usize]
         + mesh.positions[vertices[1].mesh as usize]
         + mesh.positions[vertices[2].mesh as usize])
@@ -1615,7 +1615,7 @@ fn refinement_midpoint(
     next_local: &mut u32,
 ) -> GeomResult<SurfaceVertex> {
     let uv = (a.uv + b.uv) * 0.5;
-    let exact = axiolid_scalar::surface::evaluate(surface, uv.x, uv.y)?;
+    let exact = axiolid_reference::surface::evaluate(surface, uv.x, uv.y)?;
     let key = local_edge_key(a, b);
     if let Some(existing) = cache.get(&key).copied() {
         let distance = (state.mesh.positions[existing.mesh as usize] - exact).length();
@@ -1697,7 +1697,7 @@ mod tests {
         let mut mesh = TriMesh {
             positions: uv
                 .iter()
-                .map(|p| axiolid_scalar::surface::evaluate(&surface, p.x, p.y).unwrap())
+                .map(|p| axiolid_reference::surface::evaluate(&surface, p.x, p.y).unwrap())
                 .collect(),
             indices: Vec::new(),
             normals: None,

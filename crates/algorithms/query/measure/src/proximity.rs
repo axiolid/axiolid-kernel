@@ -1,7 +1,7 @@
 //! Deterministic metric proximity queries for 3D primitives.
 //!
 //! These routines construct floating-point witnesses only. Certified topological
-//! classification belongs in `axiolid-scalar`; callers that need an exact
+//! classification belongs in `axiolid-reference`; callers that need an exact
 //! contact decision must perform that classification separately.
 
 use core::fmt;

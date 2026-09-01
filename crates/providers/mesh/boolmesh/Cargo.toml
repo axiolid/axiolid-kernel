@@ -1,5 +1,5 @@
 [package]
-name = "axiolid-boolmesh"
+name = "axiolid-mesh-boolean-boolmesh"
 description = "boolmesh-backed MeshBoolean provider"
 version.workspace = true
 edition.workspace = true
@@ -23,7 +23,7 @@ harness = false
 # The scalar oracle, used only for differential testing (ADR 0012). A
 # dev-dependency deliberately: the production provider must never depend on the
 # reference implementation at runtime.
-axiolid-scalar.workspace = true
+axiolid-reference.workspace = true
 
 [package.metadata.axiolid]
 architecture-version = 1
@@ -32,4 +32,4 @@ role = "provider.mesh"
 domain = "mesh.boolean"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-core", "axiolid-kernel", "axiolid-mesh", "axiolid-scalar"]
+allowed-internal-dependencies = ["axiolid-core", "axiolid-kernel", "axiolid-mesh", "axiolid-reference"]

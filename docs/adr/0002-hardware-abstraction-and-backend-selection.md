@@ -16,7 +16,7 @@
 > "Relation to existing code" are historical: none of them exist. The real
 > crates are `axiolid-backend-cpu` (an execution *context*, explicitly **not** the
 > correctness oracle) and `axiolid-backend-gpu`. The scalar reference is owned by
-> `axiolid-scalar` per 0012. The reasoning below -- runtime selection, single
+> `axiolid-reference` per 0012. The reasoning below -- runtime selection, single
 > portable binary, differential validation against a scalar reference -- stands.
 
 
@@ -44,7 +44,7 @@ not a compile-time `#[cfg]` choice.
   operation.
 - `axiolid-cpu` is the **correctness oracle**: portable, no intrinsics, always
   available. Every other backend is validated by differential test against it.
-  <!-- Superseded by 0012: the oracle is `axiolid-scalar`; `axiolid-backend-cpu` is an
+  <!-- Superseded by 0012: the oracle is `axiolid-reference`; `axiolid-backend-cpu` is an
   execution context and explicitly not the oracle. The principle stands. -->
 - SIMD uses `is_x86_feature_detected!` + `#[target_feature]`, so a single
   portable binary still uses AVX-512 where present.

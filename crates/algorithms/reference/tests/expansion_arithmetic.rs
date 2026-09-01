@@ -5,7 +5,7 @@
 //! rational arithmetic over i128, exact for the bounded magnitudes used here.
 
 use axiolid_kernel::Sign;
-use axiolid_scalar::arithmetic::{
+use axiolid_reference::arithmetic::{
     expansion_sign, expansion_sum, grow_expansion, negate_expansion, scale_expansion,
 };
 

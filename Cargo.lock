@@ -15,10 +15,10 @@ dependencies = [
  "axiolid-backend-cpu",
  "axiolid-backend-gpu",
  "axiolid-brep",
+ "axiolid-construct",
  "axiolid-core",
  "axiolid-curve",
  "axiolid-field",
- "axiolid-generate",
  "axiolid-heal",
  "axiolid-kernel",
  "axiolid-measure",
@@ -52,17 +52,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "axiolid-boolmesh"
-version = "0.1.0"
-dependencies = [
- "axiolid-core",
- "axiolid-kernel",
- "axiolid-mesh",
- "axiolid-scalar",
- "boolmesh",
-]
-
-[[package]]
 name = "axiolid-brep"
 version = "0.1.0"
 dependencies = [
@@ -76,17 +65,36 @@ dependencies = [
 name = "axiolid-compile"
 version = "0.1.0"
 dependencies = [
- "axiolid-boolmesh",
+ "axiolid-construct",
  "axiolid-core",
  "axiolid-curve",
- "axiolid-generate",
  "axiolid-kernel",
  "axiolid-measure",
  "axiolid-mesh",
+ "axiolid-mesh-boolean-boolmesh",
  "axiolid-model",
  "axiolid-primitive",
  "axiolid-profile",
- "axiolid-scalar",
+ "axiolid-reference",
+ "axiolid-surface",
+ "axiolid-topology",
+ "earcut",
+]
+
+[[package]]
+name = "axiolid-construct"
+version = "0.1.0"
+dependencies = [
+ "axiolid-brep",
+ "axiolid-core",
+ "axiolid-curve",
+ "axiolid-kernel",
+ "axiolid-measure",
+ "axiolid-mesh",
+ "axiolid-nurbs",
+ "axiolid-primitive",
+ "axiolid-profile",
+ "axiolid-reference",
  "axiolid-surface",
  "axiolid-topology",
  "earcut",
@@ -111,25 +119,6 @@ name = "axiolid-field"
 version = "0.1.0"
 dependencies = [
  "axiolid-core",
-]
-
-[[package]]
-name = "axiolid-generate"
-version = "0.1.0"
-dependencies = [
- "axiolid-brep",
- "axiolid-core",
- "axiolid-curve",
- "axiolid-kernel",
- "axiolid-measure",
- "axiolid-mesh",
- "axiolid-nurbs",
- "axiolid-primitive",
- "axiolid-profile",
- "axiolid-scalar",
- "axiolid-surface",
- "axiolid-topology",
- "earcut",
 ]
 
 [[package]]
@@ -167,6 +156,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "axiolid-mesh-boolean-boolmesh"
+version = "0.1.0"
+dependencies = [
+ "axiolid-core",
+ "axiolid-kernel",
+ "axiolid-mesh",
+ "axiolid-reference",
+ "boolmesh",
+]
+
+[[package]]
 name = "axiolid-model"
 version = "0.1.0"
 dependencies = [
@@ -187,7 +187,7 @@ dependencies = [
  "axiolid-core",
  "axiolid-curve",
  "axiolid-kernel",
- "axiolid-scalar",
+ "axiolid-reference",
  "axiolid-surface",
 ]
 
@@ -215,7 +215,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axiolid-scalar"
+name = "axiolid-reference"
 version = "0.1.0"
 dependencies = [
  "axiolid-core",

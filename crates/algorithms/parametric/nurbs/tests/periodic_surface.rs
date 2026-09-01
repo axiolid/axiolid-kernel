@@ -171,7 +171,7 @@ fn seam_control_edit_updates_every_expanded_alias() {
 #[test]
 fn neutral_surface_evaluation_remains_native_and_unwrapped() {
     let surface = periodic_u_strip();
-    let neutral_high = axiolid_scalar::surface::bspline_jet(&surface, 4.25, 0.4)
+    let neutral_high = axiolid_reference::surface::bspline_jet(&surface, 4.25, 0.4)
         .expect("neutral evaluator clamps")
         .point;
     let periodic = PeriodicBSplineSurface::new(surface).expect("periodic U");

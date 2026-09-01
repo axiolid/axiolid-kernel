@@ -1,7 +1,7 @@
 //! Contracts `axiolid-surface` owes the crates that consume it.
 //!
 //! Like `axiolid-curve`, this crate is a value vocabulary. Evaluation, normals,
-//! and inversion live in `axiolid-scalar` and are tested there. What is pinned
+//! and inversion live in `axiolid-reference` and are tested there. What is pinned
 //! here is the structure those consumers rely on.
 
 use axiolid_core::{Frame3, Point3, Scalar, Vec3};
@@ -62,7 +62,7 @@ fn every_surface_variant_is_constructible() {
 
 /// `Surface` is `#[non_exhaustive]`, so consumers must keep a wildcard arm.
 ///
-/// `axiolid-scalar`'s `invert` and evaluators refuse unknown variants
+/// `axiolid-reference`'s `invert` and evaluators refuse unknown variants
 /// explicitly instead of falling through. That is only sound while this enum
 /// stays non-exhaustive.
 #[test]
@@ -87,7 +87,7 @@ fn surface_enum_stays_non_exhaustive_for_consumers() {
 /// A surface's frame is stored, not normalised on construction.
 ///
 /// Consumers that map between world and surface-local coordinates must
-/// validate orthonormality themselves; `axiolid-scalar`'s inversion does
+/// validate orthonormality themselves; `axiolid-reference`'s inversion does
 /// exactly that. Storing a skewed frame is therefore representable, and this
 /// pins that the vocabulary does not silently repair it.
 #[test]

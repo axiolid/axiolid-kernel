@@ -1,5 +1,5 @@
 use axiolid_core::Point3;
-use axiolid_scalar::{segment_triangle_relation, SegmentTriangleRelation};
+use axiolid_reference::{segment_triangle_relation, SegmentTriangleRelation};
 
 const TRIANGLE: [Point3; 3] = [
     Point3::new(0.0, 0.0, 0.0),

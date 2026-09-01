@@ -15,8 +15,8 @@ from pathlib import Path
 ROOT = Path("/mnt/backup/build-cache/axiolid-solibri-spatial")
 
 SUITES = [
-    ["cargo", "test", "-p", "axiolid-scalar", "--all-features", "--test", "oracle"],
-    ["cargo", "test", "-p", "axiolid-boolmesh", "--all-features", "--test", "conformance"],
+    ["cargo", "test", "-p", "axiolid-reference", "--all-features", "--test", "oracle"],
+    ["cargo", "test", "-p", "axiolid-mesh-boolean-boolmesh", "--all-features", "--test", "conformance"],
 ]
 
 PROBES = [

@@ -1,15 +1,17 @@
 //! Linear extrusion of a triangulated profile into a closed solid.
 //!
 //! The result must be watertight and outward-oriented, because that is exactly
-//! what `axiolid-boolmesh` demands of its inputs. Getting the winding wrong here
+//! what `axiolid-mesh-boolean-boolmesh` demands of its inputs. Getting the winding wrong here
 //! produces a mesh that looks valid and computes wrong booleans -- the failure
 //! mode that has already cost two debugging sessions.
 
 use axiolid_core::{Point2, Point3, Scalar, Vec3};
 use axiolid_kernel::{GeomError, GeomResult, Sign};
 use axiolid_mesh::TriMesh;
-use axiolid_scalar::arithmetic::{expansion_sign, expansion_sum, grow_expansion, scale_expansion};
-use axiolid_scalar::expansion::two_product;
+use axiolid_reference::arithmetic::{
+    expansion_sign, expansion_sum, grow_expansion, scale_expansion,
+};
+use axiolid_reference::expansion::two_product;
 
 /// Extrude a triangulated 2D profile along `direction` by `depth`.
 ///

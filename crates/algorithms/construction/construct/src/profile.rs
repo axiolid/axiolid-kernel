@@ -7,7 +7,7 @@
 //! Triangulation of rings-with-holes is delegated to `earcut` (MIT/Apache-2.0,
 //! pure Rust). ADR 0015 records why: hole bridging is a solved problem and a
 //! hand-rolled version failed its own area gate on the two-hole case.
-//! `axiolid_scalar::triangulate_simple` is retained as the differential oracle for
+//! `axiolid_reference::triangulate_simple` is retained as the differential oracle for
 //! the hole-free case, so the adopted implementation is audited, not trusted.
 
 use axiolid_core::{Point2, Scalar, Tolerance};
@@ -37,7 +37,7 @@ pub fn profile_rings(
     match profile {
         Profile::Rectangle(r) => rectangle_rings(r, chord_error, tolerance),
         Profile::Circle(c) => circle_rings(c, chord_error),
-        // Reachable only since curve evaluation moved into `axiolid-scalar`:
+        // Reachable only since curve evaluation moved into `axiolid-reference`:
         // an ellipse has no closed-form segment count, so the old fixed-count
         // flattener could not express it at all.
         Profile::Ellipse(e) => ellipse_rings(e, chord_error),
@@ -173,7 +173,7 @@ fn ellipse_rings(e: &EllipseProfile, chord_error: Scalar) -> GeomResult<Rings> {
         semi_axis_x: e.semi_axis_x,
         semi_axis_y: e.semi_axis_y,
     });
-    let mut ring = axiolid_scalar::curve::flatten2(
+    let mut ring = axiolid_reference::curve::flatten2(
         &curve,
         Interval {
             start: 0.0,
@@ -207,7 +207,7 @@ fn flatten_circle(radius: Scalar, chord_error: Scalar) -> GeomResult<Vec<Point2>
         },
         radius,
     });
-    let mut ring = axiolid_scalar::curve::flatten2(
+    let mut ring = axiolid_reference::curve::flatten2(
         &curve,
         Interval {
             start: 0.0,
@@ -315,7 +315,7 @@ fn near2(a: Point2, b: Point2, linear: Scalar) -> bool {
 
 /// Sample one bounded segment, flattening curves under the chord budget.
 ///
-/// Delegates to `axiolid-scalar`'s curve evaluator (ADR 0012). This crate used
+/// Delegates to `axiolid-reference`'s curve evaluator (ADR 0012). This crate used
 /// to carry a private circle flattener with a closed-form segment count, and
 /// refused ellipses and B-splines outright. Both limits are gone: the scalar
 /// evaluator subdivides adaptively on measured sagitta, so every declared
@@ -330,7 +330,7 @@ fn segment_points(
     segment: &axiolid_profile::ProfileSegment,
     chord_error: Scalar,
 ) -> GeomResult<Vec<Point2>> {
-    axiolid_scalar::curve::flatten2(
+    axiolid_reference::curve::flatten2(
         &segment.curve,
         segment.domain,
         chord_error,
@@ -343,7 +343,7 @@ fn segment_points(
 ///
 /// Source contours carry whatever orientation the authoring tool wrote, so
 /// normalising here is cheaper than rejecting otherwise-valid geometry.
-use axiolid_scalar::signed_area2;
+use axiolid_reference::signed_area2;
 
 fn orient_rings(mut outer: Vec<Point2>, mut holes: Vec<Vec<Point2>>) -> Rings {
     if signed_area2(&outer) < 0.0 {

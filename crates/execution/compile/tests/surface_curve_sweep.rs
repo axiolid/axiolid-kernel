@@ -6,11 +6,11 @@
 //! exactly the wrong answer this family exists to avoid. Each test here
 //! therefore pins a quantity that a mis-oriented sweep cannot reproduce.
 
-use axiolid_boolmesh::BoolmeshBoolean;
 use axiolid_compile::ScalarCompiler;
 use axiolid_core::{Frame3, Point3, Scalar, Tolerance, Vec3};
 use axiolid_kernel::{ExecutionOptions, GeomError, GeometryCompiler, Operation};
 use axiolid_measure::volume_properties;
+use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
 use axiolid_model::{GeometryGraphBuilder, GeometryNode, SolidOperation, SurfaceRelation};
 use axiolid_profile::{Profile, RectangleProfile};
 

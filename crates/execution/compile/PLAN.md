@@ -3,7 +3,7 @@
 ## Done
 - Profile flattening: rectangle, circle, ellipse, hollow variants, contours,
   and `Derived` (2D placement) which every real IFC profile uses.
-- `earcut` triangulation with holes (ADR 0015); `axiolid-scalar` audits it.
+- `earcut` triangulation with holes (ADR 0015); `axiolid-reference` audits it.
 - Linear extrusion with caps and sides; edge-parity verified.
 - `ScalarCompiler`: iterative post-order walk, memoised, boolean dispatch.
 

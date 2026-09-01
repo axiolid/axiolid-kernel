@@ -42,7 +42,7 @@ their support surface under explicit budgets.**
 
 Concretely:
 
-- `axiolid-scalar` uses one crate-private `SplineAxis` validator for curve and
+- `axiolid-reference` uses one crate-private `SplineAxis` validator for curve and
   surface axes. Distinct-knot/multiplicity lengths, finite and strictly
   increasing knots, non-zero bounded multiplicities, exact expanded size,
   control dimensions, finite controls, and finite positive weights are checked

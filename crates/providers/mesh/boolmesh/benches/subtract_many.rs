@@ -1,6 +1,6 @@
 //! `subtract_many` throughput against the ADR 0014 sequential baseline.
 //!
-//! Run with: `cargo bench -p axiolid-boolmesh`
+//! Run with: `cargo bench -p axiolid-mesh-boolean-boolmesh`
 //!
 //! The question this answers is whether the batch override earns its
 //! complexity. ADR 0014 recorded the sequential loop at n=16: 6.95 ms and
@@ -11,10 +11,10 @@
 use std::hint::black_box;
 use std::time::Instant;
 
-use axiolid_boolmesh::BoolmeshBoolean;
 use axiolid_core::{BooleanOperator, Point3, Tolerance};
 use axiolid_kernel::{ExecutionOptions, MeshBoolean};
 use axiolid_mesh::TriMesh;
+use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
 
 /// Builds a subject plus its cutters for one benchmark case.
 type Layout = fn(usize) -> (TriMesh, Vec<TriMesh>);

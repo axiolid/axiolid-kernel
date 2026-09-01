@@ -5,12 +5,12 @@
 //! to sample, and these tests pin that the decision is driven by the chord
 //! budget and by the curve's own parameterisation.
 
-use axiolid_boolmesh::BoolmeshBoolean;
 use axiolid_compile::ScalarCompiler;
 use axiolid_core::{Frame3, Point3, Scalar, Tolerance, Vec3};
 use axiolid_curve::{Curve3, Line3};
 use axiolid_kernel::{ExecutionOptions, GeometryCompiler};
 use axiolid_measure::volume_properties;
+use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
 use axiolid_model::{
     CurveRelation, CurveSegment, GeometryGraphBuilder, GeometryNode, MasterRepresentation,
     SolidOperation, Transition, TrimSelector, TrimmingPreference,

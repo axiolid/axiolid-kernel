@@ -4,7 +4,7 @@
 
 use axiolid_core::Point2;
 use axiolid_kernel::{Certified, Precision, Sign};
-use axiolid_scalar::{orient2d, orient2d_filter};
+use axiolid_reference::{orient2d, orient2d_filter};
 
 fn p(x: f64, y: f64) -> Point2 {
     Point2::new(x, y)

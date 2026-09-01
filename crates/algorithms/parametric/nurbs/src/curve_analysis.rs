@@ -3,7 +3,7 @@
 use axiolid_core::{Point2, Point3, Scalar, Tolerance, Vec2, Vec3};
 use axiolid_curve::{Curve2, Curve3};
 use axiolid_kernel::{GeomError, GeomResult};
-use axiolid_scalar::curve::{jet2, jet3};
+use axiolid_reference::curve::{jet2, jet3};
 
 /// Parameter-invariant differential properties of a planar curve.
 #[derive(Debug, Clone, Copy, PartialEq)]

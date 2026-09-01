@@ -10,9 +10,9 @@
 
 mod support;
 
-use axiolid_boolmesh::BoolmeshBoolean;
 use axiolid_core::Tolerance;
 use axiolid_kernel::{ExecutionOptions, MeshBoolean};
+use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
 use support::{boxx, volume};
 
 /// Wall minus three entangled cutters must stay a valid solid and lose exactly

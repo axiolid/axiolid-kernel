@@ -15,7 +15,7 @@ That is useful for incomplete imported data but cannot itself be an exact result
 a line, circle, or NURBS support alone does not identify the bounded edge it
 contributes to a face.
 
-`axiolid-generate` currently returns `TriMesh`. It must retain that working,
+`axiolid-construct` currently returns `TriMesh`. It must retain that working,
 explicitly discrete path while gaining a future analytic construction path without
 silently sampling, inverting, or triangulating an exact request.
 
@@ -121,7 +121,7 @@ intervals, topology adjacency, or the outcome of an exact request.
 
 ### Explicit output request
 
-`axiolid-generate` exposes a capability-explicit result boundary:
+`axiolid-construct` exposes a capability-explicit result boundary:
 
 ```rust
 pub enum GenerationRequest {
@@ -220,7 +220,7 @@ with a mesh.
 
 ## Consequences
 
-- `axiolid-generate` has a stable output contract for future exact extrusion,
+- `axiolid-construct` has a stable output contract for future exact extrusion,
   revolution, sweep, loft, profile, centre-line, and half-space construction.
 - `axiolid-compile` remains L3 DAG/cache orchestration. Its cache can later store
   `ExactBRep` and perform a separate tolerance-bearing tessellation request;

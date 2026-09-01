@@ -1,5 +1,5 @@
 use axiolid_core::Point2;
-use axiolid_scalar::{minimum_area_rectangle, strict_convex_hull};
+use axiolid_reference::{minimum_area_rectangle, strict_convex_hull};
 
 fn p(x: f64, y: f64) -> Point2 {
     Point2::new(x, y)

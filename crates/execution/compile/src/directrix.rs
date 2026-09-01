@@ -147,7 +147,7 @@ fn sample_curve(
     range: Option<(Scalar, Scalar)>,
     options: &ExecutionOptions,
 ) -> GeomResult<Vec<Point3>> {
-    let natural = axiolid_scalar::curve::domain3(curve);
+    let natural = axiolid_reference::curve::domain3(curve);
     let domain = match range {
         None => natural,
         Some((start, end)) => {
@@ -181,7 +181,7 @@ fn sample_curve(
             }
         }
     };
-    axiolid_scalar::curve::flatten3(
+    axiolid_reference::curve::flatten3(
         curve,
         domain,
         options.tolerance().linear(),

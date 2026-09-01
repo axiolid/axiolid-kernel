@@ -1,7 +1,7 @@
 mod support;
 
 use axiolid_nurbs::{insert_surface_knot_u, insert_surface_knot_v};
-use axiolid_scalar::surface::bspline_jet;
+use axiolid_reference::surface::bspline_jet;
 use support::quarter_cylinder;
 
 #[test]

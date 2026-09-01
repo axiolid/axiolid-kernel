@@ -161,7 +161,7 @@ pub fn evaluate2(curve: &Curve2, t: Scalar) -> GeomResult<Point2> {
         // `Curve*` is #[non_exhaustive]. An unknown family is refused by name
         // rather than approximated by whichever arm happens to be nearest.
         _ => Err(GeomError::Unsupported {
-            backend: axiolid_kernel::BackendId::new("axiolid-scalar"),
+            backend: axiolid_kernel::BackendId::new("axiolid-reference"),
             operation: axiolid_kernel::Operation::CurveEvaluation,
         }),
     }?;
@@ -180,7 +180,7 @@ pub fn derivative2(curve: &Curve2, t: Scalar) -> GeomResult<Vec2> {
         // `Curve*` is #[non_exhaustive]. An unknown family is refused by name
         // rather than approximated by whichever arm happens to be nearest.
         _ => Err(GeomError::Unsupported {
-            backend: axiolid_kernel::BackendId::new("axiolid-scalar"),
+            backend: axiolid_kernel::BackendId::new("axiolid-reference"),
             operation: axiolid_kernel::Operation::CurveEvaluation,
         }),
     }?;
@@ -198,7 +198,7 @@ pub fn second_derivative2(curve: &Curve2, t: Scalar) -> GeomResult<Vec2> {
             de_boor_second_derivative(b, t, |p| [p.x, p.y], |c| Vec2::new(c[0], c[1]))
         }
         _ => Err(GeomError::Unsupported {
-            backend: axiolid_kernel::BackendId::new("axiolid-scalar"),
+            backend: axiolid_kernel::BackendId::new("axiolid-reference"),
             operation: axiolid_kernel::Operation::CurveEvaluation,
         }),
     }?;
@@ -237,7 +237,7 @@ pub fn evaluate3(curve: &Curve3, t: Scalar) -> GeomResult<Point3> {
         // `Curve*` is #[non_exhaustive]. An unknown family is refused by name
         // rather than approximated by whichever arm happens to be nearest.
         _ => Err(GeomError::Unsupported {
-            backend: axiolid_kernel::BackendId::new("axiolid-scalar"),
+            backend: axiolid_kernel::BackendId::new("axiolid-reference"),
             operation: axiolid_kernel::Operation::CurveEvaluation,
         }),
     }?;
@@ -258,7 +258,7 @@ pub fn derivative3(curve: &Curve3, t: Scalar) -> GeomResult<Vec3> {
         // `Curve*` is #[non_exhaustive]. An unknown family is refused by name
         // rather than approximated by whichever arm happens to be nearest.
         _ => Err(GeomError::Unsupported {
-            backend: axiolid_kernel::BackendId::new("axiolid-scalar"),
+            backend: axiolid_kernel::BackendId::new("axiolid-reference"),
             operation: axiolid_kernel::Operation::CurveEvaluation,
         }),
     }?;
@@ -276,7 +276,7 @@ pub fn second_derivative3(curve: &Curve3, t: Scalar) -> GeomResult<Vec3> {
             de_boor_second_derivative(b, t, |p| [p.x, p.y, p.z], |c| Vec3::new(c[0], c[1], c[2]))
         }
         _ => Err(GeomError::Unsupported {
-            backend: axiolid_kernel::BackendId::new("axiolid-scalar"),
+            backend: axiolid_kernel::BackendId::new("axiolid-reference"),
             operation: axiolid_kernel::Operation::CurveEvaluation,
         }),
     }?;

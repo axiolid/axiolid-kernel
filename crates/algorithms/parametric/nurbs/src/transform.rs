@@ -3,7 +3,7 @@
 use axiolid_core::{Point2, Point3, Scalar};
 use axiolid_curve::{BSplineCurve, BSplineCurve2, BSplineCurve3};
 use axiolid_kernel::{GeomError, GeomResult};
-use axiolid_scalar::curve::{bspline_jet2, bspline_jet3};
+use axiolid_reference::curve::{bspline_jet2, bspline_jet3};
 
 /// Reverse a planar B-spline curve without changing its image.
 pub fn reverse2(curve: &BSplineCurve2) -> GeomResult<BSplineCurve2> {

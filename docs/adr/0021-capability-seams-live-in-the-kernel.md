@@ -11,7 +11,7 @@ ADR 0021 was correct to retire the empty `axiolid-sweep` trait crate. Its
 claim that sweep construction belonged in `axiolid-compile` was not measured
 and was wrong: the construction modules form a model-free, dispatch-free L2
 cluster. [ADR 0023](./0023-solid-generation-is-an-l2-crate.md) supersedes this
-decision and extracts that cluster into `axiolid-generate`.
+decision and extracts that cluster into `axiolid-construct`.
 
 ## Context
 
@@ -51,7 +51,7 @@ successfully:
 | | `MeshBoolean` | `Sweeper` |
 | --- | --- | --- |
 | Contract lives in | `axiolid-kernel/src/boolean.rs` | its own crate |
-| Implementors | `axiolid-boolmesh`, `axiolid-scalar` | none |
+| Implementors | `axiolid-mesh-boolean-boolmesh`, `axiolid-reference` | none |
 | Conformance suite | `axiolid-kernel/src/conformance.rs` | none |
 | Operand admissibility | `axiolid-kernel/src/solid.rs` | none |
 | Referenced by | compiler, facade, providers | nothing |

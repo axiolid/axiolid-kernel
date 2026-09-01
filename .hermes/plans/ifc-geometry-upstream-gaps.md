@@ -19,7 +19,7 @@ The first slice is explicitly a section of the compiled mesh. It preserves the c
 
 - Pure Rust, format/vendor neutral, no source-format names in `crates/`.
 - `axiolid-kernel` owns an open executable operation trait; no implementation.
-- `axiolid-scalar` lands the portable correctness oracle before optimized providers.
+- `axiolid-reference` lands the portable correctness oracle before optimized providers.
 - Topology decisions use certified exact orientation against the represented affine plane, never a constant epsilon.
 - Tolerance is only for validating the requested frame and output quality contracts.
 - Input must be a finite, consistently wound, closed two-manifold triangle solid.

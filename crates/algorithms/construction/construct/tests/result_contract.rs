@@ -1,5 +1,5 @@
+use axiolid_construct::{GenerationOutput, GenerationRequest, TessellationRequest};
 use axiolid_core::Tolerance;
-use axiolid_generate::{GenerationOutput, GenerationRequest, TessellationRequest};
 
 #[test]
 fn exact_and_tessellation_are_distinct_explicit_contracts() {

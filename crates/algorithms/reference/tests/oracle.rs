@@ -10,7 +10,7 @@
 use axiolid_core::{BooleanOperator, Point3, Tolerance};
 use axiolid_kernel::{ExecutionOptions, GeomError, MeshBoolean};
 use axiolid_mesh::TriMesh;
-use axiolid_scalar::ScalarBoolean;
+use axiolid_reference::ScalarBoolean;
 
 fn options() -> ExecutionOptions {
     ExecutionOptions::new(Tolerance::METRE)

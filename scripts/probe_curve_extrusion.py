@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 SUITES = [
-    ["cargo", "test", "-p", "axiolid-scalar", "--all-features", "--test", "curve"],
+    ["cargo", "test", "-p", "axiolid-reference", "--all-features", "--test", "curve"],
     ["cargo", "test", "-p", "axiolid-compile", "--all-features", "--test", "extrusion_volume"],
     ["cargo", "test", "-p", "axiolid-compile", "--all-features", "--test", "extrusion"],
 ]

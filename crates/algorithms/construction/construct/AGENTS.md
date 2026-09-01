@@ -1,4 +1,4 @@
-# `axiolid-generate`
+# `axiolid-construct`
 
 Scalar geometry-construction algorithms over neutral representations. This is **L2**:
 it accepts exact profiles, curves, primitives, certified NURBS traces, and explicit

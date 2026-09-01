@@ -6,7 +6,7 @@
 
 use axiolid_core::Point3;
 use axiolid_kernel::Sign;
-use axiolid_scalar::{orient3d, orient3d_filter, two_sum};
+use axiolid_reference::{orient3d, orient3d_filter, two_sum};
 
 fn p(x: i64, y: i64, z: i64) -> Point3 {
     Point3::new(x as f64, y as f64, z as f64)

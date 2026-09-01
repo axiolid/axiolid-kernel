@@ -25,7 +25,7 @@ fn segments(radius: Scalar, tolerance: Scalar) -> usize {
 
 /// Tessellate one CSG primitive into a closed, outward-wound solid.
 ///
-/// Outward winding is not decoration: `axiolid-boolmesh` and the clash
+/// Outward winding is not decoration: `axiolid-mesh-boolean-boolmesh` and the clash
 /// containment test both read signed volume, and an inverted primitive
 /// silently produces negative volume and wrong verdicts.
 pub fn tessellate_primitive(primitive: &Primitive, tolerance: Tolerance) -> GeomResult<TriMesh> {

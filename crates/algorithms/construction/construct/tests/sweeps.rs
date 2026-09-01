@@ -5,9 +5,9 @@
 //! swept disk on a straight path is a cylinder, and a sectioned spine with
 //! equal sections is a plain extrusion.
 
+use axiolid_construct::profile::profile_rings;
+use axiolid_construct::sweep;
 use axiolid_core::{Point3, Scalar, Tolerance, Vec3};
-use axiolid_generate::profile::profile_rings;
-use axiolid_generate::sweep;
 use axiolid_measure::volume_properties;
 use axiolid_mesh::TriMesh;
 use axiolid_profile::{Profile, RectangleProfile};

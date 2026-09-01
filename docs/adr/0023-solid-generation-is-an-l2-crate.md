@@ -49,15 +49,15 @@ the only way to reach `extrude`.
 
 ## Decision
 
-Extract the seven modules into a new crate, **`axiolid-generate`**, at **L2**.
+Extract the seven modules into a new crate, **`axiolid-construct`**, at **L2**.
 
 `axiolid-compile` keeps exactly what its name implies: `compiler` (DAG walk,
 caching, provider identity), `brep` (B-rep face tessellation) and `directrix`
-(model-driven path extraction). It depends on `axiolid-generate` like any
+(model-driven path extraction). It depends on `axiolid-construct` like any
 other consumer.
 
 L2 is the correct tier by the workspace's own rule — algorithms over L1
-representations. `axiolid-generate` sits beside `axiolid-scalar`,
+representations. `axiolid-construct` sits beside `axiolid-reference`,
 `axiolid-tessellate` and `axiolid-measure`: it consumes representation types
 and produces meshes, and it solves rather than merely describes. It is not L1
 (it is not a value vocabulary) and not L3 (it owns no execution context,
@@ -75,7 +75,7 @@ compiler is an implementation detail; generation is a capability.
 ### On the retired `Sweeper` trait
 
 ADR 0021's conclusion stands, for a better reason than it gave. A trait is
-warranted when there is something to swap. `axiolid-generate` is a concrete
+warranted when there is something to swap. `axiolid-construct` is a concrete
 scalar implementation with no competing implementor, so it exports plain
 functions. When a second implementation appears — a GPU tessellator, or an
 exact B-rep sweep under [ADR 0020](./0020-exact-brep-kernel-model.md) — the
@@ -101,9 +101,9 @@ local change.
   is the point.
 - Seven test files moved with their modules. Two tests that cross the
   generation/boolean seam stayed at L3 in `axiolid-compile`, because
-  `axiolid-boolmesh` is L3 and an L2 crate must not depend on it. The layering
+  `axiolid-mesh-boolean-boolmesh` is L3 and an L2 crate must not depend on it. The layering
   test caught this: the first attempt moved them wholesale and failed with
-  `crates/algorithms/construction/construct (tier 2) depends on axiolid-boolmesh (tier 3)`.
+  `crates/algorithms/construction/construct (tier 2) depends on axiolid-mesh-boolean-boolmesh (tier 3)`.
 - Test count is unchanged at 570, confirming the split moved work rather than
   dropping it.
 
@@ -117,7 +117,7 @@ without the graph, and it was the unexamined position ADR 0021 defended.
 crate-crossing dependency where there is currently none.
 
 **Put it at L3 beside the compiler.** Rejected: L3 is for execution contexts
-and provider implementations. `axiolid-generate` selects no backend and
+and provider implementations. `axiolid-construct` selects no backend and
 implements no operation trait.
 
 **Reinstate a `Sweeper` trait in `axiolid-kernel` now.** Rejected: one

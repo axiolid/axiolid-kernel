@@ -23,7 +23,7 @@ Add `axiolid-nurbs` as an L2 algorithm crate and expose it through the optional
 Ownership is divided as follows:
 
 - `axiolid-curve` and `axiolid-surface` own format-neutral B-spline values.
-- `axiolid-scalar` owns the portable f64 evaluation oracle, including analytic
+- `axiolid-reference` owns the portable f64 evaluation oracle, including analytic
   first- and second-order homogeneous derivatives.
 - `axiolid-nurbs` owns reusable differential analysis, bounded inverse queries,
   verified curve seam/wrap semantics, and exact shape-preserving transformations.
@@ -64,7 +64,7 @@ General clients can use NURBS algorithms without an IFC reader or tessellator.
 The facade's small default remains unchanged; NURBS is independently opt-in and
 part of the broader `parametric` bundle.
 
-The new crate depends on `axiolid-scalar` as its portable oracle. It remains an
+The new crate depends on `axiolid-reference` as its portable oracle. It remains an
 L2-to-L2 dependency permitted by the executable layering policy and avoids a
 second evaluator.
 

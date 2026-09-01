@@ -1,7 +1,7 @@
 use axiolid_core::Point2;
 use axiolid_curve::{BSplineCurve, Curve2, KnotSpec};
 use axiolid_nurbs::{bezier_segments2, split2};
-use axiolid_scalar::curve::evaluate2;
+use axiolid_reference::curve::evaluate2;
 
 fn circle() -> BSplineCurve<Point2> {
     let w = 0.5_f64.sqrt();

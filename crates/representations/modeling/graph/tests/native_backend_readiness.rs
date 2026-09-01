@@ -31,7 +31,10 @@ const DATA_PLANE_CRATES: &[(&str, &str)] = &[
     ("axiolid-curve", "crates/representations/analytic/curve"),
     ("axiolid-surface", "crates/representations/analytic/surface"),
     ("axiolid-profile", "crates/representations/region/profile"),
-    ("axiolid-primitive", "crates/representations/analytic/primitive"),
+    (
+        "axiolid-primitive",
+        "crates/representations/analytic/primitive",
+    ),
     ("axiolid-topology", "crates/representations/topology"),
 ];
 

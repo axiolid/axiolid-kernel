@@ -1,4 +1,4 @@
-# axiolid-boolmesh instructions
+# axiolid-mesh-boolean-boolmesh instructions
 
 Purpose: adapt the adopted `boolmesh` crate to `axiolid_kernel::MeshBoolean` (ADR 0014).
 This crate owns conversion and contract enforcement; the algorithm is upstream's.

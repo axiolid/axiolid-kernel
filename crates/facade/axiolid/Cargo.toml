@@ -43,7 +43,7 @@ kernel = ["dep:axiolid-kernel"]
 mesh-boolean = ["kernel", "mesh", "axiolid-kernel/mesh-boolean"]
 mesh-section = ["kernel", "mesh", "axiolid-kernel/mesh-section"]
 graph-compile = ["kernel", "model", "mesh", "axiolid-kernel/model"]
-generate = ["mesh", "profiles", "curves", "primitives", "kernel", "brep", "dep:axiolid-generate"]
+generate = ["mesh", "profiles", "curves", "primitives", "kernel", "brep", "dep:axiolid-construct"]
 
 # Execution contexts and operation adapters. CPU stays portable by default;
 # optimized paths are selected at runtime, never by building the whole crate for
@@ -88,7 +88,7 @@ axiolid-overlay = { workspace = true, optional = true }
 axiolid-field = { workspace = true, optional = true }
 axiolid-heal = { workspace = true, optional = true }
 axiolid-kernel = { workspace = true, optional = true }
-axiolid-generate = { workspace = true, optional = true }
+axiolid-construct = { workspace = true, optional = true }
 axiolid-backend-cpu = { workspace = true, optional = true }
 axiolid-backend-gpu = { workspace = true, optional = true }
 
@@ -99,4 +99,4 @@ role = "facade"
 domain = "public"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-backend-cpu", "axiolid-backend-gpu", "axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-field", "axiolid-generate", "axiolid-heal", "axiolid-kernel", "axiolid-measure", "axiolid-mesh", "axiolid-model", "axiolid-nurbs", "axiolid-overlay", "axiolid-primitive", "axiolid-profile", "axiolid-spatial", "axiolid-surface", "axiolid-tessellate", "axiolid-topology"]
+allowed-internal-dependencies = ["axiolid-backend-cpu", "axiolid-backend-gpu", "axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-field", "axiolid-construct", "axiolid-heal", "axiolid-kernel", "axiolid-measure", "axiolid-mesh", "axiolid-model", "axiolid-nurbs", "axiolid-overlay", "axiolid-primitive", "axiolid-profile", "axiolid-spatial", "axiolid-surface", "axiolid-tessellate", "axiolid-topology"]

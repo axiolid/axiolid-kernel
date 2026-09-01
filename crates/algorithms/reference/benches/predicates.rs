@@ -1,6 +1,6 @@
 //! Predicate throughput and escalation rate across degeneracy tiers.
 //!
-//! Run with: `cargo bench -p axiolid-scalar`
+//! Run with: `cargo bench -p axiolid-reference`
 //!
 //! No criterion dependency: this reports wall-clock throughput and the
 //! escalation rate side by side, which is the pairing that makes the numbers
@@ -10,8 +10,8 @@
 use std::hint::black_box;
 use std::time::Instant;
 
-use axiolid_scalar::scene::{orient2_scene, orient3_scene, DegeneracyRate};
-use axiolid_scalar::{orient2d, orient2d_filter, orient3d, orient3d_filter, StaticFilter};
+use axiolid_reference::scene::{orient2_scene, orient3_scene, DegeneracyRate};
+use axiolid_reference::{orient2d, orient2d_filter, orient3d, orient3d_filter, StaticFilter};
 
 const SAMPLES: usize = 200_000;
 

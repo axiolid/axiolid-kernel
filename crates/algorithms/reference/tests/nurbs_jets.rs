@@ -1,7 +1,7 @@
 use axiolid_core::{Point2, Point3, Vec2, Vec3};
 use axiolid_curve::{BSplineCurve, Curve2, Curve3, KnotSpec};
-use axiolid_scalar::curve::{jet2, jet3};
-use axiolid_scalar::surface::jet;
+use axiolid_reference::curve::{jet2, jet3};
+use axiolid_reference::surface::jet;
 use axiolid_surface::{BSplineSurface, Surface};
 
 const EPS: f64 = 1.0e-12;

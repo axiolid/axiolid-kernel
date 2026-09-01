@@ -1,5 +1,5 @@
 [package]
-name = "axiolid-scalar"
+name = "axiolid-reference"
 description = "Portable scalar reference implementation and certified predicates"
 version.workspace = true
 edition.workspace = true

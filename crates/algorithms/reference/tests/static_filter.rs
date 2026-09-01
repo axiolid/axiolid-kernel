@@ -5,7 +5,7 @@
 //! (that is the price of a looser bound); it is never allowed to be wrong.
 
 use axiolid_core::{Point2, Point3};
-use axiolid_scalar::{orient2d, orient3d, StaticFilter};
+use axiolid_reference::{orient2d, orient3d, StaticFilter};
 
 #[test]
 fn an_invalid_range_is_refused_rather_than_silently_accepted() {

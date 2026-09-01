@@ -1,16 +1,16 @@
 //! Generated solids must be accepted by a boolean provider, unmodified.
 //!
-//! `axiolid-generate` sits at L2 and cannot depend on a provider, so this
+//! `axiolid-construct` sits at L2 and cannot depend on a provider, so this
 //! seam is verified here, at L3, where both sides are already in scope. The
 //! claim is not "extrusion looks right" but "extrusion output satisfies the
 //! preconditions a real boolean implementation enforces".
 
-use axiolid_boolmesh::BoolmeshBoolean;
+use axiolid_construct::extrude::extrude_profile;
+use axiolid_construct::profile::profile_rings;
 use axiolid_core::{BooleanOperator, Scalar, Tolerance, Vec3};
-use axiolid_generate::extrude::extrude_profile;
-use axiolid_generate::profile::profile_rings;
 use axiolid_kernel::{ExecutionOptions, MeshBoolean};
 use axiolid_mesh::TriMesh;
+use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
 use axiolid_profile::{CircleProfile, Profile, RectangleProfile};
 
 /// Volume measured through the audited oracle.

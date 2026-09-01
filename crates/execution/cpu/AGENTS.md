@@ -14,7 +14,7 @@ together. Add no empty placeholder files.
 
 This crate is an execution **context** (ISA detection, worker pool, policy). It
 is explicitly **not** the correctness oracle: per `docs/adr/0012` the scalar
-reference implementation is owned by `axiolid-scalar`, and the scalar
+reference implementation is owned by `axiolid-reference`, and the scalar
 implementation of an operation lands before any optimized implementation of it.
 
 Portable path is the differential oracle's target, not its owner. SIMD requires runtime detection. Optional Rayon uses a

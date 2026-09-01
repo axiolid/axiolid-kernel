@@ -7,7 +7,7 @@
 //!
 //! Run with:
 //! ```text
-//! cargo run --release -p axiolid-boolmesh --bin scratch_probe --all-features
+//! cargo run --release -p axiolid-mesh-boolean-boolmesh --bin scratch_probe --all-features
 //! ```
 
 use std::alloc::{GlobalAlloc, Layout, System};
@@ -17,7 +17,7 @@ use axiolid_core::{BooleanOperator, Point3, Tolerance};
 use axiolid_kernel::{ExecutionOptions, MeshBoolean};
 use axiolid_mesh::TriMesh;
 
-use axiolid_boolmesh::BoolmeshBoolean;
+use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
 
 static LIVE: AtomicUsize = AtomicUsize::new(0);
 static PEAK: AtomicUsize = AtomicUsize::new(0);

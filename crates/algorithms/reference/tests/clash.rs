@@ -8,7 +8,7 @@
 
 use axiolid_core::{Point3, Tolerance};
 use axiolid_mesh::TriMesh;
-use axiolid_scalar::clash::{interference, point_inside, Interference};
+use axiolid_reference::clash::{interference, point_inside, Interference};
 
 /// Axis-aligned box as a closed, outward-oriented triangle mesh.
 fn box_mesh(min: Point3, max: Point3) -> TriMesh {

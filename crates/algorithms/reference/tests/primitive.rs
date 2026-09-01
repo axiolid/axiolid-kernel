@@ -9,7 +9,7 @@ use axiolid_core::{Scalar, Tolerance};
 use axiolid_measure::volume_properties;
 use axiolid_mesh::TriMesh;
 use axiolid_primitive::Primitive;
-use axiolid_scalar::primitive::tessellate_primitive;
+use axiolid_reference::primitive::tessellate_primitive;
 
 fn volume(mesh: &TriMesh, tol: Tolerance) -> Scalar {
     volume_properties(mesh, tol)

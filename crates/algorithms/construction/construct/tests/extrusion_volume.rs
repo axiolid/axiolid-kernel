@@ -15,19 +15,19 @@
 //! wall all break the identity.
 //!
 //! These tests also cover the profile families that only became reachable once
-//! curve evaluation moved into `axiolid-scalar`: ellipse and B-spline contours
+//! curve evaluation moved into `axiolid-reference`: ellipse and B-spline contours
 //! were a hard `Unsupported` before.
 
+use axiolid_construct::extrude::extrude_profile;
+use axiolid_construct::profile::profile_rings;
 use axiolid_core::{Frame2, Interval, Point2, Scalar, Tolerance, Vec2, Vec3};
 use axiolid_curve::{BSplineCurve2, Curve2, Ellipse2, KnotSpec, Polyline2};
-use axiolid_generate::extrude::extrude_profile;
-use axiolid_generate::profile::profile_rings;
 use axiolid_mesh::TriMesh;
 use axiolid_profile::{
     CircleProfile, Contour, ContourProfile, EllipseProfile, Profile, ProfileSegment,
     RectangleProfile,
 };
-use axiolid_scalar::signed_area2;
+use axiolid_reference::signed_area2;
 
 const TAU: Scalar = core::f64::consts::TAU;
 
@@ -65,7 +65,7 @@ fn tolerance_for(chord: Scalar) -> Tolerance {
 ///
 /// `signed_area2` returns *twice* the signed area (the raw shoelace sum), so
 /// the halving is not a fudge factor -- it is the definition.
-fn ring_area(rings: &axiolid_generate::profile::Rings) -> Scalar {
+fn ring_area(rings: &axiolid_construct::profile::Rings) -> Scalar {
     let mut a = signed_area2(&rings.outer).abs();
     for hole in &rings.holes {
         a -= signed_area2(hole).abs();
@@ -190,7 +190,7 @@ fn an_annulus_loses_exactly_its_hole() {
 
 #[test]
 fn an_ellipse_profile_now_extrudes_at_all() {
-    // Before curve evaluation moved into axiolid-scalar this was a hard
+    // Before curve evaluation moved into axiolid-reference this was a hard
     // `Unsupported`, so this test is the capability claim.
     let p = Profile::Ellipse(EllipseProfile {
         semi_axis_x: 3.0,

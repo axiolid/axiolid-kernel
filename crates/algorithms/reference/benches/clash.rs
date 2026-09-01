@@ -1,13 +1,13 @@
 //! Clash scaling: is `interference` usable at model size?
 //!
-//! Run: `cargo bench -p axiolid-scalar --bench clash`
+//! Run: `cargo bench -p axiolid-reference --bench clash`
 
 use std::hint::black_box;
 use std::time::Instant;
 
 use axiolid_core::{Point3, Tolerance};
 use axiolid_mesh::TriMesh;
-use axiolid_scalar::clash::interference;
+use axiolid_reference::clash::interference;
 
 /// A UV sphere: the cheapest way to get a closed mesh with a tunable
 /// triangle count, which is what the scaling question needs.

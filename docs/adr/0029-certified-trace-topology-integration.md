@@ -21,7 +21,7 @@ pcurves, and native parameter intervals. It must not infer pcurves by inversion.
 
 ## Decision
 
-`axiolid-generate` owns the L2 topology integration function
+`axiolid-construct` owns the L2 topology integration function
 `split_surface_pair_certified`.
 
 The first supported arrangement requires exactly one complete affine trace:

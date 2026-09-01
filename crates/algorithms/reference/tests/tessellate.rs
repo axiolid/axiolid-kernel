@@ -6,8 +6,8 @@
 //! never claims success while the budget is exhausted.
 
 use axiolid_core::{Point3, Scalar, Tolerance};
-use axiolid_scalar::surface::Patch;
-use axiolid_scalar::tessellate::{tessellate_patch, TessellationBudget};
+use axiolid_reference::surface::Patch;
+use axiolid_reference::tessellate::{tessellate_patch, TessellationBudget};
 use axiolid_surface::{Cylinder, Plane, Sphere, Surface, Torus};
 use core::f64::consts::{PI, TAU};
 

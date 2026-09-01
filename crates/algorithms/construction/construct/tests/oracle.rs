@@ -1,14 +1,14 @@
 //! Differential gate: the adopted triangulator is audited, not trusted.
 //!
 //! ADR 0012 says the scalar reference exists to validate other implementations.
-//! `axiolid_scalar::triangulate_simple` is certified (its orientation decisions go
+//! `axiolid_reference::triangulate_simple` is certified (its orientation decisions go
 //! through exact predicates) but has no hole support. That is exactly enough to
 //! audit earcut on the hole-free case, which is where a silent regression in an
 //! upstream dependency would otherwise go unnoticed.
 
+use axiolid_construct::profile::{triangulate, Rings};
 use axiolid_core::Point2;
-use axiolid_generate::profile::{triangulate, Rings};
-use axiolid_scalar::{signed_area2, triangulate_simple};
+use axiolid_reference::{signed_area2, triangulate_simple};
 
 fn area_of(points: &[Point2], tris: &[[u32; 3]]) -> f64 {
     tris.iter()

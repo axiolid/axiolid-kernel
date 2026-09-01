@@ -4,7 +4,7 @@
 //!
 //! ADR 0012 requires a scalar reference to land *before* an optimized provider,
 //! so conformance has something to be judged against. Booleans skipped that
-//! step: `axiolid-boolmesh` arrived first and was, for a while, the only
+//! step: `axiolid-mesh-boolean-boolmesh` arrived first and was, for a while, the only
 //! definition of a correct result. A suite that only ever runs one
 //! implementation cannot tell "correct" from "self-consistent".
 //!

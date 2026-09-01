@@ -22,7 +22,7 @@
 //! It checks *contract* obligations: operand algebra, admissibility, evidence,
 //! empty-result handling, and determinism. It does not check that geometry is
 //! numerically correct -- that is what differential testing against
-//! `axiolid-scalar`'s oracle is for. A provider passing this suite is
+//! `axiolid-reference`'s oracle is for. A provider passing this suite is
 //! well-behaved, not necessarily accurate.
 //!
 //! # Skips are not passes

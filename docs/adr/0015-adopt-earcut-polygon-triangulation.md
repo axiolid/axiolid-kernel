@@ -12,7 +12,7 @@ holes: `IfcArbitraryProfileDefWithVoids`, hollow rectangular and circular
 sections, and every wall whose section is a ring.
 
 A hand-rolled ear clipper was written first, driven by the certified `orient2d`
-from `axiolid-scalar`. It passed on simple polygons, reflex vertices, a single
+from `axiolid-reference`. It passed on simple polygons, reflex vertices, a single
 hole, and correctly refused degenerate and mis-oriented rings. It **failed** the
 two-hole case: after splicing a second bridge the ring contains duplicated
 vertices at both the array start and interior, and the cyclic ear walk stalls
@@ -25,9 +25,9 @@ absorbed the edge cases.
 ## Decision
 
 Adopt `earcut` (MIT OR Apache-2.0) for polygon triangulation, behind
-`axiolid-compile`, which is an L3 adapter crate exactly like `axiolid-boolmesh`.
+`axiolid-compile`, which is an L3 adapter crate exactly like `axiolid-mesh-boolean-boolmesh`.
 
-`axiolid-scalar` keeps its certified `triangulate_simple` for the hole-free case.
+`axiolid-reference` keeps its certified `triangulate_simple` for the hole-free case.
 It is **not** dead code: it is the differential oracle that audits earcut on
 every hole-free polygon, so the adopted implementation is verified rather than
 trusted.
@@ -66,7 +66,7 @@ gates.
 
 **Follow-ups / risks to watch**
 
-- Extend the differential oracle to holes if `axiolid-scalar` ever grows a working
+- Extend the differential oracle to holes if `axiolid-reference` ever grows a working
   hole path, so the audit is total rather than partial.
 - Corner radii on rectangle profiles are not yet approximated; they currently
   produce sharp corners. Tracked in `axiolid-compile/PLAN.md`.

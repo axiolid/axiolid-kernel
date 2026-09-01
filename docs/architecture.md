@@ -38,10 +38,10 @@ The graph models neutral geometry intent. It does not become a source-format AST
 
 `axiolid-kernel` owns backend identity, policy, errors, and narrow operation contracts. Concrete implementations live outside it:
 
-- `axiolid-scalar` is readable, portable reference work used as a correctness oracle.
+- `axiolid-reference` is readable, portable reference work used as a correctness oracle.
 - `axiolid-backend-cpu` owns execution context and opt-in scheduling/dispatch support.
 - `axiolid-backend-gpu` is an API-neutral adapter seam.
-- `axiolid-boolmesh` is a deliberately isolated mesh Boolean provider.
+- `axiolid-mesh-boolean-boolmesh` is a deliberately isolated mesh Boolean provider.
 
 This division prevents an application from accidentally pulling native or GPU dependencies into its format boundary and makes the implementation behind an operation observable.
 

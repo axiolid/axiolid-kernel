@@ -5,9 +5,9 @@
 
 mod support;
 
-use axiolid_boolmesh::BoolmeshBoolean;
 use axiolid_core::{BooleanOperator, Tolerance};
 use axiolid_kernel::{ExecutionOptions, MeshBooleanRegistry};
+use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
 use support::{boxx, volume};
 
 fn registry() -> MeshBooleanRegistry {

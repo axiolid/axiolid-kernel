@@ -7,8 +7,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 SUITES = [
-    ["cargo", "test", "-p", "axiolid-scalar", "--all-features", "--test", "tessellate"],
-    ["cargo", "test", "-p", "axiolid-scalar", "--all-features", "--test", "clash"],
+    ["cargo", "test", "-p", "axiolid-reference", "--all-features", "--test", "tessellate"],
+    ["cargo", "test", "-p", "axiolid-reference", "--all-features", "--test", "clash"],
 ]
 
 PROBES = [

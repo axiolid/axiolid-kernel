@@ -4,9 +4,9 @@
 //! normal by a depth derived from the boundary's own extent. Its volume is
 //! therefore area x depth, a constant this crate does not get to choose.
 
+use axiolid_construct::half_space::bounded_half_space;
+use axiolid_construct::profile::Rings;
 use axiolid_core::{Plane3, Point2, Point3, Scalar, Tolerance, Vec3};
-use axiolid_generate::half_space::bounded_half_space;
-use axiolid_generate::profile::Rings;
 use axiolid_measure::volume_properties;
 use axiolid_mesh::TriMesh;
 use axiolid_primitive::ClipMargin;

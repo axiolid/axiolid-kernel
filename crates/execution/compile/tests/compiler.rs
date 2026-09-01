@@ -3,12 +3,12 @@
 //! The shape under test is the one `ifc-geometry` actually emits: a Profile
 //! feeding an Extrusion, wrapped in Instance placements, combined by Boolean.
 
-use axiolid_boolmesh::BoolmeshBoolean;
 use axiolid_compile::ScalarCompiler;
 use axiolid_core::{BooleanOperator, Plane3, Point3, Tolerance, Transform3, Vec3};
 use axiolid_curve::{Curve3, Polyline3};
 use axiolid_kernel::{ExecutionOptions, GeomError, GeometryCompiler, Operation};
 use axiolid_mesh::{PolygonFace, PolygonMesh, TriMesh};
+use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
 use axiolid_model::{GeometryGraphBuilder, GeometryNode, Instance, SolidOperation};
 use axiolid_primitive::HalfSpace;
 use axiolid_profile::{CircleProfile, Profile, RectangleProfile};

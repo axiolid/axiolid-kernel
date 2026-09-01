@@ -16,12 +16,12 @@ Measured against the tree at the time of writing, that leak has started:
 | # | Leak | Evidence |
 | --- | --- | --- |
 | 1 | `BooleanOperator` has exactly three variants — `Union`, `Intersection`, `Difference` — which is exactly `boolmesh::OpType` (`Add`, `Intersect`, `Subtract`), a 1:1 map in `provider.rs:97`. `axiolid-overlay`, designed contract-first, has **four** (adds `Xor`). The 2D and 3D operation sets disagree, and the 3D one has the shape of its backend. | `axiolid-core/src/operation.rs:5`, `axiolid-overlay/src/lib.rs:16` |
-| 2 | Preconditions are enforced in the **L3 adapter**, not the L2 contract: `to_manifold` in `axiolid-boolmesh/src/convert.rs:45` decides closedness, orientation, and zero-volume. A second provider brings a second interpretation of "valid input". | `convert.rs:45-79` |
+| 2 | Preconditions are enforced in the **L3 adapter**, not the L2 contract: `to_manifold` in `axiolid-mesh-boolean-boolmesh/src/convert.rs:45` decides closedness, orientation, and zero-volume. A second provider brings a second interpretation of "valid input". | `convert.rs:45-79` |
 | 3 | `boolean()` returns a bare `TriMesh`. Overlay returns `OverlayResult { polygons, evidence }`; field returns `FieldEvidence`. The operation most in need of evidence has none, because the backend returns none. | `axiolid-kernel/src/boolean.rs:28` |
 | 4 | `GeomError::Cancelled` is declared and produced **nowhere**; `ExecutionOptions` carries no token or deadline. The cancellation contract is fictional. | `grep Cancelled` → only the `enum` definition |
 | 5 | The only provider declares `ScratchRequirement::Unbounded`, so the memory budget is unenforceable for every real call. | `provider.rs:70` |
-| 6 | `axiolid-scalar` implements no `MeshBoolean`. The single most consequential operation has **no oracle**, in direct violation of ADR 0012's ordering rule. | `grep MeshBoolean crates/algorithms/reference/src/` → no match |
-| 7 | All five `axiolid-boolmesh` test files bind to the concrete `BoolmeshBoolean`. They test *boolmesh*, not *the contract*. A second provider inherits zero obligations. | `tests/{winding,batch,registry,conservation,fixture_issue_2019}.rs` |
+| 6 | `axiolid-reference` implements no `MeshBoolean`. The single most consequential operation has **no oracle**, in direct violation of ADR 0012's ordering rule. | `grep MeshBoolean crates/algorithms/reference/src/` → no match |
+| 7 | All five `axiolid-mesh-boolean-boolmesh` test files bind to the concrete `BoolmeshBoolean`. They test *boolmesh*, not *the contract*. A second provider inherits zero obligations. | `tests/{winding,batch,registry,conservation,fixture_issue_2019}.rs` |
 
 ADR 0014 measured `boolmesh` honestly and adopting it was right. This ADR is
 not a reversal. It says the API must be corrected **around** that provider
@@ -107,7 +107,7 @@ three is the point: one mental model for "what did the kernel actually do".
 
 ### 5. Scalar correctness oracle
 
-Per ADR 0012, `axiolid-scalar` owns a reference boolean **before** any further
+Per ADR 0012, `axiolid-reference` owns a reference boolean **before** any further
 provider is adopted. It is judged on correctness, not speed: exact predicates
 via the existing `Certified`/`Sign` ladder, no threading, no intrinsics, never
 feature-gated off. Quadratic is acceptable for a reference.
@@ -147,8 +147,8 @@ Sections 1-4 landed on 2026-08-26; the table records what closed and how.
 | 2 | Preconditions owned by the L3 adapter | **Closed** | `axiolid-kernel::solid::SolidRequirements` (`Structural` / `Enclosing` / `Oriented`), validated by the registry **before** dispatch, so admissibility cannot vary by provider. |
 | 3 | Boolean returns a bare mesh | **Closed** | `BooleanOutcome { mesh, evidence }` with `BooleanEvidence` counters, mirroring `OverlayEvidence` and `FieldEvidence`. |
 | 4 | Cancellation is fictional | **Closed** | `CancellationToken` + `ExecutionOptions::with_cancellation`; providers declare `CancellationGranularity` honestly rather than claiming responsiveness they lack. |
-| 5 | Provider declares `Unbounded` scratch | **Closed** | Measured with a counting allocator (`axiolid-boolmesh/src/bin/scratch_probe.rs`): linear, ~1.1 KiB/triangle asymptotically, 2,660 B/triangle worst at small N. Declared `PerElement { bytes_per_element: 4096 }`. |
-| 6 | No scalar boolean oracle | **Closed** | `axiolid_scalar::ScalarBoolean`: exact `orient3d` classification and ray parity, `O(n·m)`, no shared code path with `boolmesh`. Validated against analytic volumes in `axiolid-scalar/tests/oracle.rs`. |
+| 5 | Provider declares `Unbounded` scratch | **Closed** | Measured with a counting allocator (`axiolid-mesh-boolean-boolmesh/src/bin/scratch_probe.rs`): linear, ~1.1 KiB/triangle asymptotically, 2,660 B/triangle worst at small N. Declared `PerElement { bytes_per_element: 4096 }`. |
+| 6 | No scalar boolean oracle | **Closed** | `axiolid_reference::ScalarBoolean`: exact `orient3d` classification and ray parity, `O(n·m)`, no shared code path with `boolmesh`. Validated against analytic volumes in `axiolid-reference/tests/oracle.rs`. |
 | 7 | Provider tests bind the concrete type | **Closed** | `axiolid_kernel::conformance` is generic over `impl MeshBoolean` and exported. `MeshBooleanRegistry::register_conformant` makes passing it a precondition of registration. |
 
 ### Consequences of the landed work
@@ -240,7 +240,7 @@ CSG backend — was always enforced more broadly by
 
 - The scalar reference boolean is real work and is the schedule's long pole.
 - `boolean()` changing to return `BooleanOutcome` is a breaking change to an
-  L2 trait; `axiolid-boolmesh` and the registry move with it.
+  L2 trait; `axiolid-mesh-boolean-boolmesh` and the registry move with it.
 - Precondition validation in L2 costs a pass the adapter was doing anyway.
 
 **Follow-ups / risks to watch**

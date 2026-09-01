@@ -5,7 +5,7 @@
 //! polygon, and for holes it proves the holes were actually subtracted.
 
 use axiolid_core::Point2;
-use axiolid_scalar::{signed_area2, triangulate_simple};
+use axiolid_reference::{signed_area2, triangulate_simple};
 
 fn p(x: f64, y: f64) -> Point2 {
     Point2::new(x, y)

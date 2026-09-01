@@ -13,7 +13,7 @@ A mesh section is useful now, but it must not be presented as an exact section o
 
 ## Decision
 
-Add a backend-neutral `MeshPlaneSection` capability in `axiolid-kernel` and a portable correctness oracle, `ScalarSection`, in `axiolid-scalar`.
+Add a backend-neutral `MeshPlaneSection` capability in `axiolid-kernel` and a portable correctness oracle, `ScalarSection`, in `axiolid-reference`.
 
 The operation accepts:
 

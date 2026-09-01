@@ -6,7 +6,7 @@ use axiolid_nurbs::{
     SurfaceProjectionCertificate3, SurfaceProjectionUnresolvedReason,
     MAX_CERTIFIED_SURFACE_PROJECTION_DEPTH, MAX_CERTIFIED_SURFACE_PROJECTION_WORK,
 };
-use axiolid_scalar::surface::bspline_jet;
+use axiolid_reference::surface::bspline_jet;
 use axiolid_surface::BSplineSurface;
 
 fn plane() -> BSplineSurface {

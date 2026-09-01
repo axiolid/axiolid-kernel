@@ -127,8 +127,8 @@ L1 representations   axiolid-mesh, axiolid-profile, axiolid-curve, axiolid-surfa
                      axiolid-topology, axiolid-brep, axiolid-primitive, axiolid-model
 L2 algorithms/traits axiolid-tessellate, axiolid-spatial, axiolid-measure,
                      axiolid-overlay, axiolid-field, axiolid-heal, axiolid-nurbs,
-                     axiolid-scalar, axiolid-generate, axiolid-kernel
-L3 execution/adapters axiolid-boolmesh, axiolid-compile, axiolid-backend-cpu,
+                     axiolid-reference, axiolid-construct, axiolid-kernel
+L3 execution/adapters axiolid-mesh-boolean-boolmesh, axiolid-compile, axiolid-backend-cpu,
                      axiolid-backend-gpu
 L4 facade             axiolid
 L5 format bridges     ifc-geometry and future adapters (outside this directory)

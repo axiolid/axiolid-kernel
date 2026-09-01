@@ -10,9 +10,9 @@ This document records repository truth before the physical move. It is not a cap
 - Root package graph is acyclic and currently enforced by a mutation-probed coarse tier test.
 - `axiolid-kernel` mixes guarantee vocabulary, common provider/execution contracts, and three operation seams.
 - `axiolid-field` mixes stored sampled-field values with sampling, morphology, clearance, and navigation algorithms.
-- `axiolid-scalar` is the portable correctness/reference implementation, not a CPU runtime.
-- `axiolid-generate` owns constructive modeling algorithms.
-- `axiolid-boolmesh` is an adopted, replaceable mesh-Boolean provider.
+- `axiolid-reference` is the portable correctness/reference implementation, not a CPU runtime.
+- `axiolid-construct` owns constructive modeling algorithms.
+- `axiolid-mesh-boolean-boolmesh` is an adopted, replaceable mesh-Boolean provider.
 - `GeometryCompiler` currently means graph-to-`TriMesh`; ADR 0020 requires tessellation to become explicit rather than the universal exact-geometry result.
 
 ## Mechanical move map
@@ -52,10 +52,10 @@ After the mechanical checkpoint:
 
 1. `axiolid-kernel` is decomposed into `axiolid-guarantees`, `axiolid-contracts`, and real operation contracts. Mesh Boolean and mesh section become `axiolid-op-mesh-boolean` and `axiolid-op-mesh-section`. The existing tessellation seam becomes `axiolid-op-tessellate` only when its complete public contract is defined.
 2. `GeometryCompiler -> TriMesh` is removed as a universal compilation claim. Graph traversal/caching remains in `axiolid-compile`; graph-to-mesh becomes explicit tessellation. No universal geometry-result enum is introduced.
-3. `axiolid-scalar` becomes `axiolid-reference`, preserving portable oracle semantics and mutation suites.
-4. `axiolid-generate` becomes `axiolid-construct`.
+3. `axiolid-reference` becomes `axiolid-reference`, preserving portable oracle semantics and mutation suites.
+4. `axiolid-construct` becomes `axiolid-construct`.
 5. `axiolid-field` retains data/config/evidence only at `representations/sampled/field`; sampling, morphology, clearance, and navigation move to `axiolid-field-ops` under algorithms.
-6. `axiolid-boolmesh` becomes `axiolid-provider-boolmesh`.
+6. `axiolid-mesh-boolean-boolmesh` becomes `axiolid-provider-boolmesh`.
 7. The facade retains additive feature behavior and directly consumable leaf crates.
 
 ## Material conflicts and resolutions
@@ -68,6 +68,18 @@ After the mechanical checkpoint:
 - **Narrow numeric substrate:** extraction is deferred until dependency, consumer, conformance, and timing evidence passes the brief's threshold.
 - **MCS/Axioval source:** no MCS/Pkl source document or generated DTO exists in this repository. The supplied restructure brief defines the boundary; no transport/schema package is introduced into Axiolid.
 - **Downstream IFC:** current IFC pins pre-OpenProfile Axiolid `1db0184...`. Rewiring must update to the landed restructure commit and adopt the format-neutral OpenProfile declaration without introducing operation/provider dependencies.
+
+## Package rename migration
+
+The restructure is intentionally breaking while the workspace remains at `0.1.0`:
+
+| Previous package / Rust path | Replacement | Reason |
+|---|---|---|
+| `axiolid-scalar` / `axiolid_scalar` | `axiolid-reference` / `axiolid_reference` | Identifies the correctness-oracle role rather than an arithmetic implementation detail. |
+| `axiolid-generate` / `axiolid_generate` | `axiolid-construct` / `axiolid_construct` | Names construction semantics rather than the vague act of generation. |
+| `axiolid-boolmesh` / `axiolid_boolmesh` | `axiolid-mesh-boolean-boolmesh` / `axiolid_mesh_boolean_boolmesh` | Makes operation family and concrete provider explicit. |
+
+No compatibility shim packages are published: a shim would preserve misleading ownership and add feature-unification surface. Downstream manifests and imports must migrate atomically.
 
 ## Landing order
 

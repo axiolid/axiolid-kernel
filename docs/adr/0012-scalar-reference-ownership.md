@@ -34,7 +34,7 @@ the execution context that schedules them.
 
 - `axiolid-backend-cpu` stays what it is: an execution *context* (ISA detection,
   worker pool, policy). It is not the oracle and must not be called one.
-- The scalar reference implementation gets its own crate, `axiolid-scalar`, which
+- The scalar reference implementation gets its own crate, `axiolid-reference`, which
   owns portable algorithms with no intrinsics, no `unsafe`, and no threading.
   It is the oracle, the replay path, and the portability baseline.
 - Ordering is inverted from ADR 0002's implied schedule: **the scalar
@@ -52,7 +52,7 @@ topology and its oracle assignment are superseded.
 
 The rule above ("the scalar implementation of an operation lands before any
 optimized implementation of that operation") was **not** honoured for mesh
-booleans. `axiolid-boolmesh` was adopted under ADR 0014 while `axiolid-scalar`
+booleans. `axiolid-mesh-boolean-boolmesh` was adopted under ADR 0014 while `axiolid-reference`
 implemented no `MeshBoolean` at all. For a period, the single most consequential
 operation in the kernel had no oracle, and its only test suite bound the
 adopted provider's concrete type — so it could confirm that the provider agreed
@@ -70,7 +70,7 @@ exceptions. A conformance suite validated against a single implementation
 cannot distinguish *correct* from *self-consistent*, and that distinction is
 the whole reason ADR 0012 exists.
 
-`axiolid_scalar::ScalarBoolean` now implements `MeshBoolean` (ADR 0017 §5). It
+`axiolid_reference::ScalarBoolean` now implements `MeshBoolean` (ADR 0017 §5). It
 is exact where it answers and refuses where it cannot, which preserves the
 oracle's defining property: it is never *approximately* right.
 
@@ -83,7 +83,7 @@ was. It is now enforced by construction:
   obligations attach to the contract rather than to a provider.
 - `MeshBooleanRegistry::register_conformant` refuses a non-conformant provider
   at registration, returning the failing report.
-- `axiolid-boolmesh/tests/conformance.rs` runs the oracle and the production
+- `axiolid-mesh-boolean-boolmesh/tests/conformance.rs` runs the oracle and the production
   provider through the identical suite and compares their geometry directly.
 
 An operation that acquires an optimized provider without a scalar counterpart
@@ -117,7 +117,7 @@ differentially tested against. The rule enforces itself.
 
 **Follow-ups / risks to watch**
 
-- `axiolid-scalar` does not exist yet. This ADR sets the rule that governs its
+- `axiolid-reference` does not exist yet. This ADR sets the rule that governs its
   creation; it must be created with the first geometry algorithm, not after.
 - The risk this ADR exists to prevent: an AVX-512 or GPU path landing first
   because it is more interesting to write. The ordering rule above is the guard.

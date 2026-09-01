@@ -4,7 +4,7 @@
 use axiolid_core::{Point3, Scalar};
 use axiolid_curve::BSplineCurve3;
 use axiolid_kernel::{GeomError, GeomResult};
-use axiolid_scalar::{curve::bspline_jet3, surface::bspline_jet};
+use axiolid_reference::{curve::bspline_jet3, surface::bspline_jet};
 use axiolid_surface::BSplineSurface;
 
 use crate::{

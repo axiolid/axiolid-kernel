@@ -9,23 +9,23 @@ graph TD
     axiolid["axiolid\nfacade"]
     axiolid_backend_cpu["axiolid-backend-cpu\nexecution.context"]
     axiolid_backend_gpu["axiolid-backend-gpu\nexecution.context"]
-    axiolid_boolmesh["axiolid-boolmesh\nprovider.mesh"]
     axiolid_brep["axiolid-brep\nrepresentation.composed"]
     axiolid_compile["axiolid-compile\nexecution.orchestration"]
+    axiolid_construct["axiolid-construct\nalgorithm.construction"]
     axiolid_core["axiolid-core\nfoundation.values"]
     axiolid_curve["axiolid-curve\nrepresentation.atomic"]
     axiolid_field["axiolid-field\nalgorithm.sampled.mixed"]
-    axiolid_generate["axiolid-generate\nalgorithm.construction"]
     axiolid_heal["axiolid-heal\nalgorithm.repair"]
     axiolid_kernel["axiolid-kernel\ncontract.mixed"]
     axiolid_measure["axiolid-measure\nalgorithm.query"]
     axiolid_mesh["axiolid-mesh\nrepresentation.discrete"]
+    axiolid_mesh_boolean_boolmesh["axiolid-mesh-boolean-boolmesh\nprovider.mesh"]
     axiolid_model["axiolid-model\nrepresentation.graph"]
     axiolid_nurbs["axiolid-nurbs\nalgorithm.parametric"]
     axiolid_overlay["axiolid-overlay\nalgorithm.planar"]
     axiolid_primitive["axiolid-primitive\nrepresentation.atomic"]
     axiolid_profile["axiolid-profile\nrepresentation.region"]
-    axiolid_scalar["axiolid-scalar\nalgorithm.reference"]
+    axiolid_reference["axiolid-reference\nalgorithm.reference"]
     axiolid_spatial["axiolid-spatial\nalgorithm.query"]
     axiolid_surface["axiolid-surface\nrepresentation.atomic"]
     axiolid_tessellate["axiolid-tessellate\ncontract.operation"]
@@ -34,10 +34,10 @@ graph TD
     axiolid --> axiolid_backend_cpu
     axiolid --> axiolid_backend_gpu
     axiolid --> axiolid_brep
+    axiolid --> axiolid_construct
     axiolid --> axiolid_core
     axiolid --> axiolid_curve
     axiolid --> axiolid_field
-    axiolid --> axiolid_generate
     axiolid --> axiolid_heal
     axiolid --> axiolid_kernel
     axiolid --> axiolid_measure
@@ -55,41 +55,37 @@ graph TD
     axiolid_backend_gpu --> axiolid_kernel
     axiolid_backend_gpu --> axiolid_mesh
     axiolid_backend_gpu --> axiolid_model
-    axiolid_boolmesh --> axiolid_core
-    axiolid_boolmesh --> axiolid_kernel
-    axiolid_boolmesh --> axiolid_mesh
-    axiolid_boolmesh --> axiolid_scalar
     axiolid_brep --> axiolid_core
     axiolid_brep --> axiolid_curve
     axiolid_brep --> axiolid_surface
     axiolid_brep --> axiolid_topology
-    axiolid_compile --> axiolid_boolmesh
+    axiolid_compile --> axiolid_construct
     axiolid_compile --> axiolid_core
     axiolid_compile --> axiolid_curve
-    axiolid_compile --> axiolid_generate
     axiolid_compile --> axiolid_kernel
     axiolid_compile --> axiolid_measure
     axiolid_compile --> axiolid_mesh
+    axiolid_compile --> axiolid_mesh_boolean_boolmesh
     axiolid_compile --> axiolid_model
     axiolid_compile --> axiolid_primitive
     axiolid_compile --> axiolid_profile
-    axiolid_compile --> axiolid_scalar
+    axiolid_compile --> axiolid_reference
     axiolid_compile --> axiolid_surface
     axiolid_compile --> axiolid_topology
+    axiolid_construct --> axiolid_brep
+    axiolid_construct --> axiolid_core
+    axiolid_construct --> axiolid_curve
+    axiolid_construct --> axiolid_kernel
+    axiolid_construct --> axiolid_measure
+    axiolid_construct --> axiolid_mesh
+    axiolid_construct --> axiolid_nurbs
+    axiolid_construct --> axiolid_primitive
+    axiolid_construct --> axiolid_profile
+    axiolid_construct --> axiolid_reference
+    axiolid_construct --> axiolid_surface
+    axiolid_construct --> axiolid_topology
     axiolid_curve --> axiolid_core
     axiolid_field --> axiolid_core
-    axiolid_generate --> axiolid_brep
-    axiolid_generate --> axiolid_core
-    axiolid_generate --> axiolid_curve
-    axiolid_generate --> axiolid_kernel
-    axiolid_generate --> axiolid_measure
-    axiolid_generate --> axiolid_mesh
-    axiolid_generate --> axiolid_nurbs
-    axiolid_generate --> axiolid_primitive
-    axiolid_generate --> axiolid_profile
-    axiolid_generate --> axiolid_scalar
-    axiolid_generate --> axiolid_surface
-    axiolid_generate --> axiolid_topology
     axiolid_heal --> axiolid_core
     axiolid_heal --> axiolid_mesh
     axiolid_kernel --> axiolid_core
@@ -98,6 +94,10 @@ graph TD
     axiolid_measure --> axiolid_core
     axiolid_measure --> axiolid_mesh
     axiolid_mesh --> axiolid_core
+    axiolid_mesh_boolean_boolmesh --> axiolid_core
+    axiolid_mesh_boolean_boolmesh --> axiolid_kernel
+    axiolid_mesh_boolean_boolmesh --> axiolid_mesh
+    axiolid_mesh_boolean_boolmesh --> axiolid_reference
     axiolid_model --> axiolid_core
     axiolid_model --> axiolid_curve
     axiolid_model --> axiolid_mesh
@@ -108,20 +108,20 @@ graph TD
     axiolid_nurbs --> axiolid_core
     axiolid_nurbs --> axiolid_curve
     axiolid_nurbs --> axiolid_kernel
-    axiolid_nurbs --> axiolid_scalar
+    axiolid_nurbs --> axiolid_reference
     axiolid_nurbs --> axiolid_surface
     axiolid_overlay --> axiolid_core
     axiolid_primitive --> axiolid_core
     axiolid_profile --> axiolid_core
     axiolid_profile --> axiolid_curve
-    axiolid_scalar --> axiolid_core
-    axiolid_scalar --> axiolid_curve
-    axiolid_scalar --> axiolid_kernel
-    axiolid_scalar --> axiolid_measure
-    axiolid_scalar --> axiolid_mesh
-    axiolid_scalar --> axiolid_primitive
-    axiolid_scalar --> axiolid_spatial
-    axiolid_scalar --> axiolid_surface
+    axiolid_reference --> axiolid_core
+    axiolid_reference --> axiolid_curve
+    axiolid_reference --> axiolid_kernel
+    axiolid_reference --> axiolid_measure
+    axiolid_reference --> axiolid_mesh
+    axiolid_reference --> axiolid_primitive
+    axiolid_reference --> axiolid_spatial
+    axiolid_reference --> axiolid_surface
     axiolid_spatial --> axiolid_core
     axiolid_surface --> axiolid_core
     axiolid_surface --> axiolid_curve

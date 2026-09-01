@@ -46,11 +46,11 @@ after — the only implementation was an ad-hoc one inside a consumer.
 ## Decision
 
 **Curve evaluation is a scalar-reference algorithm and lives in
-`axiolid-scalar` (L2). `axiolid-compile` consumes it.**
+`axiolid-reference` (L2). `axiolid-compile` consumes it.**
 
 Concretely:
 
-- `axiolid_scalar::curve` implements `CurveEvaluator<Curve2>` and
+- `axiolid_reference::curve` implements `CurveEvaluator<Curve2>` and
   `CurveEvaluator<Curve3>` for `ScalarCurve`, plus free functions
   `evaluate2/3`, `derivative2/3`, `domain2/3`, and `flatten2`.
 - Evaluation is **analytic per family**, never generic subdivision. Derivatives
@@ -122,7 +122,7 @@ vertex loss produces a wrong wall; a refusal produces a fixable error.
 
 **Negative / costs**
 
-- `axiolid-scalar` gains a dependency on `axiolid-curve`. Both are within their
+- `axiolid-reference` gains a dependency on `axiolid-curve`. Both are within their
   layers (L2 -> L1), so the DAG is unchanged.
 - The polyline domain semantics are stricter, and one in-tree fixture declared
   `(0, 1)` for a 4-segment ring. It was wrong and is fixed; out-of-tree callers

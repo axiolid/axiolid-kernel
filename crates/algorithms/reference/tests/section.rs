@@ -5,7 +5,7 @@ use axiolid_kernel::{
     CancellationToken, ExecutionOptions, GeomError, MeshPlaneSectionRegistry, SectionLimits,
 };
 use axiolid_mesh::TriMesh;
-use axiolid_scalar::ScalarSection;
+use axiolid_reference::ScalarSection;
 
 fn cube() -> TriMesh {
     TriMesh::new(

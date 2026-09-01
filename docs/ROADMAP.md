@@ -29,7 +29,7 @@ Closing that is the main line of work.
 
 - [x] Define the strict exact B-rep result contract: typed analytic support catalogs, generic topology roles, and required native edge/pcurve spans in `axiolid-brep` (ADR 0024).
 - Migrate the compiler away from a mesh-only cache, so a cylinder survives an operation as a cylinder.
-- Implement exact construction families in `axiolid-generate` only where all supports and trims can be populated without approximation.
+- Implement exact construction families in `axiolid-construct` only where all supports and trims can be populated without approximation.
 - Make tessellation an explicit, tolerance-carrying output rather than the currency between nodes.
 - Keep operations fail-closed: refuse what cannot be done exactly instead of silently substituting an approximation.
 
@@ -67,7 +67,7 @@ results, and as a differential oracle for the exact path.
 
 Deliberately deferred until the kernel's capability surface is real. See
 [ADR 0013](./adr/0013-deferred-performance-techniques.md). Benchmarks exist for
-`axiolid-scalar` and `axiolid-boolmesh` only; there are no broad performance
+`axiolid-reference` and `axiolid-mesh-boolean-boolmesh` only; there are no broad performance
 claims to defend, and none should be made without same-harness evidence.
 
 - Publish measured correctness and performance evidence before enabling optimized paths by default.

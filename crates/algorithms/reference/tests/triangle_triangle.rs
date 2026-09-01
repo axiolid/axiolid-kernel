@@ -1,5 +1,5 @@
 use axiolid_core::Point3;
-use axiolid_scalar::{triangle_triangle_relation, TriangleTriangleRelation};
+use axiolid_reference::{triangle_triangle_relation, TriangleTriangleRelation};
 
 fn point(x: f64, y: f64, z: f64) -> Point3 {
     Point3::new(x, y, z)

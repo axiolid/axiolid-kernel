@@ -1,8 +1,8 @@
-use axiolid_boolmesh::BoolmeshBoolean;
 use axiolid_compile::ScalarCompiler;
 use axiolid_core::{Tolerance, Vec2};
 use axiolid_curve::{Curve2, Polyline2};
 use axiolid_kernel::{ExecutionOptions, GeomError, GeometryCompiler, Operation};
+use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
 use axiolid_model::{GeometryGraphBuilder, OpenProfile};
 
 #[test]

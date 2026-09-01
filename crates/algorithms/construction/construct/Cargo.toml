@@ -1,5 +1,5 @@
 [package]
-name = "axiolid-generate"
+name = "axiolid-construct"
 description = "Solid generation: profiles, lofts, sweeps, revolutions and half-space clipping"
 version.workspace = true
 edition.workspace = true
@@ -18,7 +18,7 @@ axiolid-mesh.workspace = true
 axiolid-nurbs.workspace = true
 axiolid-primitive.workspace = true
 axiolid-profile.workspace = true
-axiolid-scalar.workspace = true
+axiolid-reference.workspace = true
 axiolid-surface.workspace = true
 axiolid-topology.workspace = true
 earcut = "0.4"
@@ -36,4 +36,4 @@ role = "algorithm.construction"
 domain = "construction"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-kernel", "axiolid-measure", "axiolid-mesh", "axiolid-nurbs", "axiolid-primitive", "axiolid-profile", "axiolid-scalar", "axiolid-surface", "axiolid-topology"]
+allowed-internal-dependencies = ["axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-kernel", "axiolid-measure", "axiolid-mesh", "axiolid-nurbs", "axiolid-primitive", "axiolid-profile", "axiolid-reference", "axiolid-surface", "axiolid-topology"]

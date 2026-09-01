@@ -27,11 +27,11 @@ L1 representations
        |
 L2 algorithms and contracts
   axiolid-tessellate  axiolid-spatial  axiolid-measure  axiolid-overlay
-  axiolid-field  axiolid-heal  axiolid-nurbs  axiolid-scalar
-  axiolid-generate  axiolid-kernel
+  axiolid-field  axiolid-heal  axiolid-nurbs  axiolid-reference
+  axiolid-construct  axiolid-kernel
        |
 L3 execution/adapters and reference compilation
-  axiolid-boolmesh  axiolid-compile  axiolid-backend-cpu  axiolid-backend-gpu
+  axiolid-mesh-boolean-boolmesh  axiolid-compile  axiolid-backend-cpu  axiolid-backend-gpu
        |
 L4 opt-in facade
   axiolid
@@ -54,7 +54,7 @@ unification cannot leak an implementation into `ifc-geometry`.
 - `axiolid-brep`: strict exact B-rep result vocabulary: typed analytic support
   catalogs, topology, and explicit native trim spans. It is L1 composition only;
   no tessellation or geometric solving.
-- `axiolid-generate`: model-free scalar construction algorithms — profiles,
+- `axiolid-construct`: model-free scalar construction algorithms — profiles,
   lofts, sweeps, revolutions, extrusion, and bounded half-space clipping. It is
   L2: consumes representations, chooses no provider, and produces the current
   mesh reference result. It must not depend on `axiolid-model`, a backend, or

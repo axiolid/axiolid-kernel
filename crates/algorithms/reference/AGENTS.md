@@ -1,4 +1,4 @@
-# axiolid-scalar instructions
+# axiolid-reference instructions
 
 Purpose: portable scalar reference implementation and correctness oracle (ADR 0012).
 

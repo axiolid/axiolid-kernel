@@ -1,10 +1,10 @@
-use axiolid_boolmesh::BoolmeshBoolean;
 use axiolid_compile::ScalarCompiler;
 use axiolid_core::{Frame3, Point3, Tolerance, Vec3};
 use axiolid_kernel::{ExecutionOptions, GeometryCompiler, MeshPlaneSectionRegistry, SectionLimits};
+use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
 use axiolid_model::{GeometryGraphBuilder, GeometryNode, SolidOperation};
 use axiolid_profile::{Profile, RectangleProfile};
-use axiolid_scalar::ScalarSection;
+use axiolid_reference::ScalarSection;
 
 #[test]
 fn body_graph_compiles_and_sections_into_plan_linework() {

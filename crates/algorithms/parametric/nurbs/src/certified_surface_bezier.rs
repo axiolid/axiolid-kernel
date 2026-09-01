@@ -960,7 +960,7 @@ fn piecewise_bezier_patches_with_modes(
 mod tests {
     use axiolid_core::Point3;
     use axiolid_curve::KnotSpec;
-    use axiolid_scalar::surface::bspline_jet;
+    use axiolid_reference::surface::bspline_jet;
 
     use super::*;
 

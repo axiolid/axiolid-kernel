@@ -5,7 +5,7 @@ use crate::projection::{CurveProjection2, CurveProjection3, ProjectionOptions, P
 use axiolid_core::{Point2, Point3, Scalar};
 use axiolid_curve::{BSplineCurve2, BSplineCurve3};
 use axiolid_kernel::{GeomError, GeomResult};
-use axiolid_scalar::curve::{bspline_jet2, bspline_jet3};
+use axiolid_reference::curve::{bspline_jet2, bspline_jet3};
 
 /// Find the best planar-curve projection candidate within explicit budgets.
 ///

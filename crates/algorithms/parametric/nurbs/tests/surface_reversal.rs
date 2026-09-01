@@ -1,7 +1,7 @@
 mod support;
 
 use axiolid_nurbs::{reverse_surface_u, reverse_surface_v};
-use axiolid_scalar::surface::bspline_jet;
+use axiolid_reference::surface::bspline_jet;
 use support::quarter_cylinder;
 
 #[test]

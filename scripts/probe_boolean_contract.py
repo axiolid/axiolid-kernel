@@ -14,10 +14,10 @@ ROOT = Path("/mnt/backup/build-cache/axiolid-solibri-spatial")
 
 SUITES = [
     ["cargo", "test", "-p", "axiolid-kernel", "--all-features", "--test", "boolean_contract"],
-    ["cargo", "test", "-p", "axiolid-boolmesh", "--all-features", "--test", "symmetric_difference"],
+    ["cargo", "test", "-p", "axiolid-mesh-boolean-boolmesh", "--all-features", "--test", "symmetric_difference"],
     # `csg_deferral` was deleted when the deferral ended (ADR 0017 fully
     # landed); the conformance suite superseded it.
-    ["cargo", "test", "-p", "axiolid-boolmesh", "--all-features", "--test", "conformance"],
+    ["cargo", "test", "-p", "axiolid-mesh-boolean-boolmesh", "--all-features", "--test", "conformance"],
 ]
 
 # (name, relative path, find, replace)

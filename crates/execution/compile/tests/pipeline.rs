@@ -2,15 +2,15 @@
 //! boolean provider, unmodified.
 //!
 //! Edge-manifoldness is a local proxy; this is the real thing. If extrusion
-//! output cannot enter `axiolid-boolmesh`, the pipeline does not exist no matter
+//! output cannot enter `axiolid-mesh-boolean-boolmesh`, the pipeline does not exist no matter
 //! how good each half looks alone.
 
-use axiolid_boolmesh::BoolmeshBoolean;
+use axiolid_construct::extrude::extrude;
+use axiolid_construct::profile::{profile_rings, triangulate, Rings};
 use axiolid_core::{BooleanOperator, Point3, Tolerance, Vec3};
-use axiolid_generate::extrude::extrude;
-use axiolid_generate::profile::{profile_rings, triangulate, Rings};
 use axiolid_kernel::{ExecutionOptions, MeshBoolean};
 use axiolid_mesh::TriMesh;
+use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
 use axiolid_profile::{Profile, RectangleProfile};
 
 fn volume(m: &TriMesh) -> f64 {

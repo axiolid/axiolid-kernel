@@ -15,7 +15,7 @@ together. Add no empty placeholder files.
 Composite/trim/offset/surface relations belong in axiolid-model to avoid curve-surface cycles. Preserve knots, multiplicities, weights, and domains.
 
 This crate is representation only: it declares `CurveEvaluator` but implements
-no evaluation. The scalar implementation is `axiolid_scalar::curve`
+no evaluation. The scalar implementation is `axiolid_reference::curve`
 (ADR 0018) — analytic per family, de Boor for splines, adaptive flattening on
 measured sagitta. Do not add an evaluator here; L1 is data, L2 solves.
 

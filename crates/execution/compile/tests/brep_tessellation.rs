@@ -1,9 +1,9 @@
 //! Faceted B-rep tessellation gates.
 
-use axiolid_boolmesh::BoolmeshBoolean;
 use axiolid_compile::ScalarCompiler;
 use axiolid_core::Vec3;
 use axiolid_kernel::{ExecutionOptions, GeometryCompiler};
+use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
 use axiolid_model::{GeometryGraphBuilder, GeometryNode};
 use axiolid_topology::audit_brep;
 use axiolid_topology::{

@@ -18,9 +18,9 @@ axiolid-topology.workspace = true
 axiolid-primitive.workspace = true
 axiolid-profile.workspace = true
 axiolid-curve.workspace = true
-axiolid-generate.workspace = true
+axiolid-construct.workspace = true
 axiolid-kernel = { workspace = true, features = ["mesh-boolean", "model"] }
-axiolid-scalar.workspace = true
+axiolid-reference.workspace = true
 axiolid-surface.workspace = true
 earcut = "0.4"
 
@@ -30,7 +30,7 @@ earcut = "0.4"
 # watertightness and volume in one call instead of trusting a hand-rolled
 # divergence sum that would happily integrate a broken mesh.
 axiolid-measure.workspace = true
-axiolid-boolmesh.workspace = true
+axiolid-mesh-boolean-boolmesh.workspace = true
 
 [package.metadata.axiolid]
 architecture-version = 1
@@ -39,4 +39,4 @@ role = "execution.orchestration"
 domain = "graph.compile"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-boolmesh", "axiolid-core", "axiolid-curve", "axiolid-generate", "axiolid-kernel", "axiolid-measure", "axiolid-mesh", "axiolid-model", "axiolid-primitive", "axiolid-profile", "axiolid-scalar", "axiolid-surface", "axiolid-topology"]
+allowed-internal-dependencies = ["axiolid-mesh-boolean-boolmesh", "axiolid-core", "axiolid-curve", "axiolid-construct", "axiolid-kernel", "axiolid-measure", "axiolid-mesh", "axiolid-model", "axiolid-primitive", "axiolid-profile", "axiolid-reference", "axiolid-surface", "axiolid-topology"]

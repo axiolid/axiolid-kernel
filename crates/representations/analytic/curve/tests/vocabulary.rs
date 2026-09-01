@@ -3,7 +3,7 @@
 //! This crate is a value vocabulary: no evaluation, no algorithms. What it owes
 //! downstream is therefore structural rather than numeric, and that is what is
 //! pinned here. Evaluation behaviour is tested where it lives, in
-//! `axiolid-scalar`.
+//! `axiolid-reference`.
 
 use axiolid_core::{Frame2, Frame3, Point2, Point3, Vec2, Vec3};
 use axiolid_curve::{
@@ -106,7 +106,7 @@ fn every_curve3_variant_is_constructible() {
 /// wildcard arm.
 ///
 /// Downstream code refuses unknown future variants explicitly rather than
-/// falling through (see `axiolid-scalar`'s evaluators). That discipline is only
+/// falling through (see `axiolid-reference`'s evaluators). That discipline is only
 /// sound while the enums stay non-exhaustive: making them exhaustive would let
 /// a new variant compile into a silent fallthrough at every match site. This
 /// test fails to compile if that guarantee is withdrawn.
@@ -134,7 +134,7 @@ fn curve_enums_stay_non_exhaustive_for_consumers() {
 ///
 /// The vocabulary stores distinct knots and multiplicities separately rather
 /// than an expanded knot vector, so the two must agree in length. Validation
-/// lives in `axiolid-scalar`; what this pins is that the representation is the
+/// lives in `axiolid-reference`; what this pins is that the representation is the
 /// paired one, because a reader building the expanded vector depends on it.
 #[test]
 fn spline_knots_and_multiplicities_are_parallel() {

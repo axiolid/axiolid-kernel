@@ -12,13 +12,13 @@ use axiolid_kernel::{
 use axiolid_mesh::TriMesh;
 use axiolid_model::{GeometryGraph, GeometryNode, NodeId, SolidOperation};
 
-use axiolid_generate::extrude::extrude_profile;
-use axiolid_generate::profile::profile_rings;
+use axiolid_construct::extrude::extrude_profile;
+use axiolid_construct::profile::profile_rings;
 
 /// Scalar reference compiler.
 ///
 /// Generic over the boolean provider so this crate never depends on a
-/// particular one: `axiolid-boolmesh` is an adapter, and a different provider
+/// particular one: `axiolid-mesh-boolean-boolmesh` is an adapter, and a different provider
 /// swaps in without touching this code.
 #[derive(Debug, Clone)]
 pub struct ScalarCompiler<B> {
@@ -99,7 +99,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
         &self,
         graph: &GeometryGraph,
         id: NodeId,
-    ) -> GeomResult<axiolid_generate::profile::Rings> {
+    ) -> GeomResult<axiolid_construct::profile::Rings> {
         let node = self.node(graph, id)?;
         let GeometryNode::Curve2(curve) = node else {
             return Err(GeomError::InvalidInput(format!(
@@ -119,7 +119,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                         "half-space boundary needs at least 3 distinct points".to_owned(),
                     ));
                 }
-                Ok(axiolid_generate::profile::Rings {
+                Ok(axiolid_construct::profile::Rings {
                     outer: pts,
                     holes: Vec::new(),
                 })
@@ -162,13 +162,14 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
             axiolid_model::SurfaceRelation::LinearExtrusion { direction, .. },
         )) = graph.get(id)
         {
-            return axiolid_generate::sweep::linear_extrusion_normals(path, *direction);
+            return axiolid_construct::sweep::linear_extrusion_normals(path, *direction);
         }
         let surface = Self::surface_of(graph, id)?;
         path.iter()
             .map(|point| {
-                let (u, v) = axiolid_scalar::surface::invert(surface, *point, options.tolerance())?;
-                axiolid_scalar::surface::normal(surface, u, v)
+                let (u, v) =
+                    axiolid_reference::surface::invert(surface, *point, options.tolerance())?;
+                axiolid_reference::surface::normal(surface, u, v)
             })
             .collect()
     }
@@ -179,7 +180,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
         id: NodeId,
         options: &ExecutionOptions,
         what: &str,
-    ) -> GeomResult<axiolid_generate::profile::Rings> {
+    ) -> GeomResult<axiolid_construct::profile::Rings> {
         let node = self.node(graph, id)?;
         let GeometryNode::Profile(shape) = node else {
             return Err(GeomError::InvalidInput(format!(
@@ -379,7 +380,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
             // CSG primitives are analytic solids: no surface evaluation,
             // no trim curves, just a closed mesh at the caller's tolerance.
             GeometryNode::Primitive(primitive) => {
-                axiolid_scalar::primitive::tessellate_primitive(primitive, options.tolerance())
+                axiolid_reference::primitive::tessellate_primitive(primitive, options.tolerance())
             }
             other => Err(GeomError::Unsupported {
                 backend: self.descriptor().id,
@@ -438,7 +439,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                     )));
                 };
                 let rings = profile_rings(shape, chord_error(options), options.tolerance())?;
-                axiolid_generate::revolve::revolve(
+                axiolid_construct::revolve::revolve(
                     &rings,
                     *axis_origin,
                     *axis_direction,
@@ -454,7 +455,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
             } => {
                 let a = self.rings_of(graph, *start_profile, options, "taper start profile")?;
                 let b = self.rings_of(graph, *end_profile, options, "taper end profile")?;
-                axiolid_generate::sweep::tapered_extrude(&a, &b, *direction, *depth)
+                axiolid_construct::sweep::tapered_extrude(&a, &b, *direction, *depth)
             }
             SolidOperation::TaperedRevolution {
                 start_profile,
@@ -465,7 +466,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
             } => {
                 let a = self.rings_of(graph, *start_profile, options, "taper start profile")?;
                 let b = self.rings_of(graph, *end_profile, options, "taper end profile")?;
-                axiolid_generate::sweep::tapered_revolve(
+                axiolid_construct::sweep::tapered_revolve(
                     &a,
                     &b,
                     *axis_origin,
@@ -482,7 +483,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                 fillet_radius,
             } => {
                 let path = self.directrix_points(graph, *directrix, *parameter_range, options)?;
-                axiolid_generate::sweep::swept_disk(
+                axiolid_construct::sweep::swept_disk(
                     &path,
                     *radius,
                     *inner_radius,
@@ -498,7 +499,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
             } => {
                 let rings = self.rings_of(graph, *profile, options, "sweep profile")?;
                 let path = self.directrix_points(graph, *directrix, *parameter_range, options)?;
-                axiolid_generate::sweep::fixed_reference_sweep(&rings, &path, *reference_direction)
+                axiolid_construct::sweep::fixed_reference_sweep(&rings, &path, *reference_direction)
             }
             SolidOperation::SurfaceCurveSweep {
                 profile,
@@ -510,7 +511,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                     self.rings_of(graph, *profile, options, "surface curve sweep profile")?;
                 let path = self.directrix_points(graph, *directrix, *parameter_range, options)?;
                 let normals = self.surface_normals(graph, *reference_surface, &path, options)?;
-                axiolid_generate::sweep::surface_curve_sweep(&rings, &path, &normals)
+                axiolid_construct::sweep::surface_curve_sweep(&rings, &path, &normals)
             }
             SolidOperation::SectionedSpine { spine, sections } => {
                 let path = self.directrix_points(graph, *spine, None, options)?;
@@ -540,7 +541,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                         .collect();
                     placed.push((rings, pts));
                 }
-                axiolid_generate::sweep::sectioned_spine(&placed)
+                axiolid_construct::sweep::sectioned_spine(&placed)
             }
             SolidOperation::BoundedHalfSpace {
                 half_space,
@@ -558,7 +559,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                 // an unbounded half-space extends before it can be meshed.
                 let margin = axiolid_primitive::ClipMargin::new(2.0)
                     .expect("2.0 is a valid positive clip margin");
-                let mesh = axiolid_generate::half_space::bounded_half_space(
+                let mesh = axiolid_construct::half_space::bounded_half_space(
                     &rings,
                     hs.boundary,
                     hs.agreement,
@@ -575,7 +576,7 @@ impl<B: MeshBoolean> ScalarCompiler<B> {
                 let subject = self.cached(cache, *left, options.tolerance())?;
                 let right_node = self.node(graph, *right)?;
                 let bounded_tool = if let GeometryNode::HalfSpace(hs) = right_node {
-                    Some(axiolid_generate::half_space::for_subject(
+                    Some(axiolid_construct::half_space::for_subject(
                         subject,
                         *hs,
                         options.tolerance(),

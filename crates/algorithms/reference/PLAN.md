@@ -1,4 +1,4 @@
-# axiolid-scalar plan
+# axiolid-reference plan
 
 ## Done
 - Error-free transformations (`two_sum`, `two_diff`, `two_product`).

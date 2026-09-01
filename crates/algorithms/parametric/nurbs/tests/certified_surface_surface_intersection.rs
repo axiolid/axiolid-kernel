@@ -4,7 +4,7 @@ use axiolid_nurbs::{
     intersect_surface_surface_certified, CertifiedSurfaceSurfaceIntersection3,
     CertifiedSurfaceSurfaceIntersectionOptions,
 };
-use axiolid_scalar::surface::bspline_jet;
+use axiolid_reference::surface::bspline_jet;
 use axiolid_surface::BSplineSurface;
 
 fn xy_plane() -> BSplineSurface {

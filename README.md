@@ -51,7 +51,7 @@ assert!(origin.is_finite());
 assert!(tolerance.linear() >= 0.0);
 ```
 
-For narrow dependency graphs, depend directly on leaf crates such as `axiolid-core`, `axiolid-mesh`, or `axiolid-scalar`. Feature bundles are named for capability—not an input format:
+For narrow dependency graphs, depend directly on leaf crates such as `axiolid-core`, `axiolid-mesh`, or `axiolid-reference`. Feature bundles are named for capability—not an input format:
 
 ```toml
 axiolid = { git = "https://github.com/axiolid/axiolid-kernel.git", features = ["discrete"] }

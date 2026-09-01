@@ -47,7 +47,7 @@ axiolid-model = { path = "crates/representations/modeling/graph", version = "0.1
 axiolid-primitive = { path = "crates/representations/analytic/primitive", version = "0.1.0" }
 axiolid-heal = { path = "crates/algorithms/repair/heal", version = "0.1.0" }
 axiolid-nurbs = { path = "crates/algorithms/parametric/nurbs", version = "0.1.0" }
-axiolid-generate = { path = "crates/algorithms/construction/construct", version = "0.1.0" }
+axiolid-construct = { path = "crates/algorithms/construction/construct", version = "0.1.0" }
 axiolid-profile = { path = "crates/representations/region/profile", version = "0.1.0" }
 axiolid-curve = { path = "crates/representations/analytic/curve", version = "0.1.0" }
 axiolid-surface = { path = "crates/representations/analytic/surface", version = "0.1.0" }
@@ -59,12 +59,12 @@ axiolid-measure = { path = "crates/algorithms/query/measure", version = "0.1.0" 
 axiolid-overlay = { path = "crates/algorithms/planar/overlay", version = "0.1.0" }
 axiolid-field = { path = "crates/algorithms/sampled/field", version = "0.1.0", default-features = false }
 i_overlay = "4.5.2"
-axiolid-scalar = { path = "crates/algorithms/reference", version = "0.1.0" }
+axiolid-reference = { path = "crates/algorithms/reference", version = "0.1.0" }
 axiolid-compile = { path = "crates/execution/compile", version = "0.1.0" }
 axiolid-kernel = { path = "crates/contracts/common", version = "0.1.0", default-features = false }
 axiolid-backend-cpu = { path = "crates/execution/cpu", version = "0.1.0", default-features = false }
 axiolid-backend-gpu = { path = "crates/execution/gpu", version = "0.1.0", default-features = false }
-axiolid-boolmesh = { path = "crates/providers/mesh/boolmesh", version = "0.1.0" }
+axiolid-mesh-boolean-boolmesh = { path = "crates/providers/mesh/boolmesh", version = "0.1.0" }
 glam = "0.29"
 thiserror = "2.0"
 rayon = "1.10"

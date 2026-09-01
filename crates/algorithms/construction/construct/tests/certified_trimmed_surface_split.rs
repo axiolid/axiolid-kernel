@@ -1,11 +1,11 @@
 use std::collections::BTreeSet;
 
-use axiolid_core::Point3;
-use axiolid_curve::KnotSpec;
-use axiolid_generate::{
+use axiolid_construct::{
     split_surface_pair_certified, CertifiedSurfacePairSplit3, CertifiedSurfacePairSplitOptions,
     CertifiedTrimmedSurfacePair3, SurfacePairMember, SurfacePairSplitUnresolvedReason,
 };
+use axiolid_core::Point3;
+use axiolid_curve::KnotSpec;
 use axiolid_nurbs::{
     CertifiedSurfaceSurfaceIntersection3, CertifiedSurfaceSurfaceIntersectionOptions,
 };
@@ -190,7 +190,7 @@ fn splits_boundary_owned_face_and_embeds_same_edge_in_containing_face() {
     assert_eq!(split.split_faces.len(), 2);
     assert_eq!(
         split.split_surface,
-        axiolid_generate::SurfacePairMember::Second
+        axiolid_construct::SurfacePairMember::Second
     );
     assert_eq!(split.embedded_curve.face, split.unsplit_face);
     assert_eq!(split.embedded_curve.edge, split.intersection_edge);
