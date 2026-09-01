@@ -1,11 +1,19 @@
 //! Semantic validation for graph references.
 
-use crate::{CurveRelation, GeometryNode, GraphError, NodeId, SolidOperation, SurfaceRelation};
+use std::collections::HashSet;
+
+use axiolid_curve::{BSplineCurve2, Curve2};
+
+use crate::{
+    CurveRelation, GeometryNode, GraphError, NodeId, SolidOperation, SurfaceRelation, TrimSelector,
+    TrimmingPreference,
+};
 
 #[derive(Debug, Clone, Copy)]
 enum ExpectedReference {
     Curve,
     Curve2,
+    BoundedOpenCurve2,
     Curve3,
     Surface,
     CurveOrSurface,
@@ -20,22 +28,40 @@ enum CurveDimension {
     Three,
 }
 
-fn curve_has_dimension(
-    node: &GeometryNode,
-    nodes: &[GeometryNode],
-    expected: CurveDimension,
-) -> bool {
-    let mut pending = vec![node];
-    while let Some(mut node) = pending.pop() {
-        while let GeometryNode::Instance(instance) = node {
-            node = &nodes[instance.source.index()];
+fn curve_has_dimension(root: NodeId, nodes: &[GeometryNode], dimension: CurveDimension) -> bool {
+    let mut pending = vec![root];
+    let mut visited = HashSet::new();
+
+    while let Some(node_id) = pending.pop() {
+        if !visited.insert(node_id.index()) {
+            continue;
         }
-        match node {
-            GeometryNode::Curve2(_) if expected == CurveDimension::Two => {}
-            GeometryNode::Curve3(_) if expected == CurveDimension::Three => {}
-            GeometryNode::Curve2(_) | GeometryNode::Curve3(_) => return false,
-            GeometryNode::CurveRelation(relation) => {
-                if !queue_curve_dependencies(relation, nodes, expected, &mut pending) {
+        match &nodes[node_id.index()] {
+            GeometryNode::Instance(instance) => pending.push(instance.source),
+            GeometryNode::Curve2(_) => {
+                if dimension != CurveDimension::Two {
+                    return false;
+                }
+            }
+            GeometryNode::Curve3(_) => {
+                if dimension != CurveDimension::Three {
+                    return false;
+                }
+            }
+            GeometryNode::CurveRelation(CurveRelation::Trimmed { basis, .. })
+            | GeometryNode::CurveRelation(CurveRelation::Offset { basis, .. }) => {
+                pending.push(*basis);
+            }
+            GeometryNode::CurveRelation(CurveRelation::Composite { segments }) => {
+                pending.extend(segments.iter().map(|segment| segment.curve));
+            }
+            GeometryNode::CurveRelation(CurveRelation::SurfaceCurve { .. }) => {
+                if dimension != CurveDimension::Three {
+                    return false;
+                }
+            }
+            GeometryNode::CurveRelation(CurveRelation::ParameterCurve { .. }) => {
+                if dimension != CurveDimension::Two {
                     return false;
                 }
             }
@@ -45,27 +71,259 @@ fn curve_has_dimension(
     true
 }
 
-fn queue_curve_dependencies<'a>(
-    relation: &CurveRelation,
-    nodes: &'a [GeometryNode],
-    expected: CurveDimension,
-    pending: &mut Vec<&'a GeometryNode>,
+fn bspline_is_structurally_valid_2d(curve: &BSplineCurve2) -> bool {
+    let degree = usize::from(curve.degree);
+    let expected_sum = curve
+        .control_points
+        .len()
+        .checked_add(degree)
+        .and_then(|value| value.checked_add(1));
+    let actual_sum = curve
+        .multiplicities
+        .iter()
+        .try_fold(0usize, |sum, value| sum.checked_add(*value as usize));
+    let weights_are_valid = curve.weights.as_ref().is_none_or(|weights| {
+        weights.len() == curve.control_points.len()
+            && weights
+                .iter()
+                .all(|weight| weight.is_finite() && *weight > 0.0)
+    });
+
+    degree > 0
+        && curve.control_points.len() > degree
+        && curve.control_points.iter().all(|point| point.is_finite())
+        && !curve.knots.is_empty()
+        && curve.knots.iter().all(|knot| knot.is_finite())
+        && curve.knots.windows(2).all(|pair| pair[0] < pair[1])
+        && curve.multiplicities.len() == curve.knots.len()
+        && curve
+            .multiplicities
+            .iter()
+            .all(|value| *value > 0 && *value <= u32::from(curve.degree) + 1)
+        && actual_sum == expected_sum
+        && weights_are_valid
+}
+
+fn curve2_is_structurally_valid_trim_basis(curve: &Curve2) -> bool {
+    match curve {
+        Curve2::Line(line) => {
+            line.origin.is_finite()
+                && line.direction.is_finite()
+                && line.direction.length_squared() > 0.0
+        }
+        Curve2::Circle(circle) => {
+            circle.frame.origin.is_finite()
+                && circle.frame.x.is_finite()
+                && circle.frame.y.is_finite()
+                && circle.frame.x.perp_dot(circle.frame.y) != 0.0
+                && circle.radius.is_finite()
+                && circle.radius > 0.0
+        }
+        Curve2::Ellipse(ellipse) => {
+            ellipse.frame.origin.is_finite()
+                && ellipse.frame.x.is_finite()
+                && ellipse.frame.y.is_finite()
+                && ellipse.frame.x.perp_dot(ellipse.frame.y) != 0.0
+                && ellipse.semi_axis_x.is_finite()
+                && ellipse.semi_axis_x > 0.0
+                && ellipse.semi_axis_y.is_finite()
+                && ellipse.semi_axis_y > 0.0
+        }
+        Curve2::Polyline(polyline) => {
+            polyline.points.len() >= 2 && polyline.points.iter().all(|point| point.is_finite())
+        }
+        Curve2::BSpline(spline) => bspline_is_structurally_valid_2d(spline),
+        _ => false,
+    }
+}
+
+fn trim_selector_is_finite_2d(selector: &TrimSelector) -> bool {
+    match selector {
+        TrimSelector::Parameter(value) => value.is_finite(),
+        TrimSelector::Point2(point) => point.is_finite(),
+        TrimSelector::Point3(_) => false,
+    }
+}
+
+fn trim_end_supports_preference(
+    selectors: &[TrimSelector],
+    preference: TrimmingPreference,
 ) -> bool {
-    match relation {
-        CurveRelation::Composite { segments } => {
-            if segments.is_empty() {
+    match preference {
+        TrimmingPreference::Parameter => selectors
+            .iter()
+            .any(|selector| matches!(selector, TrimSelector::Parameter(_))),
+        TrimmingPreference::Cartesian => selectors
+            .iter()
+            .any(|selector| matches!(selector, TrimSelector::Point2(_))),
+        TrimmingPreference::Unspecified => true,
+    }
+}
+
+fn trim_selectors_definitely_equal(start: &[TrimSelector], end: &[TrimSelector]) -> bool {
+    start.iter().any(|left| {
+        end.iter().any(|right| match (left, right) {
+            (TrimSelector::Parameter(a), TrimSelector::Parameter(b)) => a == b,
+            (TrimSelector::Point2(a), TrimSelector::Point2(b)) => a == b,
+            _ => false,
+        })
+    })
+}
+
+fn trim_declaration_is_structurally_open_2d(
+    start: &[TrimSelector],
+    end: &[TrimSelector],
+    preference: TrimmingPreference,
+) -> bool {
+    !start.is_empty()
+        && !end.is_empty()
+        && start.iter().all(trim_selector_is_finite_2d)
+        && end.iter().all(trim_selector_is_finite_2d)
+        && trim_end_supports_preference(start, preference)
+        && trim_end_supports_preference(end, preference)
+        && !trim_selectors_definitely_equal(start, end)
+}
+
+fn curve_is_valid_2d_trim_basis(root: NodeId, nodes: &[GeometryNode]) -> bool {
+    let mut pending = vec![root];
+    let mut visited = HashSet::new();
+
+    'pending: while let Some(node_id) = pending.pop() {
+        if !visited.insert(node_id.index()) {
+            continue;
+        }
+        let mut node = &nodes[node_id.index()];
+        while let GeometryNode::Instance(instance) = node {
+            if !instance.transform.is_finite() {
                 return false;
             }
-            pending.extend(segments.iter().map(|segment| &nodes[segment.curve.index()]));
-            true
+            if !visited.insert(instance.source.index()) {
+                continue 'pending;
+            }
+            node = &nodes[instance.source.index()];
         }
-        CurveRelation::Trimmed { basis, .. } | CurveRelation::Offset { basis, .. } => {
-            pending.push(&nodes[basis.index()]);
-            true
+        match node {
+            GeometryNode::Curve2(curve) => {
+                if !curve2_is_structurally_valid_trim_basis(curve) {
+                    return false;
+                }
+            }
+            GeometryNode::CurveRelation(CurveRelation::Trimmed {
+                basis,
+                start,
+                end,
+                preference,
+                ..
+            }) => {
+                if !trim_declaration_is_structurally_open_2d(start, end, *preference) {
+                    return false;
+                }
+                pending.push(*basis);
+            }
+            GeometryNode::CurveRelation(CurveRelation::Composite { segments }) => {
+                if segments.is_empty() {
+                    return false;
+                }
+                pending.extend(segments.iter().map(|segment| segment.curve));
+            }
+            GeometryNode::CurveRelation(CurveRelation::Offset {
+                basis,
+                distance,
+                reference_direction,
+            }) => {
+                if !distance.is_finite() || reference_direction.is_some() {
+                    return false;
+                }
+                pending.push(*basis);
+            }
+            GeometryNode::CurveRelation(CurveRelation::ParameterCurve {
+                reference_curve, ..
+            }) => pending.push(*reference_curve),
+            GeometryNode::CurveRelation(CurveRelation::SurfaceCurve { .. }) | _ => return false,
         }
-        CurveRelation::SurfaceCurve { .. } => expected == CurveDimension::Three,
-        CurveRelation::ParameterCurve { .. } => expected == CurveDimension::Two,
     }
+    true
+}
+
+fn trimmed_curve_is_structurally_open_2d(
+    basis: NodeId,
+    start: &[TrimSelector],
+    end: &[TrimSelector],
+    preference: TrimmingPreference,
+    nodes: &[GeometryNode],
+) -> bool {
+    trim_declaration_is_structurally_open_2d(start, end, preference)
+        && curve_is_valid_2d_trim_basis(basis, nodes)
+}
+
+fn curve_is_bounded_open_2d(root: NodeId, nodes: &[GeometryNode]) -> bool {
+    let mut pending = vec![root];
+    let mut visited = HashSet::new();
+
+    'pending: while let Some(node_id) = pending.pop() {
+        if !visited.insert(node_id.index()) {
+            continue;
+        }
+        let mut node = &nodes[node_id.index()];
+        while let GeometryNode::Instance(instance) = node {
+            if !instance.transform.is_finite() {
+                return false;
+            }
+            if !visited.insert(instance.source.index()) {
+                continue 'pending;
+            }
+            node = &nodes[instance.source.index()];
+        }
+        match node {
+            GeometryNode::Curve2(Curve2::Polyline(curve)) => {
+                if curve.closed
+                    || curve.points.len() < 2
+                    || !curve.points.iter().all(|point| point.is_finite())
+                    || curve.points.first() == curve.points.last()
+                {
+                    return false;
+                }
+            }
+            GeometryNode::Curve2(Curve2::BSpline(curve)) => {
+                if curve.closed || !bspline_is_structurally_valid_2d(curve) {
+                    return false;
+                }
+            }
+            GeometryNode::Curve2(_) => return false,
+            GeometryNode::CurveRelation(CurveRelation::Trimmed {
+                basis,
+                start,
+                end,
+                preference,
+                ..
+            }) => {
+                if !trimmed_curve_is_structurally_open_2d(*basis, start, end, *preference, nodes) {
+                    return false;
+                }
+            }
+            GeometryNode::CurveRelation(CurveRelation::Composite { segments }) => {
+                if segments.is_empty() {
+                    return false;
+                }
+                pending.extend(segments.iter().map(|segment| segment.curve));
+            }
+            GeometryNode::CurveRelation(CurveRelation::Offset {
+                basis,
+                distance,
+                reference_direction,
+            }) => {
+                if !distance.is_finite() || reference_direction.is_some() {
+                    return false;
+                }
+                pending.push(*basis);
+            }
+            GeometryNode::CurveRelation(CurveRelation::ParameterCurve {
+                reference_curve, ..
+            }) => pending.push(*reference_curve),
+            GeometryNode::CurveRelation(CurveRelation::SurfaceCurve { .. }) | _ => return false,
+        }
+    }
+    true
 }
 
 impl ExpectedReference {
@@ -73,6 +331,7 @@ impl ExpectedReference {
         match self {
             Self::Curve => "curve",
             Self::Curve2 => "curve2",
+            Self::BoundedOpenCurve2 => "bounded open curve2",
             Self::Curve3 => "curve3",
             Self::Surface => "surface",
             Self::CurveOrSurface => "curve or surface",
@@ -82,10 +341,28 @@ impl ExpectedReference {
         }
     }
 
-    fn accepts<'a>(self, mut node: &'a GeometryNode, nodes: &'a [GeometryNode]) -> bool {
+    fn accepts<'a>(
+        self,
+        reference: NodeId,
+        mut node: &'a GeometryNode,
+        nodes: &'a [GeometryNode],
+    ) -> bool {
+        match self {
+            Self::Curve => {
+                return curve_has_dimension(reference, nodes, CurveDimension::Two)
+                    || curve_has_dimension(reference, nodes, CurveDimension::Three);
+            }
+            Self::Curve2 => {
+                return curve_has_dimension(reference, nodes, CurveDimension::Two);
+            }
+            Self::BoundedOpenCurve2 => return curve_is_bounded_open_2d(reference, nodes),
+            Self::Curve3 => {
+                return curve_has_dimension(reference, nodes, CurveDimension::Three);
+            }
+            _ => {}
+        }
+
         // An instance preserves the dimensional/reference family of its source.
-        // Walk iteratively because a valid append-only graph may contain a deep
-        // chain of instances and validation must not consume call-stack depth.
         while let GeometryNode::Instance(instance) = node {
             node = &nodes[instance.source.index()];
         }
@@ -95,17 +372,12 @@ impl ExpectedReference {
             GeometryNode::Surface(_) | GeometryNode::SurfaceRelation(_)
         );
         match self {
-            Self::Curve => {
-                curve_has_dimension(node, nodes, CurveDimension::Two)
-                    || curve_has_dimension(node, nodes, CurveDimension::Three)
-            }
-            Self::Curve2 => curve_has_dimension(node, nodes, CurveDimension::Two),
-            Self::Curve3 => curve_has_dimension(node, nodes, CurveDimension::Three),
+            Self::Curve | Self::Curve2 | Self::BoundedOpenCurve2 | Self::Curve3 => false,
             Self::Surface => surface,
             Self::CurveOrSurface => {
                 surface
-                    || curve_has_dimension(node, nodes, CurveDimension::Two)
-                    || curve_has_dimension(node, nodes, CurveDimension::Three)
+                    || curve_has_dimension(reference, nodes, CurveDimension::Two)
+                    || curve_has_dimension(reference, nodes, CurveDimension::Three)
             }
             Self::Profile => matches!(node, GeometryNode::Profile(_)),
             Self::Solid => matches!(
@@ -136,6 +408,9 @@ pub(crate) fn validate_reference_types(
         GeometryNode::SurfaceRelation(value) => validate_surface_relation(value, nodes),
         GeometryNode::PointOnSurface(value) => {
             expect_reference(nodes, value.surface, ExpectedReference::Surface)
+        }
+        GeometryNode::OpenProfile(value) => {
+            expect_reference(nodes, value.path, ExpectedReference::BoundedOpenCurve2)
         }
         GeometryNode::SolidOperation(value) => validate_solid_operation(value, nodes),
         GeometryNode::BRep(value) => {
@@ -190,7 +465,7 @@ fn expect_reference(
     expected: ExpectedReference,
 ) -> Result<(), GraphError> {
     let actual = &nodes[reference.index()];
-    if expected.accepts(actual, nodes) {
+    if expected.accepts(reference, actual, nodes) {
         return Ok(());
     }
     Err(GraphError::InvalidReferenceType {
@@ -219,6 +494,7 @@ fn node_kind(node: &GeometryNode) -> &'static str {
         GeometryNode::SurfaceRelation(_) => "surface-relation",
         GeometryNode::PointOnSurface(_) => "point-on-surface",
         GeometryNode::Profile(_) => "profile",
+        GeometryNode::OpenProfile(_) => "open-profile",
         GeometryNode::Primitive(_) => "primitive",
         GeometryNode::HalfSpace(_) => "half-space",
         GeometryNode::SolidOperation(_) => "solid-operation",

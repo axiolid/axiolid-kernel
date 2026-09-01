@@ -668,7 +668,9 @@ fn is_subject_bounded_half_space_boolean(
 /// that supplies it, instead of guessing from a generic failure.
 fn unsupported_operation(node: &GeometryNode) -> Operation {
     match node {
-        GeometryNode::Curve2(_) | GeometryNode::Curve3(_) => Operation::CurveEvaluation,
+        GeometryNode::Curve2(_) | GeometryNode::Curve3(_) | GeometryNode::OpenProfile(_) => {
+            Operation::CurveEvaluation
+        }
         GeometryNode::Surface(_) => Operation::SurfaceEvaluation,
         GeometryNode::Profile(_) => Operation::ProfileTriangulation,
         GeometryNode::BRep(_) | GeometryNode::PolygonMesh(_) => Operation::Tessellation,

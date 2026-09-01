@@ -40,6 +40,7 @@ fn model_handles_and_values_have_standard_traits() {
     id::<axiolid::model::NodeId>();
     value::<axiolid::model::GeometryGraph>();
     value::<axiolid::model::GeometryNode>();
+    value::<axiolid::model::OpenProfile>();
     default_value::<axiolid::model::GeometryGraph>();
     default_value::<axiolid::model::GeometryGraphBuilder>();
 }

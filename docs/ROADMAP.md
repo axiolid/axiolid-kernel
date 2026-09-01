@@ -14,7 +14,7 @@ trade capability for benchmarks now.
 
 ## Current foundation
 
-- Format-neutral values, meshes, profiles, curves, surfaces, topology, and an immutable geometry graph.
+- Format-neutral values, meshes, area profiles, authored bounded-open profile declarations, curves, surfaces, topology, and an immutable geometry graph.
 - Feature-gated facade with a portable scalar reference path and separate CPU/GPU provider seams.
 - Architecture, feature-isolation, and layering gates that keep IFC, source formats, and concrete providers out of the kernel.
 - A first-class general NURBS algorithm crate with analytic second-order curve/surface jets, differential geometry, bounded local projection, globally certified clamped curve projection and curve-pair minimum distance, verified closed-curve wrapping, and exact shape-preserving insertion/reversal/split/Bézier operations; import and tessellation remain consumers.

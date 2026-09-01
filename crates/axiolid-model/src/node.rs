@@ -30,6 +30,28 @@ pub struct PointOnSurface {
     pub v: Scalar,
 }
 
+/// Source-authored bounded open two-dimensional profile path.
+///
+/// This declaration preserves exact curve intent while carrying no area, width,
+/// closure edge, or evaluation instruction. Graph construction conservatively
+/// admits only known bounded-open forms, including finite source-open
+/// polylines, structurally valid finite B-splines, finite 2D trims with no
+/// exactly equal authored endpoints, and recursively valid relation chains.
+/// Endpoint inequality across arbitrary relations still requires geometric
+/// evaluation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct OpenProfile {
+    /// Exact two-dimensional curve or curve relation authored as the path.
+    pub path: NodeId,
+}
+
+impl OpenProfile {
+    /// Declare `path` as a bounded open profile without implying area or width.
+    pub const fn new(path: NodeId) -> Self {
+        Self { path }
+    }
+}
+
 /// Reuse one graph node under a transform, preserving instancing.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Instance {
@@ -79,8 +101,10 @@ pub enum GeometryNode {
     SurfaceRelation(SurfaceRelation),
     /// Point on a surface.
     PointOnSurface(PointOnSurface),
-    /// Exact section profile.
+    /// Exact section profile with area semantics.
     Profile(Profile),
+    /// Authored exact open profile path without area or width semantics.
+    OpenProfile(OpenProfile),
     /// Exact primitive solid.
     Primitive(Primitive),
     /// Unbounded half-space.
@@ -110,6 +134,7 @@ impl GeometryNode {
             Self::PointOnCurve(value) => references.push(value.curve),
             Self::SurfaceRelation(value) => value.references(&mut references),
             Self::PointOnSurface(value) => references.push(value.surface),
+            Self::OpenProfile(value) => references.push(value.path),
             Self::SolidOperation(value) => value.references(&mut references),
             Self::BRep(value) => {
                 references.extend(value.edges().iter().filter_map(|edge| edge.curve));

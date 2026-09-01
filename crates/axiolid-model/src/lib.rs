@@ -22,7 +22,7 @@ pub use curve_relation::{
 };
 pub use graph::{GeometryGraph, GeometryGraphBuilder, GraphError};
 pub use id::NodeId;
-pub use node::{GeometryNode, Instance, PointOnCurve, PointOnSurface};
+pub use node::{GeometryNode, Instance, OpenProfile, PointOnCurve, PointOnSurface};
 pub use solid_operation::{Section, SolidOperation};
 pub use surface_relation::SurfaceRelation;
 pub use value::BuiltInNode;
