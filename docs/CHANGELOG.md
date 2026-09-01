@@ -30,7 +30,7 @@ All notable changes to Axiolid are documented in this file.
 - Extracted scalar solid generation — profiles, lofts, sweeps, revolutions, extrusion, and bounded half-space clipping — from the L3 DAG compiler into the new L2 `axiolid-generate` crate. `axiolid-compile` now owns graph traversal, caching, model-driven directrices, and B-rep tessellation only; see [ADR 0023](./adr/0023-solid-generation-is-an-l2-crate.md).
 
 ### Fixed
-- `orient3d` exact escalation now preserves error-free coordinate-difference tails before evaluating cofactors. Previously it incorrectly assumed filter uncertainty implied Sterbenz-exact subtraction and could certify a false nonzero sign for exactly coplanar binary64 inputs.
+- `orient3d` exact escalation now preserves error-free coordinate-difference tails before evaluating cofactors and uses a bounded exact dyadic fallback when finite inputs would overflow or underflow expansion intermediates. Previously it could certify false signs for exactly coplanar inputs and false zero for extreme finite coordinates.
 
 ### Removed
 - Removed the `axiolid-sweep` crate and the facade's misleading `sweeps` feature and `axiolid::sweep` module. The crate held a single `Sweeper` trait with no implementors, no tests, and no references. Its former construction code is now properly extracted into `axiolid-generate`; [ADR 0021](./adr/0021-capability-seams-live-in-the-kernel.md) is superseded by [ADR 0023](./adr/0023-solid-generation-is-an-l2-crate.md).

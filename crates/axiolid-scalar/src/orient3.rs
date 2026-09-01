@@ -24,6 +24,7 @@ use crate::arithmetic::{
     scale_expansion,
 };
 use crate::expansion::{two_diff, two_product};
+use crate::orient3_dyadic::orient3d_exact_dyadic;
 
 /// Machine epsilon for binary64.
 const EPSILON: f64 = f64::EPSILON / 2.0;
@@ -46,14 +47,24 @@ const ORIENT3D_ERROR_FACTOR: f64 = (7.0 + 56.0 * EPSILON) * EPSILON;
 
 /// Orientation of `d` relative to the plane through `a`, `b`, `c`.
 ///
-/// Always [`Certified::Certain`]: escalates internally, so the sign may drive a
-/// topology decision directly.
+/// Returns an exact certified sign for finite binary64 coordinates. The usual
+/// expansion path handles inputs whose intermediates remain representable;
+/// other finite exponent ranges fall back to a fixed-size exact dyadic
+/// accumulator. Non-finite input returns [`Certified::Uncertain`] rather than
+/// guessing.
 #[must_use]
 pub fn orient3d(a: Point3, b: Point3, c: Point3, d: Point3) -> Certified {
     match orient3d_filter(a, b, c, d) {
         Certified::Certain { sign, .. } => Certified::exact_sign(sign),
         // Non-exhaustive enum: anything we do not recognise must escalate.
-        _ => Certified::exact_sign(orient3d_exact(a, b, c, d)),
+        _ => orient3d_exact(a, b, c, d)
+            .or_else(|| orient3d_exact_dyadic(a, b, c, d))
+            .map_or(
+                Certified::Uncertain {
+                    attempted: Precision::Exact,
+                },
+                Certified::exact_sign,
+            ),
     }
 }
 
@@ -63,6 +74,15 @@ pub fn orient3d_filter(a: Point3, b: Point3, c: Point3, d: Point3) -> Certified 
     let (adx, ady, adz) = (a.x - d.x, a.y - d.y, a.z - d.z);
     let (bdx, bdy, bdz) = (b.x - d.x, b.y - d.y, b.z - d.z);
     let (cdx, cdy, cdz) = (c.x - d.x, c.y - d.y, c.z - d.z);
+
+    let differences = [adx, ady, adz, bdx, bdy, bdz, cdx, cdy, cdz];
+    if !differences.iter().all(|value| {
+        value.is_finite() && (*value == 0.0 || (value.abs() >= 1.0e-90 && value.abs() <= 1.0e90))
+    }) {
+        return Certified::Uncertain {
+            attempted: Precision::F64,
+        };
+    }
 
     let bdxcdy = bdx * cdy;
     let cdxbdy = cdx * bdy;
@@ -93,7 +113,7 @@ pub fn orient3d_filter(a: Point3, b: Point3, c: Point3, d: Point3) -> Certified 
 /// the result is the determinant of the input binary64 coordinates rather than
 /// of rounded coordinate differences.
 #[must_use]
-fn orient3d_exact(a: Point3, b: Point3, c: Point3, d: Point3) -> Sign {
+fn orient3d_exact(a: Point3, b: Point3, c: Point3, d: Point3) -> Option<Sign> {
     let (adx, adx_error) = two_diff(a.x, d.x);
     let (ady, ady_error) = two_diff(a.y, d.y);
     let (adz, adz_error) = two_diff(a.z, d.z);
@@ -104,13 +124,27 @@ fn orient3d_exact(a: Point3, b: Point3, c: Point3, d: Point3) -> Sign {
     let (cdy, cdy_error) = two_diff(c.y, d.y);
     let (cdz, cdz_error) = two_diff(c.z, d.z);
 
+    let differences = [[adx, ady, adz], [bdx, bdy, bdz], [cdx, cdy, cdz]];
     let errors = [
-        adx_error, ady_error, adz_error, bdx_error, bdy_error, bdz_error, cdx_error, cdy_error,
-        cdz_error,
+        [adx_error, ady_error, adz_error],
+        [bdx_error, bdy_error, bdz_error],
+        [cdx_error, cdy_error, cdz_error],
     ];
-    if errors.iter().all(|error| *error == 0.0) {
-        return orient3d_exact_differences([adx, ady, adz], [bdx, bdy, bdz], [cdx, cdy, cdz]);
+    if !exact_components_are_representable(&differences, &errors) {
+        return None;
     }
+
+    if errors.iter().flatten().all(|error| *error == 0.0) {
+        return Some(orient3d_exact_differences(
+            differences[0],
+            differences[1],
+            differences[2],
+        ));
+    }
+
+    let [[adx, ady, adz], [bdx, bdy, bdz], [cdx, cdy, cdz]] = differences;
+    let [[adx_error, ady_error, adz_error], [bdx_error, bdy_error, bdz_error], [cdx_error, cdy_error, cdz_error]] =
+        errors;
 
     let adx = difference_expansion(adx, adx_error);
     let ady = difference_expansion(ady, ady_error);
@@ -130,7 +164,81 @@ fn orient3d_exact(a: Point3, b: Point3, c: Point3, d: Point3) -> Sign {
         &expansion_sum(&expansion_product(&bc, &adz), &expansion_product(&ca, &bdz)),
         &expansion_product(&ab, &cdz),
     );
-    expansion_sign(&total)
+    Some(expansion_sign(&total))
+}
+
+/// Whether the ordinary expansion evaluator can represent every intermediate.
+///
+/// Components above exponent 300 could overflow a three-factor term. The
+/// monomial check separately proves that each two- and three-factor product
+/// stays above binary64's underflow floor.
+#[must_use]
+fn exact_components_are_representable(differences: &[[f64; 3]; 3], errors: &[[f64; 3]; 3]) -> bool {
+    differences
+        .iter()
+        .flatten()
+        .chain(errors.iter().flatten())
+        .all(|value| value.is_finite() && (*value == 0.0 || highest_bit_exponent(*value) <= 300))
+        && determinant_terms_are_representable(differences, errors)
+}
+
+#[must_use]
+fn determinant_terms_are_representable(
+    differences: &[[f64; 3]; 3],
+    errors: &[[f64; 3]; 3],
+) -> bool {
+    let mut least_bits = [[None; 3]; 3];
+    for row in 0..3 {
+        for column in 0..3 {
+            least_bits[row][column] = [differences[row][column], errors[row][column]]
+                .into_iter()
+                .filter(|value| *value != 0.0)
+                .map(least_significant_bit_exponent)
+                .min();
+        }
+    }
+
+    [
+        [(1, 0), (2, 1), (0, 2)],
+        [(2, 0), (1, 1), (0, 2)],
+        [(2, 0), (0, 1), (1, 2)],
+        [(0, 0), (2, 1), (1, 2)],
+        [(0, 0), (1, 1), (2, 2)],
+        [(1, 0), (0, 1), (2, 2)],
+    ]
+    .into_iter()
+    .all(|term| {
+        let exponents = term.map(|(row, column)| least_bits[row][column]);
+        let [Some(first), Some(second), Some(third)] = exponents else {
+            return true;
+        };
+        first + second >= -1074 && first + second + third >= -1074
+    })
+}
+
+#[must_use]
+fn highest_bit_exponent(value: f64) -> i32 {
+    let bits = value.abs().to_bits();
+    let encoded_exponent = ((bits >> 52) & 0x7ff) as i32;
+    if encoded_exponent == 0 {
+        let fraction = bits & ((1_u64 << 52) - 1);
+        -1074 + (63 - fraction.leading_zeros() as i32)
+    } else {
+        encoded_exponent - 1023
+    }
+}
+
+#[must_use]
+fn least_significant_bit_exponent(value: f64) -> i32 {
+    let bits = value.abs().to_bits();
+    let encoded_exponent = ((bits >> 52) & 0x7ff) as i32;
+    let fraction = bits & ((1_u64 << 52) - 1);
+    if encoded_exponent == 0 {
+        -1074 + fraction.trailing_zeros() as i32
+    } else {
+        let significand = (1_u64 << 52) | fraction;
+        encoded_exponent - 1023 - 52 + significand.trailing_zeros() as i32
+    }
 }
 
 /// Evaluate the determinant when all coordinate differences are already exact.

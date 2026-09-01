@@ -1,0 +1,160 @@
+//! Fixed-size exact dyadic fallback for `orient3d`.
+//!
+//! This path is used only when binary64 expansion arithmetic cannot normalize
+//! finite inputs without overflow or underflow. It performs bounded stack-only
+//! work over the exact binary representation of the original coordinates.
+
+use axiolid_core::Point3;
+use axiolid_kernel::Sign;
+
+const DYADIC_LIMBS: usize = 100;
+const MIN_TRIPLE_EXPONENT: i32 = -3222;
+
+struct ExactMagnitude {
+    limbs: [u64; DYADIC_LIMBS],
+}
+
+impl ExactMagnitude {
+    fn zero() -> Self {
+        Self {
+            limbs: [0; DYADIC_LIMBS],
+        }
+    }
+
+    fn add_shifted_product(&mut self, product: [u64; 3], offset: usize) -> bool {
+        for (word_index, mut word) in product.into_iter().enumerate() {
+            while word != 0 {
+                let bit = word.trailing_zeros() as usize;
+                if !self.add_bit(offset + word_index * 64 + bit) {
+                    return false;
+                }
+                word &= word - 1;
+            }
+        }
+        true
+    }
+
+    fn add_bit(&mut self, bit: usize) -> bool {
+        let mut word_index = bit / 64;
+        if word_index >= DYADIC_LIMBS {
+            return false;
+        }
+        let mut addend = 1_u64 << (bit % 64);
+        loop {
+            let (sum, carry) = self.limbs[word_index].overflowing_add(addend);
+            self.limbs[word_index] = sum;
+            if !carry {
+                return true;
+            }
+            word_index += 1;
+            if word_index >= DYADIC_LIMBS {
+                return false;
+            }
+            addend = 1;
+        }
+    }
+
+    fn compare(&self, other: &Self) -> std::cmp::Ordering {
+        for index in (0..DYADIC_LIMBS).rev() {
+            match self.limbs[index].cmp(&other.limbs[index]) {
+                std::cmp::Ordering::Equal => {}
+                ordering => return ordering,
+            }
+        }
+        std::cmp::Ordering::Equal
+    }
+}
+
+/// Exact sign fallback over the original coordinates, without subtraction.
+///
+/// Expanding each `(coordinate - d)` factor yields 48 signed products. Every
+/// binary64 value is an integer significand times a power of two, so those
+/// products accumulate exactly into fixed positive and negative magnitudes.
+#[must_use]
+pub(super) fn orient3d_exact_dyadic(a: Point3, b: Point3, c: Point3, d: Point3) -> Option<Sign> {
+    let points = [
+        [a.x, a.y, a.z],
+        [b.x, b.y, b.z],
+        [c.x, c.y, c.z],
+        [d.x, d.y, d.z],
+    ];
+    let monomials = [
+        (false, [(1, 0), (2, 1), (0, 2)]),
+        (true, [(2, 0), (1, 1), (0, 2)]),
+        (false, [(2, 0), (0, 1), (1, 2)]),
+        (true, [(0, 0), (2, 1), (1, 2)]),
+        (false, [(0, 0), (1, 1), (2, 2)]),
+        (true, [(1, 0), (0, 1), (2, 2)]),
+    ];
+    let mut positive = ExactMagnitude::zero();
+    let mut negative = ExactMagnitude::zero();
+
+    for (subtract, factors) in monomials {
+        for choices in 0_u8..8 {
+            let mut mantissas = [0_u64; 3];
+            let mut exponent = 0_i32;
+            let mut is_negative = subtract;
+            for index in 0..3 {
+                let choose_d = choices & (1 << index) != 0;
+                let (point, coordinate) = factors[index];
+                let value = points[if choose_d { 3 } else { point }][coordinate];
+                let (value_negative, mantissa, value_exponent) = binary64_parts(value)?;
+                if mantissa == 0 {
+                    mantissas = [0; 3];
+                    break;
+                }
+                mantissas[index] = mantissa;
+                exponent += value_exponent;
+                is_negative ^= value_negative ^ choose_d;
+            }
+            if mantissas.contains(&0) {
+                continue;
+            }
+
+            let offset = usize::try_from(exponent - MIN_TRIPLE_EXPONENT).ok()?;
+            let product = multiply_three_significands(mantissas);
+            let target = if is_negative {
+                &mut negative
+            } else {
+                &mut positive
+            };
+            if !target.add_shifted_product(product, offset) {
+                return None;
+            }
+        }
+    }
+
+    Some(match positive.compare(&negative) {
+        std::cmp::Ordering::Greater => Sign::Positive,
+        std::cmp::Ordering::Less => Sign::Negative,
+        std::cmp::Ordering::Equal => Sign::Zero,
+    })
+}
+
+#[must_use]
+fn binary64_parts(value: f64) -> Option<(bool, u64, i32)> {
+    if !value.is_finite() {
+        return None;
+    }
+    let bits = value.to_bits();
+    let negative = bits >> 63 != 0;
+    let encoded_exponent = ((bits >> 52) & 0x7ff) as i32;
+    let fraction = bits & ((1_u64 << 52) - 1);
+    if encoded_exponent == 0 {
+        Some((negative, fraction, -1074))
+    } else {
+        Some((
+            negative,
+            (1_u64 << 52) | fraction,
+            encoded_exponent - 1023 - 52,
+        ))
+    }
+}
+
+#[must_use]
+fn multiply_three_significands([a, b, c]: [u64; 3]) -> [u64; 3] {
+    let ab = u128::from(a) * u128::from(b);
+    let low = u128::from(ab as u64) * u128::from(c);
+    let middle = u128::from((ab >> 64) as u64) * u128::from(c) + (low >> 64);
+    [low as u64, middle as u64, (middle >> 64) as u64]
+}

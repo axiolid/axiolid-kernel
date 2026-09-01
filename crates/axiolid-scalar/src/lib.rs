@@ -14,6 +14,7 @@ pub mod curve;
 pub mod expansion;
 mod nurbs;
 pub mod orient3;
+mod orient3_dyadic;
 pub mod orientation;
 pub mod polygon;
 pub mod primitive;

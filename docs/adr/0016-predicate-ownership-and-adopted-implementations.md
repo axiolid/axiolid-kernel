@@ -8,9 +8,11 @@
 ## Context
 
 `axiolid-scalar` now owns a certified predicate suite: `orient2d`, `orient3d`,
-`incircle`, `insphere`, plus static filters. Every one is a filtered cascade
-that escalates to exact expansion arithmetic, so it returns a *proven* sign
-rather than a plausible one.
+`incircle`, `insphere`, plus static filters. Their filtered cascades escalate
+to exact arithmetic, so they return a *proven* sign rather than a plausible
+one. `orient3d` normally uses expansion arithmetic; finite exponent ranges
+that would overflow or underflow those expansions use a fixed-size exact
+dyadic accumulator instead.
 
 But the mesh boolean is `boolmesh` (ADR 0014) and polygon triangulation is
 `earcut` (ADR 0015). Both carry their own predicates. So the obvious question:
@@ -77,10 +79,13 @@ proportionally.** `orient2d` is essentially flat — its exact path is cheap
 enough to disappear into measurement noise even at 10% degeneracy. `orient3d`
 costs more at high degeneracy, because its exact path builds expansion cofactors
 and, when coordinate subtraction has a nonzero tail, multiplies complete
-difference expansions. That is a real cost and it is bounded by the finite
-expansion sizes for this fixed-degree predicate: a 10% exactly-coplanar rate
-is far beyond authored building models, and the price of the alternative
-(a wrong sign) is a corrupt mesh.
+difference expansions. Finite inputs outside the expansion evaluator's checked
+no-overflow/no-underflow envelope use a bounded 100-limb stack accumulator over
+exact binary64 dyadics; this avoids intermediate overflow and underflow without
+adding heap allocation to that rare fallback. That is a real cost and it is
+bounded by the finite expansion sizes for this fixed-degree predicate: a 10%
+exactly-coplanar rate is far beyond authored building models, and the price of
+the alternative (a wrong sign) is a corrupt mesh.
 
 The static filter is 1.09x faster than the dynamic one on clean 2D data. That
 is a smaller win than the theory suggests, because the dynamic permanent is

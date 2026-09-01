@@ -50,6 +50,86 @@ fn obvious_orientations_are_correct() {
 }
 
 #[test]
+fn finite_extreme_coordinates_do_not_receive_a_false_exact_sign() {
+    let magnitude = 1.0e200;
+    let origin = Point3::new(0.0, 0.0, 0.0);
+    let x = Point3::new(magnitude, 0.0, 0.0);
+    let y = Point3::new(0.0, magnitude, 0.0);
+    let z = Point3::new(0.0, 0.0, magnitude);
+
+    assert!(!orient3d_filter(x, y, z, origin).is_certain());
+    assert_eq!(orient3d(x, y, z, origin).sign(), Some(Sign::Positive));
+}
+
+#[test]
+fn maximum_finite_cubic_determinant_fits_the_exact_accumulator() {
+    let magnitude = f64::MAX;
+    let origin = Point3::new(0.0, 0.0, 0.0);
+    let x = Point3::new(magnitude, 0.0, 0.0);
+    let y = Point3::new(0.0, magnitude, 0.0);
+    let z = Point3::new(0.0, 0.0, magnitude);
+
+    assert!(!orient3d_filter(x, y, z, origin).is_certain());
+    assert_eq!(orient3d(x, y, z, origin).sign(), Some(Sign::Positive));
+}
+
+#[test]
+fn minimum_positive_cubic_determinant_uses_exact_accumulator() {
+    let magnitude = f64::from_bits(1);
+    let origin = Point3::new(0.0, 0.0, 0.0);
+    let x = Point3::new(magnitude, 0.0, 0.0);
+    let y = Point3::new(0.0, magnitude, 0.0);
+    let z = Point3::new(0.0, 0.0, magnitude);
+
+    assert!(!orient3d_filter(x, y, z, origin).is_certain());
+    assert_eq!(orient3d(x, y, z, origin).sign(), Some(Sign::Positive));
+}
+
+#[test]
+fn finite_extreme_exponent_spread_uses_exact_dyadic_fallback() {
+    let origin = Point3::new(0.0, 0.0, 0.0);
+    let x = Point3::new(1.0e308, 0.0, 0.0);
+    let y = Point3::new(0.0, 1.0, 0.0);
+    let z = Point3::new(0.0, 0.0, 1.0e-300);
+
+    assert!(!orient3d_filter(x, y, z, origin).is_certain());
+    assert_eq!(orient3d(x, y, z, origin).sign(), Some(Sign::Positive));
+}
+
+#[test]
+fn finite_coordinate_difference_overflow_uses_exact_dyadic_fallback() {
+    let a = Point3::new(f64::MAX, 0.0, 0.0);
+    let b = Point3::new(0.0, 1.0, 0.0);
+    let c = Point3::new(0.0, 0.0, 1.0);
+    let d = Point3::new(-f64::MAX, 0.0, 0.0);
+
+    assert!(!orient3d_filter(a, b, c, d).is_certain());
+    assert_eq!(orient3d(a, b, c, d).sign(), Some(Sign::Positive));
+}
+
+#[test]
+fn huge_exact_coplanarity_stays_zero() {
+    let magnitude = 1.0e200;
+    let a = Point3::new(magnitude, 0.0, magnitude);
+    let b = Point3::new(0.0, magnitude, magnitude);
+    let c = Point3::new(magnitude, magnitude, magnitude);
+    let d = Point3::new(0.5 * magnitude, 0.5 * magnitude, magnitude);
+
+    assert!(!orient3d_filter(a, b, c, d).is_certain());
+    assert_eq!(orient3d(a, b, c, d).sign(), Some(Sign::Zero));
+}
+
+#[test]
+fn non_finite_coordinates_are_uncertain() {
+    let origin = Point3::new(0.0, 0.0, 0.0);
+    let x = Point3::new(f64::NAN, 0.0, 0.0);
+    let y = Point3::new(0.0, 1.0, 0.0);
+    let z = Point3::new(0.0, 0.0, 1.0);
+
+    assert_eq!(orient3d(x, y, z, origin).sign(), None);
+}
+
+#[test]
 fn exact_coplanarity_survives_inexact_coordinate_differences() {
     // Each coordinate satisfies d = a + b - c exactly as a binary rational,
     // but several plain `point - d` operations round. The exact path must carry
