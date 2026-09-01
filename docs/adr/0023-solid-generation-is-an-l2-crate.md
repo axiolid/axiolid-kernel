@@ -103,7 +103,7 @@ local change.
   generation/boolean seam stayed at L3 in `axiolid-compile`, because
   `axiolid-boolmesh` is L3 and an L2 crate must not depend on it. The layering
   test caught this: the first attempt moved them wholesale and failed with
-  `crates/axiolid-generate (tier 2) depends on axiolid-boolmesh (tier 3)`.
+  `crates/algorithms/construction/construct (tier 2) depends on axiolid-boolmesh (tier 3)`.
 - Test count is unchanged at 570, confirming the split moved work rather than
   dropping it.
 

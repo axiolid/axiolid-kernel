@@ -18,8 +18,8 @@ echo "fmt OK"
 echo "=== 2. field contract suites ==="
 cargo test -p axiolid-field --all-features
 
-echo "=== 3. layering gate ==="
-cargo test -p axiolid-core --test layering
+echo "=== 3. architecture gate ==="
+cargo xtask architecture check
 
 echo "=== 4. workspace tests, all features ==="
 cargo test --workspace --all-features

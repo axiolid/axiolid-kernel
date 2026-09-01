@@ -23,13 +23,13 @@ PROBES = [
     # --- oracle correctness (ADR 0017 section 5) ---
     (
         "oracle-union-of-nested-returns-inner",
-        "crates/axiolid-scalar/src/boolean.rs",
+        "crates/algorithms/reference/src/boolean.rs",
         "(BooleanOperator::Union, Arrangement::ToolInsideSubject) => subject.clone(),",
         "(BooleanOperator::Union, Arrangement::ToolInsideSubject) => tool.clone(),",
     ),
     (
         "oracle-difference-forgets-the-cavity",
-        "crates/axiolid-scalar/src/boolean.rs",
+        "crates/algorithms/reference/src/boolean.rs",
         """            (
                 BooleanOperator::Difference | BooleanOperator::SymmetricDifference,
                 Arrangement::ToolInsideSubject,
@@ -41,13 +41,13 @@ PROBES = [
     ),
     (
         "oracle-cavity-is-not-reversed",
-        "crates/axiolid-scalar/src/boolean.rs",
+        "crates/algorithms/reference/src/boolean.rs",
         "    for triangle in indices.chunks_exact_mut(3) {\n        triangle.swap(0, 1);\n    }",
         "    for _triangle in indices.chunks_exact_mut(3) {}",
     ),
     (
         "oracle-self-difference-is-not-empty",
-        "crates/axiolid-scalar/src/boolean.rs",
+        "crates/algorithms/reference/src/boolean.rs",
         """            (
                 BooleanOperator::Difference | BooleanOperator::SymmetricDifference,
                 Arrangement::Identical,
@@ -59,77 +59,77 @@ PROBES = [
     ),
     (
         "oracle-disjoint-intersection-is-not-empty",
-        "crates/axiolid-scalar/src/boolean.rs",
+        "crates/algorithms/reference/src/boolean.rs",
         "(BooleanOperator::Intersection, Arrangement::Disjoint) => empty(),",
         "(BooleanOperator::Intersection, Arrangement::Disjoint) => subject.clone(),",
     ),
     # --- oracle honesty: it must refuse what it cannot answer ---
     (
         "oracle-guesses-at-interpenetration",
-        "crates/axiolid-scalar/src/boolean.rs",
+        "crates/algorithms/reference/src/boolean.rs",
         "    if surfaces_intersect(subject, tool, options)? {",
         "    if false && surfaces_intersect(subject, tool, options)? {",
     ),
     (
         "oracle-crossing-test-reopens-the-shared-edge-hole",
-        "crates/axiolid-scalar/src/boolean.rs",
+        "crates/algorithms/reference/src/boolean.rs",
         "        if !(positive && negative) {\n            return true;\n        }",
         "        if !(positive && negative)\n            && !signs.contains(&Sign::Zero)\n        {\n            return true;\n        }",
     ),
     (
         "oracle-accepts-empty-operands",
-        "crates/axiolid-scalar/src/boolean.rs",
+        "crates/algorithms/reference/src/boolean.rs",
         "        if mesh.positions.is_empty() || mesh.indices.is_empty() {",
         "        if false {",
     ),
     # --- containment classification ---
     (
         "oracle-point-on-surface-counts-as-inside",
-        "crates/axiolid-scalar/src/boolean.rs",
+        "crates/algorithms/reference/src/boolean.rs",
         "        if side_origin == Sign::Zero {\n            // The point is ON the surface: neither inside nor outside.\n            return Some(false);\n        }",
         "        if side_origin == Sign::Zero {\n            return Some(true);\n        }",
     ),
     (
         "oracle-parity-inverted",
-        "crates/axiolid-scalar/src/boolean.rs",
+        "crates/algorithms/reference/src/boolean.rs",
         "    Some(crossings % 2 == 1)",
         "    Some(crossings % 2 == 0)",
     ),
     # --- conformance suite must detect defects (ADR 0017 section 6) ---
     (
         "suite-treats-failure-as-conformant",
-        "crates/axiolid-kernel/src/conformance.rs",
+        "crates/contracts/common/src/conformance.rs",
         "        !self\n            .checks\n            .iter()\n            .any(|check| matches!(check.outcome, Outcome::Failed { .. }))",
         "        true",
     ),
     (
         "suite-counts-skips-as-passes",
-        "crates/axiolid-kernel/src/conformance.rs",
+        "crates/contracts/common/src/conformance.rs",
         "            .filter(|check| check.outcome == Outcome::Passed)\n            .count()",
         "            .filter(|check| check.outcome != Outcome::Passed || true)\n            .count()",
     ),
     (
         "suite-skips-the-disjoint-algebra-check",
-        "crates/axiolid-kernel/src/conformance.rs",
+        "crates/contracts/common/src/conformance.rs",
         "    check_disjoint_algebra(provider, &mut report);",
         "    let _ = check_disjoint_algebra;",
     ),
     (
         "suite-ignores-a-wrong-union-volume",
-        "crates/axiolid-kernel/src/conformance.rs",
+        "crates/contracts/common/src/conformance.rs",
         "        if (measured - 2.0).abs() < 1e-9 {",
         "        if true {",
     ),
     (
         "suite-accepts-an-unrefused-empty-operand",
-        "crates/axiolid-kernel/src/conformance.rs",
+        "crates/contracts/common/src/conformance.rs",
         "            Ok(_) => Outcome::Failed {\n                detail: \"an empty mesh is not a solid and must be refused\".into(),\n            },",
         "            Ok(_) => Outcome::Passed,",
     ),
     # --- registration gate ---
     (
         "registration-admits-non-conformant-providers",
-        "crates/axiolid-kernel/src/boolean.rs",
+        "crates/contracts/common/src/boolean.rs",
         "        if !report.is_conformant() {\n            return Err(Box::new(report));\n        }",
         "        if false {\n            return Err(Box::new(report));\n        }",
     ),

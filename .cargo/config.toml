@@ -1,2 +1,5 @@
 [build]
 target-dir = "/mnt/backup/build-cache/axiolid-target"
+
+[alias]
+xtask = "run --quiet -p xtask --"

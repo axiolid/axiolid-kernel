@@ -1,0 +1,27 @@
+[package]
+name = "axiolid-backend-cpu"
+description = "Portable and runtime-optimized CPU execution context for Axiolid geometry"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[features]
+default = []
+simd = []
+parallel = ["dep:rayon"]
+
+[dependencies]
+rayon = { workspace = true, optional = true }
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "execution"
+role = "execution.context"
+domain = "cpu"
+public = true
+format-neutral = true
+allowed-internal-dependencies = []

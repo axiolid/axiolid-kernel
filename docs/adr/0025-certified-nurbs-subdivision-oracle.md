@@ -90,8 +90,8 @@ differential evidence.
 
 ## Relation to existing code
 
-- `crates/axiolid-nurbs/src/certified_bezier.rs`
-- `crates/axiolid-nurbs/src/certified_refinement.rs`
-- `crates/axiolid-nurbs/src/certified_curve_projection.rs`
-- `crates/axiolid-nurbs/src/certified_curve_distance.rs`
-- `crates/axiolid-nurbs/src/certified_projection.rs`
+- `crates/algorithms/parametric/nurbs/src/certified_bezier.rs`
+- `crates/algorithms/parametric/nurbs/src/certified_refinement.rs`
+- `crates/algorithms/parametric/nurbs/src/certified_curve_projection.rs`
+- `crates/algorithms/parametric/nurbs/src/certified_curve_distance.rs`
+- `crates/algorithms/parametric/nurbs/src/certified_projection.rs`

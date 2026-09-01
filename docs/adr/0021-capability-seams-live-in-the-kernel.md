@@ -34,11 +34,11 @@ Measured facts about it:
 
 - **Zero implementors.** Nothing in the workspace implements `Sweeper`.
 - **Zero external references.** `Sweeper` does not appear in any `.rs` file
-  outside `crates/axiolid-sweep/` itself.
+  outside `crates/facade/axiolid-sweep/` itself.
 - **Zero tests.** No `tests/` directory and no inline `#[cfg(test)]`.
 - **The actual sweep implementation lives elsewhere**, in
-  `crates/axiolid-compile/src/sweep.rs` (340 lines) and
-  `crates/axiolid-compile/src/loft.rs` (200 lines), reached through the
+  `crates/execution/compile/src/sweep.rs` (340 lines) and
+  `crates/execution/compile/src/loft.rs` (200 lines), reached through the
   compiler rather than through this trait.
 
 So the crate is a seam that nothing enters. Worse, it is *misleading*: the
@@ -130,11 +130,11 @@ compiler's sweep families are untouched.
 
 ## Relation to existing code
 
-- `crates/axiolid-sweep/` — removed by this decision.
-- `crates/axiolid/Cargo.toml`, `crates/axiolid/src/lib.rs` — the `sweeps`
+- `crates/facade/axiolid-sweep/` — removed by this decision.
+- `crates/facade/axiolid/Cargo.toml`, `crates/facade/axiolid/src/lib.rs` — the `sweeps`
   feature and `pub mod sweep` re-export are removed.
 - `Cargo.toml` — the workspace dependency entry is removed.
-- `crates/axiolid-kernel/src/boolean.rs` — the pattern a future sweep contract
+- `crates/contracts/common/src/boolean.rs` — the pattern a future sweep contract
   must follow.
-- `crates/axiolid-compile/src/sweep.rs`, `crates/axiolid-compile/src/loft.rs` —
+- `crates/execution/compile/src/sweep.rs`, `crates/execution/compile/src/loft.rs` —
   where sweep construction actually lives; unchanged by this decision.

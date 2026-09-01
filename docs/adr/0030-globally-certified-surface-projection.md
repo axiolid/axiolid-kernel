@@ -93,8 +93,8 @@ non-global semantics.
 
 ## Relation to existing code
 
-- `crates/axiolid-nurbs/src/certified_surface_projection.rs`
-- `crates/axiolid-nurbs/src/certified_surface_bezier.rs`
-- `crates/axiolid-nurbs/src/certified_bezier.rs`
-- `crates/axiolid-nurbs/src/certified_projection.rs`
-- `crates/axiolid-nurbs/tests/certified_surface_projection.rs`
+- `crates/algorithms/parametric/nurbs/src/certified_surface_projection.rs`
+- `crates/algorithms/parametric/nurbs/src/certified_surface_bezier.rs`
+- `crates/algorithms/parametric/nurbs/src/certified_bezier.rs`
+- `crates/algorithms/parametric/nurbs/src/certified_projection.rs`
+- `crates/algorithms/parametric/nurbs/tests/certified_surface_projection.rs`

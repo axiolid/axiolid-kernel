@@ -1,0 +1,22 @@
+[package]
+name = "axiolid-topology"
+description = "Typed-handle B-rep topology independent of curve and surface implementations"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[dependencies]
+axiolid-core.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "representations"
+role = "representation.topology"
+domain = "topology"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core"]

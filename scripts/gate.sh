@@ -8,6 +8,8 @@ trap 'rm -f "$gate_out"' EXIT
 fail=0
 step() { local name="$1"; shift; printf '%-46s' "$name"; if "$@" >"$gate_out" 2>&1; then echo ok; else echo "FAIL (exit $?)"; tail -25 "$gate_out" | sed 's/^/    /'; fail=1; fi; }
 step "fmt --check" cargo fmt --all -- --check
+step "architecture" cargo xtask architecture check
+step "architecture mutation probe" scripts/probe_layering_gate.sh
 step "build --workspace" cargo build --workspace
 step "test --workspace" cargo test --workspace
 step "test --all-features" cargo test --workspace --all-features

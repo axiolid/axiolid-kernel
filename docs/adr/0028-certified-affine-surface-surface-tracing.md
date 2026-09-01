@@ -104,6 +104,6 @@ not reinterpret `Unresolved` as absence.
 
 ## Evidence
 
-- `crates/axiolid-nurbs/tests/certified_surface_surface_intersection.rs`
-- `crates/axiolid-nurbs/src/certified_surface_surface_intersection.rs`
+- `crates/algorithms/parametric/nurbs/tests/certified_surface_surface_intersection.rs`
+- `crates/algorithms/parametric/nurbs/src/certified_surface_surface_intersection.rs`
 - ADR 0027 boundary-root certificates

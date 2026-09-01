@@ -1,0 +1,26 @@
+[package]
+name = "axiolid-nurbs"
+description = "General polynomial and rational B-spline analysis and transformation algorithms"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-curve.workspace = true
+axiolid-kernel.workspace = true
+axiolid-scalar.workspace = true
+axiolid-surface.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "algorithms"
+role = "algorithm.parametric"
+domain = "parametric.nurbs"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core", "axiolid-curve", "axiolid-kernel", "axiolid-scalar", "axiolid-surface"]

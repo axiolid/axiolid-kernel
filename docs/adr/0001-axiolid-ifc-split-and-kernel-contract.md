@@ -48,7 +48,7 @@ source-format adapter → Axiolid values / graph → operation contract → prov
 
 ## Relation to existing code
 
-- `crates/axiolid-core` owns neutral scalar values, transforms, bounds, and tolerance policy.
-- `crates/axiolid-model` owns the immutable geometry graph.
-- `crates/axiolid-kernel` owns operation contracts; providers are separate crates behind opt-in features.
+- `crates/foundation/core` owns neutral scalar values, transforms, bounds, and tolerance policy.
+- `crates/representations/modeling/graph` owns the immutable geometry graph.
+- `crates/contracts/common` owns operation contracts; providers are separate crates behind opt-in features.
 - The Nehirde IFC geometry adapter is a consumer of this boundary, not an Axiolid dependency.

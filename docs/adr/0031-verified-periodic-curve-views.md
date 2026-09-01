@@ -79,7 +79,7 @@ is implied by this decision.
 
 ## Relation to existing code
 
-- `crates/axiolid-nurbs/src/periodic.rs`
-- `crates/axiolid-nurbs/src/transform.rs`
-- `crates/axiolid-nurbs/tests/periodic_view.rs`
-- `crates/axiolid-scalar/src/curve.rs`
+- `crates/algorithms/parametric/nurbs/src/periodic.rs`
+- `crates/algorithms/parametric/nurbs/src/transform.rs`
+- `crates/algorithms/parametric/nurbs/tests/periodic_view.rs`
+- `crates/algorithms/reference/src/curve.rs`

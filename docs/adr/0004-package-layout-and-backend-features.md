@@ -92,7 +92,7 @@ implementation compiled in. Applications (`apps/ifc-cli`) opt back in explicitly
 
 ## Relation to existing code
 
-- `crates/axiolid-kernel/src/backend/{mod,scalar,simd,gpu}.rs`
+- `crates/contracts/common/src/backend/{mod,scalar,simd,gpu}.rs`
 - `packages/ifc/ifc-geometry/tests/no_backend_dependency.rs` — enforces the
   feature constraint; mutation-verified against two distinct violations.
 - Root `Cargo.toml` — `axiolid-kernel` workspace entry carries

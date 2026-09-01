@@ -1,0 +1,25 @@
+[package]
+name = "axiolid-tessellate"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+authors.workspace = true
+description = "Curves, surfaces and B-reps to triangles under an explicit tolerance."
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-mesh.workspace = true
+axiolid-model.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "contracts"
+role = "contract.operation"
+domain = "operation.tessellate"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core", "axiolid-mesh", "axiolid-model"]

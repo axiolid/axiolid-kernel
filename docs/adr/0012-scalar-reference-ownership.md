@@ -124,9 +124,9 @@ differentially tested against. The rule enforces itself.
 
 ## Relation to existing code
 
-- `crates/axiolid-backend-cpu/` -- execution context; explicitly not the
+- `crates/execution/cpu/` -- execution context; explicitly not the
   oracle.
-- `crates/axiolid-kernel/src/capability.rs` -- `ExecutionTarget::PortableCpu`
+- `crates/contracts/common/src/capability.rs` -- `ExecutionTarget::PortableCpu`
   is the target a reference implementation reports.
 - `docs/adr/0002-hardware-abstraction-and-backend-selection.md` -- reasoning
   retained, topology and oracle ownership superseded here.

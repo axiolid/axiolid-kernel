@@ -1,0 +1,23 @@
+[package]
+name = "axiolid-curve"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+authors.workspace = true
+description = "Curve evaluation: lines, conics, composite curves, NURBS, trimming."
+
+[dependencies]
+axiolid-core.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "representations"
+role = "representation.atomic"
+domain = "analytic.curve"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core"]

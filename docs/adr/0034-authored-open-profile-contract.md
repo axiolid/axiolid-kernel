@@ -68,8 +68,8 @@ We will represent an authored bounded open profile as `axiolid_model::OpenProfil
 
 ## Relation to existing code
 
-- `crates/axiolid-model/src/node.rs` owns `OpenProfile` and `GeometryNode::OpenProfile`.
-- `crates/axiolid-model/src/validation.rs` enforces graph-reference and conservative bounded/open semantics.
-- `crates/axiolid-model/src/value.rs` provides sealed builder insertion.
-- `crates/axiolid-compile/src/compiler.rs` classifies evaluation without manufacturing a mesh.
+- `crates/representations/modeling/graph/src/node.rs` owns `OpenProfile` and `GeometryNode::OpenProfile`.
+- `crates/representations/modeling/graph/src/validation.rs` enforces graph-reference and conservative bounded/open semantics.
+- `crates/representations/modeling/graph/src/value.rs` provides sealed builder insertion.
+- `crates/execution/compile/src/compiler.rs` classifies evaluation without manufacturing a mesh.
 - ADR 0009 defines the graph layering; ADR 0033 separates authored geometry from mesh-derived section contours.

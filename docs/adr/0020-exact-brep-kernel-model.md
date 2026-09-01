@@ -13,7 +13,7 @@ work those applications need (clash and containment reasoning, section curves,
 exact quantities). It is not intended to be a tessellation pipeline.
 
 Today the implementation is a tessellation pipeline. The evidence is one line
-in `crates/axiolid-compile/src/compiler.rs`:
+in `crates/execution/compile/src/compiler.rs`:
 
 ```rust
 type Cache = std::collections::HashMap<usize, TriMesh>;
@@ -143,19 +143,19 @@ follow-ups below.
 
 ## Relation to existing code
 
-- `crates/axiolid-compile/src/compiler.rs` — `type Cache = HashMap<usize, TriMesh>`
+- `crates/execution/compile/src/compiler.rs` — `type Cache = HashMap<usize, TriMesh>`
   and `compile() -> GeomResult<TriMesh>`; the concrete site this decision
   changes.
-- `crates/axiolid-kernel/src/boolean.rs`, `crates/axiolid-kernel/src/solid.rs` —
+- `crates/contracts/common/src/boolean.rs`, `crates/contracts/common/src/solid.rs` —
   the mesh boolean contract and operand admissibility, which remain valid for
   mesh inputs.
-- `crates/axiolid-topology` — the neutral B-rep vocabulary an exact result will
+- `crates/representations/topology` — the neutral B-rep vocabulary an exact result will
   populate.
-- `crates/axiolid-scalar/src/surface.rs` — exact surface evaluation, normals,
+- `crates/algorithms/reference/src/surface.rs` — exact surface evaluation, normals,
   and analytic inversion for plane/cylinder/cone/sphere/torus.
-- `crates/axiolid-scalar/src/curve.rs` — exact curve evaluation, derivatives,
+- `crates/algorithms/reference/src/curve.rs` — exact curve evaluation, derivatives,
   and adaptive flattening; flattening is an output path under this decision.
-- `crates/axiolid-scalar/src/nurbs.rs` — validated spline evaluation from
+- `crates/algorithms/reference/src/nurbs.rs` — validated spline evaluation from
   ADR 0019.
 - `docs/capabilities.md`, `docs/ROADMAP.md` — updated alongside this ADR so the
   stated ambition and the stated status stay distinguishable.

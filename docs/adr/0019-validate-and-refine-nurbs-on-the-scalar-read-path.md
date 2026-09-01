@@ -140,9 +140,9 @@ Concretely:
 
 ## Relation to existing code
 
-- `crates/axiolid-scalar/src/nurbs.rs`
-- `crates/axiolid-scalar/src/curve.rs`
-- `crates/axiolid-scalar/src/surface.rs`
-- `crates/axiolid-compile/src/brep.rs`
-- `crates/axiolid-scalar/tests/{curve,surface}.rs`
-- `crates/axiolid-compile/tests/brep_tessellation.rs`
+- `crates/algorithms/reference/src/nurbs.rs`
+- `crates/algorithms/reference/src/curve.rs`
+- `crates/algorithms/reference/src/surface.rs`
+- `crates/execution/compile/src/brep.rs`
+- `crates/algorithms/reference/tests/{curve,surface}.rs`
+- `crates/execution/compile/tests/brep_tessellation.rs`

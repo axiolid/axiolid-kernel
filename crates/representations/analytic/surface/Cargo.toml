@@ -1,0 +1,24 @@
+[package]
+name = "axiolid-surface"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+authors.workspace = true
+description = "Surface evaluation: elementary surfaces, swept surfaces, NURBS patches."
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-curve.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "representations"
+role = "representation.atomic"
+domain = "analytic.surface"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core", "axiolid-curve"]

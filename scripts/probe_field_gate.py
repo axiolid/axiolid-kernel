@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path("/mnt/backup/build-cache/axiolid-solibri-spatial")
-SRC = ROOT / "crates/axiolid-field/src"
+SRC = ROOT / "crates/algorithms/sampled/field/src"
 
 # (name, file, old, new) -- each must change real behaviour, not a no-op.
 PROBES = [

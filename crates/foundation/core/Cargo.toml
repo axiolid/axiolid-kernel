@@ -1,0 +1,24 @@
+[package]
+name = "axiolid-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+authors.workspace = true
+description = "Geometry data types and tolerance policy. No algorithms, no backends."
+
+# ROOT OF THE GRAPH — no internal dependencies, ever.
+[dependencies]
+glam.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "foundation"
+role = "foundation.values"
+domain = "numeric"
+public = true
+format-neutral = true
+allowed-internal-dependencies = []

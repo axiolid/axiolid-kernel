@@ -1,0 +1,24 @@
+[package]
+name = "axiolid-measure"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+authors.workspace = true
+description = "Metric properties: area, volume, centroid, moments of inertia."
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-mesh.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "algorithms"
+role = "algorithm.query"
+domain = "query.measure"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core", "axiolid-mesh"]

@@ -129,7 +129,7 @@ clean inputs, and because the margin grows with the predicate's degree.
 
 ## Relation to existing code
 
-- `crates/axiolid-scalar/src/{orientation,orient3,sphere,static_filter}.rs`
-- `crates/axiolid-scalar/src/scene.rs` — degeneracy-controlled scenes.
-- `crates/axiolid-scalar/benches/predicates.rs` — the measurements above.
-- `crates/axiolid-scalar/tests/degeneracy.rs` — escalation-rate gates.
+- `crates/algorithms/reference/src/{orientation,orient3,sphere,static_filter}.rs`
+- `crates/algorithms/reference/src/scene.rs` — degeneracy-controlled scenes.
+- `crates/algorithms/reference/benches/predicates.rs` — the measurements above.
+- `crates/algorithms/reference/tests/degeneracy.rs` — escalation-rate gates.

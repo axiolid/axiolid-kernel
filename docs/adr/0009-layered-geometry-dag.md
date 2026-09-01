@@ -85,8 +85,8 @@ small operation traits, and physically separate execution/adaptor crates.
 
 - `crates/AGENTS.md` and per-crate `AGENTS.md` files
 - `crates/PLAN.md`
-- `crates/axiolid-model/src/graph.rs`
-- `crates/axiolid-kernel/`
-- `crates/axiolid-backend-{cpu,gpu}/`
+- `crates/representations/modeling/graph/src/graph.rs`
+- `crates/contracts/common/`
+- `crates/facade/axiolid-backend-{cpu,gpu}/`
 - `packages/ifc/ifc-geometry/references/ifc4-add2-tc1-geometry-declarations.tsv`
 - `packages/ifc/ifc-geometry/tests/declaration_manifest.rs`

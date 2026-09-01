@@ -40,6 +40,6 @@ Tests cover invalid cyclic knots/aliases, U/V wrapping, huge-offset refusal, ine
 
 ## Relation to code
 
-- `crates/axiolid-nurbs/src/periodic_surface.rs`
-- `crates/axiolid-nurbs/src/certified_surface_bezier.rs`
-- `crates/axiolid-nurbs/src/certified_surface_projection.rs`
+- `crates/algorithms/parametric/nurbs/src/periodic_surface.rs`
+- `crates/algorithms/parametric/nurbs/src/certified_surface_bezier.rs`
+- `crates/algorithms/parametric/nurbs/src/certified_surface_projection.rs`

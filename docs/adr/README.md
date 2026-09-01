@@ -33,3 +33,4 @@ These records capture durable choices that preserve Axiolid’s format-neutral, 
 | [0032](./0032-explicit-periodic-bspline-surfaces.md) | Periodic B-spline surfaces use an explicit cyclic schema |
 | [0033](./0033-mesh-plane-section-contract.md) | Mesh plane sections are an explicit approximation tier |
 | [0034](./0034-authored-open-profile-contract.md) | Authored open profiles are graph declarations, not areas |
+| [0035](./0035-nested-ownership-and-capability-contracts.md) | Physical layout follows ownership; contracts remain provider-neutral |

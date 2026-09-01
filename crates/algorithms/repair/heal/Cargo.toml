@@ -1,0 +1,24 @@
+[package]
+name = "axiolid-heal"
+description = "Explicit diagnosis and opt-in repair contracts for dirty geometry"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-mesh.workspace = true
+thiserror.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "algorithms"
+role = "algorithm.repair"
+domain = "repair.mesh"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core", "axiolid-mesh"]

@@ -140,7 +140,7 @@ in-house implementation is a change to one crate, not an API break.
 
 ## Relation to existing code
 
-- `crates/axiolid-kernel/src/boolean.rs` — the `MeshBoolean` trait and
+- `crates/contracts/common/src/boolean.rs` — the `MeshBoolean` trait and
   `MeshBooleanRegistry` this provider registers into.
 - `docs/adr/0003-pure-rust-mesh-boolean.md` — the deferred decision this
   resolves.

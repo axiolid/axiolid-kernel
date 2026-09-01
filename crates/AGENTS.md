@@ -130,7 +130,7 @@ type, trait, invariant, test, or implementation.
 Run targeted crate tests while iterating. Before merging geometry-wide changes:
 
 ```bash
-cargo test -p axiolid-core --test layering
+cargo xtask architecture check
 scripts/geometry-feature-matrix.sh
 cargo test -p ifc-geometry --test declaration_manifest
 cargo test -p ifc-geometry --test no_backend_dependency

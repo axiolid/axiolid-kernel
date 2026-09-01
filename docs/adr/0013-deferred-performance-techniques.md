@@ -108,15 +108,15 @@ does not yet exist.
 
 ## Relation to existing code
 
-- `crates/axiolid-kernel/src/certainty.rs` -- `Certified`, `Sign`,
+- `crates/contracts/common/src/certainty.rs` -- `Certified`, `Sign`,
   `EscalationLadder`; the f32/f64/exact ladder.
-- `crates/axiolid-kernel/src/execution.rs` -- `OutputBound`,
+- `crates/contracts/common/src/execution.rs` -- `OutputBound`,
   `ScratchRequirement`, `DataResidency`, `Determinism`.
-- `crates/axiolid-kernel/src/compile.rs` -- `compile_batch_into`,
+- `crates/contracts/common/src/compile.rs` -- `compile_batch_into`,
   `output_bound`.
-- `crates/axiolid-backend-cpu/src/features.rs` -- `avx2_fma` detection
+- `crates/execution/cpu/src/features.rs` -- `avx2_fma` detection
   already present, unused pending an arithmetic kernel.
-- `crates/axiolid-spatial/src/index.rs` -- `SpatialIndex`, the seam a
+- `crates/algorithms/query/spatial/src/index.rs` -- `SpatialIndex`, the seam a
   BVH/Morton implementation fills.
 - `docs/adr/0012-scalar-reference-ownership.md` -- the ordering rule this ADR
   relies on.

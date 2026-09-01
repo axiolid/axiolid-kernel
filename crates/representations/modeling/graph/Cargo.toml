@@ -1,0 +1,33 @@
+[package]
+name = "axiolid-model"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+authors.workspace = true
+description = "Format-neutral geometry item tree. The currency between a format reader and a kernel."
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-mesh.workspace = true
+axiolid-profile.workspace = true
+axiolid-primitive.workspace = true
+axiolid-curve.workspace = true
+axiolid-surface.workspace = true
+axiolid-topology.workspace = true
+
+[dev-dependencies]
+# The native-backend readiness gate parses the data-plane crates' own sources.
+syn = { version = "2", features = ["full", "parsing", "visit"] }
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "representations"
+role = "representation.graph"
+domain = "modeling.graph"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core", "axiolid-curve", "axiolid-mesh", "axiolid-primitive", "axiolid-profile", "axiolid-surface", "axiolid-topology"]

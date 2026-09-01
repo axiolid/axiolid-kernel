@@ -73,6 +73,6 @@ Those capabilities require separate contracts and tests. They must consume this 
 
 ## Evidence
 
-- `crates/axiolid-nurbs/tests/certified_curve_surface_intersection.rs`
-- tensor refinement/partial tests in `crates/axiolid-nurbs/src/certified_surface_bezier.rs`
-- public exports from `crates/axiolid-nurbs/src/lib.rs`
+- `crates/algorithms/parametric/nurbs/tests/certified_curve_surface_intersection.rs`
+- tensor refinement/partial tests in `crates/algorithms/parametric/nurbs/src/certified_surface_bezier.rs`
+- public exports from `crates/algorithms/parametric/nurbs/src/lib.rs`

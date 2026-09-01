@@ -1,0 +1,23 @@
+[package]
+name = "axiolid-overlay"
+description = "Deterministic validated planar overlay contract"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[dependencies]
+axiolid-core.workspace = true
+i_overlay.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "algorithms"
+role = "algorithm.planar"
+domain = "planar.overlay"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core"]

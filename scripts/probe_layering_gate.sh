@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Mutation-verify crates/axiolid-core/tests/layering.rs.
+# Mutation-verify `cargo xtask architecture check`.
 #
 # A gate that has never failed is decoration with a green light. Each mutation
 # below is a real architectural violation of the kind a hurried manifest edit
@@ -13,8 +13,8 @@ set -uo pipefail
 export PATH="$HOME/.cargo/bin:$PATH"
 cd "$(dirname "$0")/.."
 
-GATE=(cargo test -p axiolid-core --test layering)
-BAK=/tmp/layering_mut.bak
+GATE=(cargo xtask architecture check)
+BAK="${TMPDIR:-/tmp}/layering_mut.bak"
 fail=0
 
 # Content hash of every source/manifest in `crates/`, so we can prove the probe
@@ -27,7 +27,7 @@ BEFORE="$(snapshot)"
 
 # Run the gate; echo "GREEN" or "RED".
 run_gate() {
-    if "${GATE[@]}" >/tmp/layering_mut_out.txt 2>&1; then echo GREEN; else echo RED; fi
+    if "${GATE[@]}" >"${TMPDIR:-/tmp}/layering_mut_out.txt" 2>&1; then echo GREEN; else echo RED; fi
 }
 
 # mutate <label> <manifest> <line-to-append-to-[dependencies]> <expected>
@@ -68,22 +68,22 @@ G=crates
 
 # 1. The seam reversed: geometry reaching back into IFC.
 mutate "axiolid-mesh depends on ifc-model" \
-    "$G/axiolid-mesh/Cargo.toml" "ifc-model.workspace = true" RED
+    "$G/representations/discrete/mesh/Cargo.toml" "ifc-model.workspace = true" RED
 
 # 2. Tier inversion: a representation crate pulling in an algorithm crate.
 mutate "axiolid-mesh (L1) depends on axiolid-kernel (L2)" \
-    "$G/axiolid-mesh/Cargo.toml" 'axiolid-kernel = { workspace = true, default-features = false }' RED
+    "$G/representations/discrete/mesh/Cargo.toml" 'axiolid-kernel = { workspace = true, default-features = false }' RED
 
 # 3. The root gaining a sibling. A normal dep would be a cargo CYCLE (and so
 #    inconclusive), but cargo permits dev-dependency cycles -- and the gate
 #    counts dev-dependencies deliberately, because a test that reaches across
 #    the boundary disproves the boundary just as well as a release dep does.
-cp "$G/axiolid-core/Cargo.toml" "$BAK"
-printf '\n[dev-dependencies]\naxiolid-mesh.workspace = true\n' >> "$G/axiolid-core/Cargo.toml"
-if diff -q "$G/axiolid-core/Cargo.toml" "$BAK" >/dev/null; then
+cp "$G/foundation/core/Cargo.toml" "$BAK"
+printf '\n[dev-dependencies]\naxiolid-mesh.workspace = true\n' >> "$G/foundation/core/Cargo.toml"
+if diff -q "$G/foundation/core/Cargo.toml" "$BAK" >/dev/null; then
     echo "  axiolid-core dev-depends on axiolid-mesh: MUTATION DID NOT APPLY"; fail=1
 else
-    got=$(run_gate); cp "$BAK" "$G/axiolid-core/Cargo.toml"
+    got=$(run_gate); cp "$BAK" "$G/foundation/core/Cargo.toml"
     if [ "$got" = RED ]; then
         printf '  %-58s %s (expected RED)  ok\n' "axiolid-core dev-depends on axiolid-mesh" "$got"
     else
@@ -91,10 +91,9 @@ else
     fi
 fi
 
-# 4. A new crate appearing with no declared tier -- the way a layered design
-#    quietly stops being one.
-mkdir -p "$G/axiolid-untiered/src"
-cat > "$G/axiolid-untiered/Cargo.toml" <<'TOML'
+# 4. A new crate appearing without workspace registration or architecture metadata.
+mkdir -p "$G/unregistered/src"
+cat > "$G/unregistered/Cargo.toml" <<'TOML'
 [package]
 name = "axiolid-untiered"
 version.workspace = true
@@ -103,19 +102,19 @@ edition.workspace = true
 [dependencies]
 axiolid-core.workspace = true
 TOML
-echo "// mutation probe" > "$G/axiolid-untiered/src/lib.rs"
+echo "// mutation probe" > "$G/unregistered/src/lib.rs"
 got=$(run_gate)
-rm -rf "$G/axiolid-untiered"
+rm -rf "$G/unregistered"
 if [ "$got" = RED ]; then
-    printf '  %-58s %s (expected RED)  ok\n' "new crate with no tier in TIERS" "$got"
+    printf '  %-58s %s (expected RED)  ok\n' "new unregistered package manifest" "$got"
 else
-    printf '  %-58s %s (expected RED)  MISS\n' "new crate with no tier in TIERS" "$got"; fail=1
+    printf '  %-58s %s (expected RED)  MISS\n' "new unregistered package manifest" "$got"; fail=1
 fi
 
 # 5. Decoy: the violation exists only as a COMMENT. A gate that trips on this
 #    is a gate nobody can write an explanatory note next to.
 mutate "COMMENTED-OUT ifc-model dep (must NOT trip)" \
-    "$G/axiolid-mesh/Cargo.toml" "# ifc-model.workspace = true" GREEN
+    "$G/representations/discrete/mesh/Cargo.toml" "# ifc-model.workspace = true" GREEN
 
 echo "=== restored ==="
 printf '  %-58s %s\n' "tree after restore" "$(run_gate)"

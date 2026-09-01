@@ -603,21 +603,21 @@ locally audited revision rather than a moving branch.
 
 ### Axiolid evidence
 
-- Representation breadth: `crates/axiolid-model/src/node.rs`
+- Representation breadth: `crates/representations/modeling/graph/src/node.rs`
 - Curve/surface values and unimplemented evaluator contracts:
-  `crates/axiolid-curve/src/` and
-  `crates/axiolid-surface/src/`
-- Exact predicates and scalar polygon work: `crates/axiolid-scalar/src/`
-- Executed solid generation: `crates/axiolid-generate/src/`
-- Executed compiler families: `crates/axiolid-compile/src/compiler.rs`
-- Faceted B-rep path: `crates/axiolid-compile/src/brep.rs`
-- Adopted booleans and batching: `crates/axiolid-boolmesh/src/`
-- Geometry provider contracts: `crates/axiolid-kernel/src/`
+  `crates/representations/analytic/curve/src/` and
+  `crates/representations/analytic/surface/src/`
+- Exact predicates and scalar polygon work: `crates/algorithms/reference/src/`
+- Executed solid generation: `crates/algorithms/construction/construct/src/`
+- Executed compiler families: `crates/execution/compile/src/compiler.rs`
+- Faceted B-rep path: `crates/execution/compile/src/brep.rs`
+- Adopted booleans and batching: `crates/providers/mesh/boolmesh/src/`
+- Geometry provider contracts: `crates/contracts/common/src/`
 - Focused operation/provider seams:
-  `crates/axiolid-spatial/src/`,
-  `crates/axiolid-measure/src/`,
-  `crates/axiolid-heal/src/`, and
-  `crates/axiolid-tessellate/src/`
+  `crates/algorithms/query/spatial/src/`,
+  `crates/algorithms/query/measure/src/`,
+  `crates/algorithms/repair/heal/src/`, and
+  `crates/contracts/operations/tessellate/src/`
 - Differential results: `docs/benchmarks/differential-ifcopenshell.md`
 - Predicate ownership and limits: `docs/adr/0016-predicate-ownership-and-adopted-implementations.md`
 - Deferred optimization triggers: `docs/adr/0013-deferred-performance-techniques.md`

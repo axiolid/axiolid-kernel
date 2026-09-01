@@ -20,7 +20,7 @@ Measured against the tree at the time of writing, that leak has started:
 | 3 | `boolean()` returns a bare `TriMesh`. Overlay returns `OverlayResult { polygons, evidence }`; field returns `FieldEvidence`. The operation most in need of evidence has none, because the backend returns none. | `axiolid-kernel/src/boolean.rs:28` |
 | 4 | `GeomError::Cancelled` is declared and produced **nowhere**; `ExecutionOptions` carries no token or deadline. The cancellation contract is fictional. | `grep Cancelled` → only the `enum` definition |
 | 5 | The only provider declares `ScratchRequirement::Unbounded`, so the memory budget is unenforceable for every real call. | `provider.rs:70` |
-| 6 | `axiolid-scalar` implements no `MeshBoolean`. The single most consequential operation has **no oracle**, in direct violation of ADR 0012's ordering rule. | `grep MeshBoolean crates/axiolid-scalar/src/` → no match |
+| 6 | `axiolid-scalar` implements no `MeshBoolean`. The single most consequential operation has **no oracle**, in direct violation of ADR 0012's ordering rule. | `grep MeshBoolean crates/algorithms/reference/src/` → no match |
 | 7 | All five `axiolid-boolmesh` test files bind to the concrete `BoolmeshBoolean`. They test *boolmesh*, not *the contract*. A second provider inherits zero obligations. | `tests/{winding,batch,registry,conservation,fixture_issue_2019}.rs` |
 
 ADR 0014 measured `boolmesh` honestly and adopting it was right. This ADR is
@@ -256,15 +256,15 @@ CSG backend — was always enforced more broadly by
 
 ## Relation to existing code
 
-- `crates/axiolid-kernel/src/boolean.rs` — trait, registry, dispatch; the
+- `crates/contracts/common/src/boolean.rs` — trait, registry, dispatch; the
   surface this ADR redefines.
-- `crates/axiolid-kernel/src/execution.rs` — `ExecutionOptions`,
+- `crates/contracts/common/src/execution.rs` — `ExecutionOptions`,
   `ScratchRequirement`; gains cancellation.
-- `crates/axiolid-kernel/src/error.rs` — `GeomError::Cancelled`, currently
+- `crates/contracts/common/src/error.rs` — `GeomError::Cancelled`, currently
   unreachable.
-- `crates/axiolid-kernel/src/certainty.rs` — `Certified`/`Sign`/
+- `crates/contracts/common/src/certainty.rs` — `Certified`/`Sign`/
   `EscalationLadder`, the arithmetic the oracle builds on.
-- `crates/axiolid-boolmesh/src/convert.rs` — precondition logic to be lifted
+- `crates/providers/mesh/boolmesh/src/convert.rs` — precondition logic to be lifted
   into L2.
-- `crates/axiolid-scalar/` — owner of the reference boolean; today has none.
-- `crates/axiolid-overlay/src/lib.rs` — the 2D contract this aligns with.
+- `crates/algorithms/reference/` — owner of the reference boolean; today has none.
+- `crates/algorithms/planar/overlay/src/lib.rs` — the 2D contract this aligns with.

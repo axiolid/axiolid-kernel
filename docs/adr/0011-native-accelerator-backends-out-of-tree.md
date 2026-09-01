@@ -115,16 +115,16 @@ only preserve the *option* of building one cheaply.
 
 ## Relation to existing code
 
-- `crates/axiolid-kernel/src/capability.rs` — inline `BackendId`,
+- `crates/contracts/common/src/capability.rs` — inline `BackendId`,
   `BackendId::try_new`, `BackendId::CAPACITY`, `BackendIdTooLong`.
-- `crates/axiolid-backend-gpu/src/executor.rs` — the `GpuGraphExecutor`
+- `crates/execution/gpu/src/executor.rs` — the `GpuGraphExecutor`
   seam, including the required `validate_options` policy hook.
-- `crates/axiolid-backend-gpu/src/adapter.rs` — device, root, and
+- `crates/execution/gpu/src/adapter.rs` — device, root, and
   cardinality validation; `BackendContractViolation` attribution.
-- `crates/axiolid-backend-gpu/tests/out_of_tree_executor.rs` — proves
+- `crates/execution/gpu/tests/out_of_tree_executor.rs` — proves
   the seam is satisfiable with published API only, using runtime device
   identities and contained unwinds.
-- `crates/axiolid-model/tests/native_backend_readiness.rs` — enforces
+- `crates/representations/modeling/graph/tests/native_backend_readiness.rs` — enforces
   the transferable data plane across all eight representation crates.
 - `docs/adr/0009-layered-geometry-dag.md` — the layering and open-seam decision
   this refines.

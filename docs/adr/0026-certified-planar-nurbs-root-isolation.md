@@ -119,7 +119,7 @@ B-rep splitting. No downstream code may infer those capabilities from this API.
 
 ## Relation to existing code
 
-- `crates/axiolid-nurbs/src/certified_curve_intersection.rs`
-- `crates/axiolid-nurbs/src/certified_bezier.rs`
-- `crates/axiolid-nurbs/src/certified_refinement.rs`
-- `crates/axiolid-nurbs/tests/certified_curve_intersection.rs`
+- `crates/algorithms/parametric/nurbs/src/certified_curve_intersection.rs`
+- `crates/algorithms/parametric/nurbs/src/certified_bezier.rs`
+- `crates/algorithms/parametric/nurbs/src/certified_refinement.rs`
+- `crates/algorithms/parametric/nurbs/tests/certified_curve_intersection.rs`
