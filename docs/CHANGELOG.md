@@ -23,6 +23,8 @@ All notable changes to Axiolid are documented in this file.
 - Added a format-neutral authored `OpenProfile` graph declaration for conservative bounded-open exact 2D curve paths, with finite/structurally valid curve, 2D-offset, instance, and trim-selector validation, shared-DAG-linear traversal, exact same-endpoint refusal, explicit no-area/no-width semantics, solid-operation exclusion, and curve-evaluation classification; see [ADR 0034](./adr/0034-authored-open-profile-contract.md).
 
 ### Changed
+- Format-neutral production-source checks now reject both Protobuf vocabulary and `prost` imports, with independent mutation probes; tests remain free to name transports when verifying rejection.
+- Documentation now builds with VitePress 2/Vite 8 and an advisory-free locked dependency graph.
 - Replaced the mixed `axiolid-kernel` package with `axiolid-guarantees`, `axiolid-contracts`, `axiolid-mesh-contracts`, operation-specific contract packages, and execution-owned `axiolid-dispatch`.
 - Split `axiolid-field` values from `axiolid-field-ops`; the facade now exposes additive `field`, `field-ops`, and `field-navigation` tiers.
 - Renamed the generic mesh-valued `GeometryCompiler` API to explicit `MeshCompiler::{compile_mesh, compile_mesh_batch, compile_mesh_batch_into}` and the reference package/type to `axiolid-mesh-compile::ReferenceMeshCompiler`.
@@ -37,6 +39,7 @@ All notable changes to Axiolid are documented in this file.
 - Extracted scalar solid generation — profiles, lofts, sweeps, revolutions, extrusion, and bounded half-space clipping — from the L3 DAG compiler into the new L2 `axiolid-construct` crate. `axiolid-mesh-compile` now owns graph traversal, caching, model-driven directrices, and B-rep tessellation only; see [ADR 0023](./adr/0023-solid-generation-is-an-l2-crate.md).
 
 ### Fixed
+- Corrected the README MSRV badge from Rust 1.85 to the workspace-required Rust 1.88.
 - Solid admission and boolmesh result validation now reject finite-coordinate meshes when signed-volume accumulation overflows or otherwise becomes non-finite, instead of accepting non-finite volume as outward orientation.
 - `orient3d` exact escalation now preserves error-free coordinate-difference tails before evaluating cofactors and uses a bounded exact dyadic fallback when finite inputs would overflow or underflow expansion intermediates. Previously it could certify false signs for exactly coplanar inputs and false zero for extreme finite coordinates.
 

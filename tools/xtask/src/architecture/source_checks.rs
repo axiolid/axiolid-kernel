@@ -2,7 +2,11 @@ use super::model::{Architecture, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const FORBIDDEN_FORMAT_TERMS: &[&str] = &["ifc", "revit", "solibri", "cset", "pkl"];
+// Production source is intentionally format-neutral. Tests may name external
+// formats when proving that adapters and architecture gates reject leakage.
+const FORBIDDEN_FORMAT_TERMS: &[&str] = &[
+    "ifc", "revit", "solibri", "cset", "pkl", "protobuf", "prost",
+];
 const FORBIDDEN_NATIVE_DEPENDENCIES: &[&str] = &["bindgen", "cxx", "autocxx", "cmake"];
 
 pub fn validate(architecture: &Architecture, errors: &mut Vec<String>) -> Result<()> {
