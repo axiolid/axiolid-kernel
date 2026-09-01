@@ -11,10 +11,11 @@
 use std::hint::black_box;
 use std::time::Instant;
 
+use axiolid_contracts::ExecutionOptions;
 use axiolid_core::{BooleanOperator, Point3, Tolerance};
-use axiolid_kernel::{ExecutionOptions, MeshBoolean};
 use axiolid_mesh::TriMesh;
 use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
+use axiolid_mesh_boolean_contract::MeshBoolean;
 
 /// Builds a subject plus its cutters for one benchmark case.
 type Layout = fn(usize) -> (TriMesh, Vec<TriMesh>);

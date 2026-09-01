@@ -10,10 +10,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path("/mnt/backup/build-cache/axiolid-solibri-spatial")
+ROOT = Path(__file__).resolve().parents[1]
 
 SUITES = [
-    ["cargo", "test", "-p", "axiolid-kernel", "--all-features", "--test", "boolean_contract"],
+    ["cargo", "test", "-p", "axiolid-dispatch", "--all-features", "--test", "mesh_boolean_contract"],
     ["cargo", "test", "-p", "axiolid-mesh-boolean-boolmesh", "--all-features", "--test", "symmetric_difference"],
     # `csg_deferral` was deleted when the deferral ended (ADR 0017 fully
     # landed); the conformance suite superseded it.
@@ -36,55 +36,55 @@ PROBES = [
     ),
     (
         "registry-skips-precondition-validation",
-        "crates/contracts/common/src/boolean.rs",
+        "crates/execution/dispatch/src/boolean.rs",
         "        SolidRequirements::Oriented.validate_operands(subject, &[tool])?;",
         "        let _ = SolidRequirements::Oriented;",
     ),
     (
         "solid-accepts-inside-out",
-        "crates/contracts/common/src/solid.rs",
+        "crates/contracts/common/mesh/src/solid.rs",
         "        if six_volume < 0.0 {",
         "        if false {",
     ),
     (
         "solid-accepts-zero-volume",
-        "crates/contracts/common/src/solid.rs",
+        "crates/contracts/common/mesh/src/solid.rs",
         "        if six_volume == 0.0 {",
         "        if false {",
     ),
     (
         "cancellation-never-fires",
-        "crates/contracts/common/src/cancel.rs",
+        "crates/contracts/common/base/src/cancel.rs",
         "        if self.is_cancelled() {\n            return Err(GeomError::Cancelled);\n        }",
         "        if false {\n            return Err(GeomError::Cancelled);\n        }",
     ),
     (
         "cancellation-token-clones-dont-share",
-        "crates/contracts/common/src/cancel.rs",
+        "crates/contracts/common/base/src/cancel.rs",
         "        Arc::ptr_eq(&self.flag, &other.flag)",
         "        self.is_cancelled() == other.is_cancelled()",
     ),
     (
         "evidence-absorb-loses-sub-operations",
-        "crates/contracts/common/src/evidence.rs",
+        "crates/contracts/operations/mesh-boolean/src/evidence.rs",
         "        self.sub_operations += other.sub_operations;",
         "        self.sub_operations = other.sub_operations;",
     ),
     (
         "evidence-absorb-overwrites-input-counts",
-        "crates/contracts/common/src/evidence.rs",
+        "crates/contracts/operations/mesh-boolean/src/evidence.rs",
         "        self.output_triangles = other.output_triangles;",
         "        self.subject_triangles = other.subject_triangles;\n        self.output_triangles = other.output_triangles;",
     ),
     (
         "xor-reports-one-pass",
-        "crates/contracts/common/src/boolean.rs",
+        "crates/contracts/operations/mesh-boolean/src/contract.rs",
         "    evidence.sub_operations = 3;",
         "    evidence.sub_operations = 1;",
     ),
     (
         "xor-skips-the-final-difference",
-        "crates/contracts/common/src/boolean.rs",
+        "crates/contracts/operations/mesh-boolean/src/contract.rs",
         "    if intersection.mesh.indices.is_empty() {",
         "    if true {",
     ),

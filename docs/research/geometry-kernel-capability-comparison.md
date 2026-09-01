@@ -321,8 +321,8 @@ The following classification was checked against production source and tests at
 - Simple polygon triangulation and ring orientation, plus adopted `earcut`
   differential coverage for polygon/profile work.
 - Rectangle, circle, arbitrary contour, holes, and derived-profile extrusion to
-  triangle meshes (`axiolid-compile`).
-- Planar faceted B-rep tessellation with shared topology (`axiolid-compile::brep`).
+  triangle meshes (`axiolid-mesh-compile`).
+- Planar faceted B-rep tessellation with shared topology (`axiolid-mesh-compile::brep`).
 - Triangle-mesh union/intersection/difference through the adopted `boolmesh`
   provider, including a measured disjoint-cutter `subtract_many` override
   (`axiolid-mesh-boolean-boolmesh`).

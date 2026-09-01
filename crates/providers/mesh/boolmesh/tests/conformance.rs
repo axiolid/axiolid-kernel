@@ -11,8 +11,8 @@
 //! construction.
 
 use axiolid_core::{BooleanOperator, Tolerance};
-use axiolid_kernel::conformance::{self, box_at, volume};
-use axiolid_kernel::{ExecutionOptions, GeomError, MeshBoolean};
+use axiolid_mesh_boolean_contract::conformance::{self, box_at, volume};
+use axiolid_mesh_boolean_contract::{ExecutionOptions, GeomError, MeshBoolean};
 use axiolid_reference::ScalarBoolean;
 
 use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
@@ -47,11 +47,11 @@ fn the_production_provider_is_conformant() {
 /// The suite must be able to fail, or passing it means nothing.
 #[test]
 fn the_suite_detects_a_non_conformant_provider() {
-    use axiolid_kernel::{
+    use axiolid_mesh::TriMesh;
+    use axiolid_mesh_boolean_contract::{
         Backend, BackendDescriptor, BackendId, BooleanEvidence, BooleanOutcome, ExecutionTarget,
         GeomResult, ScratchRequirement,
     };
-    use axiolid_mesh::TriMesh;
 
     /// Returns its subject unchanged for every operation: plausible shape,
     /// wrong algebra.
@@ -215,7 +215,7 @@ fn the_oracle_refuses_rather_than_guessing() {
 
 #[test]
 fn registration_admits_a_conformant_provider() {
-    use axiolid_kernel::MeshBooleanRegistry;
+    use axiolid_dispatch::MeshBooleanRegistry;
 
     let mut registry = MeshBooleanRegistry::new();
     registry
@@ -226,11 +226,12 @@ fn registration_admits_a_conformant_provider() {
 
 #[test]
 fn registration_refuses_a_non_conformant_provider() {
-    use axiolid_kernel::{
-        Backend, BackendDescriptor, BackendId, BooleanEvidence, BooleanOutcome, ExecutionTarget,
-        GeomResult, MeshBooleanRegistry, ScratchRequirement,
-    };
+    use axiolid_dispatch::MeshBooleanRegistry;
     use axiolid_mesh::TriMesh;
+    use axiolid_mesh_boolean_contract::{
+        Backend, BackendDescriptor, BackendId, BooleanEvidence, BooleanOutcome, ExecutionTarget,
+        GeomResult, ScratchRequirement,
+    };
 
     /// Ignores its tool: the same defect the suite catches, now at the door.
     #[derive(Debug)]
@@ -281,12 +282,12 @@ fn registration_refuses_a_non_conformant_provider() {
 // therefore gets a provider that violates it and nothing else, and the test
 // names the check that must catch it.
 
-use axiolid_kernel::conformance::{Check, ConformanceReport, Outcome};
-use axiolid_kernel::{
+use axiolid_mesh::TriMesh;
+use axiolid_mesh_boolean_contract::conformance::{Check, ConformanceReport, Outcome};
+use axiolid_mesh_boolean_contract::{
     Backend, BackendDescriptor, BackendId, BooleanEvidence, BooleanOutcome, ExecutionTarget,
     GeomResult, ScratchRequirement,
 };
-use axiolid_mesh::TriMesh;
 
 /// Find one named check, or fail loudly if the suite stopped running it.
 fn check_named<'a>(report: &'a ConformanceReport, name: &str) -> &'a Check {
@@ -460,7 +461,7 @@ fn skips_are_reported_separately_from_passes() {
         ) -> GeomResult<BooleanOutcome> {
             Err(GeomError::Unsupported {
                 backend: BackendId::new("refuses"),
-                operation: axiolid_kernel::Operation::MeshBoolean,
+                operation: axiolid_mesh_boolean_contract::Operation::MeshBoolean,
             })
         }
     }

@@ -16,12 +16,13 @@
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use axiolid_backend_gpu::{GpuCompiler, GpuDeviceDescriptor, GpuFeatures, GpuGraphExecutor};
-use axiolid_core::{Point3, Tolerance};
-use axiolid_kernel::{
+use axiolid_contracts::{
     Backend, BackendId, DevicePreference, ExecutionOptions, ExecutionTarget, GeomError, GeomResult,
-    GeometryCompiler, Operation, Precision,
+    Operation, Precision,
 };
+use axiolid_core::{Point3, Tolerance};
 use axiolid_mesh::TriMesh;
+use axiolid_mesh_compile_contract::MeshCompiler;
 use axiolid_model::{GeometryGraph, GeometryGraphBuilder, GeometryNode, NodeId};
 
 /// Stand-in for a driver-backed executor (CUDA, HIP, Level Zero).
@@ -31,7 +32,7 @@ use axiolid_model::{GeometryGraph, GeometryGraphBuilder, GeometryNode, NodeId};
 #[derive(Debug)]
 struct SimulatedNativeExecutor {
     device: GpuDeviceDescriptor,
-    /// When set, `compile_batch` panics to model a native callback that
+    /// When set, `compile_mesh_batch` panics to model a native callback that
     /// unwinds. A real bridge must never let this cross an FFI frame.
     panic_on_compile: bool,
 }
@@ -76,7 +77,7 @@ impl GpuGraphExecutor for SimulatedNativeExecutor {
         Ok(())
     }
 
-    fn compile_batch(
+    fn compile_mesh_batch(
         &self,
         graph: &GeometryGraph,
         roots: &[NodeId],
@@ -124,7 +125,7 @@ fn an_out_of_tree_executor_satisfies_the_seam_with_public_api_only() {
     assert_eq!(descriptor.id.as_str(), "cuda:0");
 
     let meshes = compiler
-        .compile_batch(&graph, &[root], &ExecutionOptions::new(Tolerance::METRE))
+        .compile_mesh_batch(&graph, &[root], &ExecutionOptions::new(Tolerance::METRE))
         .expect("simulated native compile");
     assert_eq!(meshes.len(), 1);
 }
@@ -146,11 +147,11 @@ fn driver_enumerated_devices_get_distinct_runtime_identities() {
     ));
     let compiler = GpuCompiler::new(SimulatedNativeExecutor::new("hip", 1, true));
     let (graph, root) = single_point_graph();
-    assert!(compiler.compile(&graph, root, &options).is_ok());
+    assert!(compiler.compile_mesh(&graph, root, &options).is_ok());
 
     let mismatched = GpuCompiler::new(SimulatedNativeExecutor::new("hip", 0, true));
     assert!(matches!(
-        mismatched.compile(&graph, root, &options),
+        mismatched.compile_mesh(&graph, root, &options),
         Err(GeomError::Unsupported { backend, .. }) if backend.as_str() == "hip:0"
     ));
 }
@@ -165,7 +166,7 @@ fn a_faulting_native_call_is_contained_and_attributed() {
     let (graph, root) = single_point_graph();
 
     let error = compiler
-        .compile(&graph, root, &ExecutionOptions::new(Tolerance::METRE))
+        .compile_mesh(&graph, root, &ExecutionOptions::new(Tolerance::METRE))
         .expect_err("a faulting driver call must produce an error, not unwind");
     assert!(
         matches!(
@@ -185,7 +186,7 @@ fn an_f32_only_device_refuses_f64_before_submission() {
     let options = ExecutionOptions::new(Tolerance::METRE).with_precision(Precision::F64);
 
     assert!(matches!(
-        compiler.compile(&graph, root, &options),
+        compiler.compile_mesh(&graph, root, &options),
         Err(GeomError::Unsupported {
             backend,
             operation: Operation::GraphCompilation,

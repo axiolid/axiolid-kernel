@@ -8,7 +8,7 @@
 ## Context
 
 ADR 0003 decided *that* the mesh boolean is a pure-Rust implementation behind
-`axiolid_kernel::MeshBoolean`, and explicitly deferred *which* implementation:
+`axiolid_contracts::MeshBoolean`, and explicitly deferred *which* implementation:
 "Evaluate `boolmesh` and `manifold-rust` against the fixture corpus before
 writing our own; adopting beats building if one passes."
 
@@ -92,7 +92,7 @@ files must be published under MPL-2.0, but merely depending on it does not add
 obligations beyond Axiolid's own MPL-covered source. Depending preserves a clean
 licence boundary; vendoring and patching must be reviewed separately.
 
-The provider lives behind `axiolid_kernel::MeshBoolean` per ADR 0003, so this
+The provider lives behind `axiolid_contracts::MeshBoolean` per ADR 0003, so this
 choice remains reversible: replacing `boolmesh` with `manifold-rust` or with an
 in-house implementation is a change to one crate, not an API break.
 

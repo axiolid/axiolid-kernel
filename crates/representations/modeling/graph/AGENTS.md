@@ -10,7 +10,7 @@ Allowed internal dependencies: all L1 representation crates. Follow parent `../A
 id.rs; graph.rs; node.rs; value.rs; validation.rs; curve_relation.rs; surface_relation.rs;
 solid_operation.rs. `value.rs` owns sealed built-in-to-node conversions only;
 `validation.rs` owns graph-reference family checks; graph ownership stays in `id.rs`/`graph.rs`.
-execution/provider traits must remain open in `axiolid-kernel`. Split a module before
+execution/provider traits must remain open in operation-contract packages. Split a module before
 unrelated data, validation, and algorithms grow together. Add no empty
 placeholder files.
 

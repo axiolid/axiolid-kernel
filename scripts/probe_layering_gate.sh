@@ -71,13 +71,12 @@ mutate "axiolid-mesh depends on ifc-model" \
     "$G/representations/discrete/mesh/Cargo.toml" "ifc-model.workspace = true" RED
 
 # 2. Tier inversion: a representation crate pulling in an algorithm crate.
-mutate "axiolid-mesh (L1) depends on axiolid-kernel (L2)" \
-    "$G/representations/discrete/mesh/Cargo.toml" 'axiolid-kernel = { workspace = true, default-features = false }' RED
+mutate "axiolid-mesh representation depends on dispatch execution" \
+    "$G/representations/discrete/mesh/Cargo.toml" 'axiolid-dispatch.workspace = true' RED
 
-# 3. The root gaining a sibling. A normal dep would be a cargo CYCLE (and so
-#    inconclusive), but cargo permits dev-dependency cycles -- and the gate
-#    counts dev-dependencies deliberately, because a test that reaches across
-#    the boundary disproves the boundary just as well as a release dep does.
+# 3. The dependency is dev-only, but it is still absent from the package's
+#    exact allowlist. Dev edges may point upward for integration tests only when
+#    they are explicitly declared in architecture metadata.
 cp "$G/foundation/core/Cargo.toml" "$BAK"
 printf '\n[dev-dependencies]\naxiolid-mesh.workspace = true\n' >> "$G/foundation/core/Cargo.toml"
 if diff -q "$G/foundation/core/Cargo.toml" "$BAK" >/dev/null; then

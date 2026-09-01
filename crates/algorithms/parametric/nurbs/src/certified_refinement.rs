@@ -1,9 +1,9 @@
 //! Interval-aware clamped NURBS refinement into conservative rational Bézier cells.
 
 use crate::certified_bezier::{Cell, HomogeneousPoint, Interval};
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::Scalar;
 use axiolid_curve::BSplineCurve;
-use axiolid_kernel::{GeomError, GeomResult};
 
 pub(crate) struct RefinementBudget {
     remaining: u128,

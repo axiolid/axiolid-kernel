@@ -9,4 +9,7 @@ pub mod options;
 pub mod tessellator;
 
 pub use options::{InvalidTessellationOptions, TessellationOptions};
+
+pub const CAPABILITY_ID: axiolid_contracts::CapabilityId =
+    axiolid_contracts::capability_ids::TESSELLATE;
 pub use tessellator::Tessellator;

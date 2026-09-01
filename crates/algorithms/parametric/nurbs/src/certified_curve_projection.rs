@@ -8,9 +8,9 @@ use crate::certified_projection::{
     ParameterInterval,
 };
 use crate::certified_refinement::{piecewise_bezier_cells, RefinementBudget};
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point2, Point3, Scalar};
 use axiolid_curve::{BSplineCurve2, BSplineCurve3};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_reference::curve::{bspline_jet2, bspline_jet3};
 use core::cmp::Ordering;
 use std::collections::BinaryHeap;

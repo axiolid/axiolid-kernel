@@ -15,7 +15,7 @@
 //! determinant is too close to zero to trust. The benchmark harness measures
 //! the escalation rate precisely so this cost is a number, not a hope.
 
-use axiolid_kernel::Sign;
+use axiolid_contracts::Sign;
 
 use crate::expansion::{two_product, two_sum};
 

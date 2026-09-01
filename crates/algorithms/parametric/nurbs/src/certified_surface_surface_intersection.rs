@@ -5,9 +5,9 @@
 //! axes. General patch pairs are still bounded and conservatively returned as
 //! unresolved candidates rather than passed through heuristic marching.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point3, Scalar};
 use axiolid_curve::{BSplineCurve3, KnotSpec};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_surface::BSplineSurface;
 
 use crate::{

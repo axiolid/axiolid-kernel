@@ -1,4 +1,4 @@
-# axiolid-tessellate implementation plan
+# axiolid-tessellation-contract implementation plan
 
 Status: architecture scaffold; algorithms incomplete. This is planning context,
 not standing agent instruction.

@@ -31,7 +31,7 @@ So a robust boolean in pure Rust is **demonstrated, not hypothetical**.
 
 ## Decision
 
-Mesh boolean is expressed as the `axiolid_kernel::MeshBoolean` trait. No C++
+Mesh boolean is expressed as the `axiolid_contracts::MeshBoolean` trait. No C++
 geometry kernel enters the dependency graph.
 
 Behind that trait we may either implement our own or adopt a pure-Rust crate;

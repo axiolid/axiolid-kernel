@@ -16,13 +16,19 @@ dependencies = [
  "axiolid-backend-gpu",
  "axiolid-brep",
  "axiolid-construct",
+ "axiolid-contracts",
  "axiolid-core",
  "axiolid-curve",
+ "axiolid-dispatch",
  "axiolid-field",
+ "axiolid-field-ops",
  "axiolid-heal",
- "axiolid-kernel",
  "axiolid-measure",
  "axiolid-mesh",
+ "axiolid-mesh-boolean-contract",
+ "axiolid-mesh-compile-contract",
+ "axiolid-mesh-contracts",
+ "axiolid-mesh-section-contract",
  "axiolid-model",
  "axiolid-nurbs",
  "axiolid-overlay",
@@ -30,7 +36,7 @@ dependencies = [
  "axiolid-profile",
  "axiolid-spatial",
  "axiolid-surface",
- "axiolid-tessellate",
+ "axiolid-tessellation-contract",
  "axiolid-topology",
 ]
 
@@ -45,9 +51,10 @@ dependencies = [
 name = "axiolid-backend-gpu"
 version = "0.1.0"
 dependencies = [
+ "axiolid-contracts",
  "axiolid-core",
- "axiolid-kernel",
  "axiolid-mesh",
+ "axiolid-mesh-compile-contract",
  "axiolid-model",
 ]
 
@@ -62,17 +69,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "axiolid-compile"
+name = "axiolid-construct"
 version = "0.1.0"
 dependencies = [
- "axiolid-construct",
+ "axiolid-brep",
+ "axiolid-contracts",
  "axiolid-core",
  "axiolid-curve",
- "axiolid-kernel",
+ "axiolid-guarantees",
  "axiolid-measure",
  "axiolid-mesh",
- "axiolid-mesh-boolean-boolmesh",
- "axiolid-model",
+ "axiolid-mesh-boolean-contract",
+ "axiolid-mesh-contracts",
+ "axiolid-nurbs",
  "axiolid-primitive",
  "axiolid-profile",
  "axiolid-reference",
@@ -82,22 +91,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "axiolid-construct"
+name = "axiolid-contracts"
 version = "0.1.0"
 dependencies = [
- "axiolid-brep",
  "axiolid-core",
- "axiolid-curve",
- "axiolid-kernel",
- "axiolid-measure",
- "axiolid-mesh",
- "axiolid-nurbs",
- "axiolid-primitive",
- "axiolid-profile",
- "axiolid-reference",
- "axiolid-surface",
- "axiolid-topology",
- "earcut",
+ "axiolid-guarantees",
+ "thiserror",
 ]
 
 [[package]]
@@ -115,6 +114,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "axiolid-dispatch"
+version = "0.1.0"
+dependencies = [
+ "axiolid-contracts",
+ "axiolid-core",
+ "axiolid-mesh",
+ "axiolid-mesh-boolean-contract",
+ "axiolid-mesh-contracts",
+ "axiolid-mesh-section-contract",
+]
+
+[[package]]
 name = "axiolid-field"
 version = "0.1.0"
 dependencies = [
@@ -122,21 +133,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "axiolid-field-ops"
+version = "0.1.0"
+dependencies = [
+ "axiolid-core",
+ "axiolid-field",
+]
+
+[[package]]
+name = "axiolid-guarantees"
+version = "0.1.0"
+
+[[package]]
 name = "axiolid-heal"
 version = "0.1.0"
 dependencies = [
  "axiolid-core",
  "axiolid-mesh",
- "thiserror",
-]
-
-[[package]]
-name = "axiolid-kernel"
-version = "0.1.0"
-dependencies = [
- "axiolid-core",
- "axiolid-mesh",
- "axiolid-model",
  "thiserror",
 ]
 
@@ -159,11 +172,78 @@ dependencies = [
 name = "axiolid-mesh-boolean-boolmesh"
 version = "0.1.0"
 dependencies = [
+ "axiolid-contracts",
  "axiolid-core",
- "axiolid-kernel",
+ "axiolid-dispatch",
  "axiolid-mesh",
+ "axiolid-mesh-boolean-contract",
+ "axiolid-mesh-contracts",
  "axiolid-reference",
  "boolmesh",
+]
+
+[[package]]
+name = "axiolid-mesh-boolean-contract"
+version = "0.1.0"
+dependencies = [
+ "axiolid-contracts",
+ "axiolid-core",
+ "axiolid-mesh",
+ "axiolid-mesh-contracts",
+]
+
+[[package]]
+name = "axiolid-mesh-compile"
+version = "0.1.0"
+dependencies = [
+ "axiolid-construct",
+ "axiolid-contracts",
+ "axiolid-core",
+ "axiolid-curve",
+ "axiolid-dispatch",
+ "axiolid-guarantees",
+ "axiolid-measure",
+ "axiolid-mesh",
+ "axiolid-mesh-boolean-boolmesh",
+ "axiolid-mesh-boolean-contract",
+ "axiolid-mesh-compile-contract",
+ "axiolid-mesh-contracts",
+ "axiolid-mesh-section-contract",
+ "axiolid-model",
+ "axiolid-primitive",
+ "axiolid-profile",
+ "axiolid-reference",
+ "axiolid-surface",
+ "axiolid-topology",
+ "earcut",
+]
+
+[[package]]
+name = "axiolid-mesh-compile-contract"
+version = "0.1.0"
+dependencies = [
+ "axiolid-contracts",
+ "axiolid-mesh",
+ "axiolid-model",
+]
+
+[[package]]
+name = "axiolid-mesh-contracts"
+version = "0.1.0"
+dependencies = [
+ "axiolid-contracts",
+ "axiolid-core",
+ "axiolid-mesh",
+]
+
+[[package]]
+name = "axiolid-mesh-section-contract"
+version = "0.1.0"
+dependencies = [
+ "axiolid-contracts",
+ "axiolid-core",
+ "axiolid-mesh",
+ "axiolid-mesh-contracts",
 ]
 
 [[package]]
@@ -184,9 +264,10 @@ dependencies = [
 name = "axiolid-nurbs"
 version = "0.1.0"
 dependencies = [
+ "axiolid-contracts",
  "axiolid-core",
  "axiolid-curve",
- "axiolid-kernel",
+ "axiolid-guarantees",
  "axiolid-reference",
  "axiolid-surface",
 ]
@@ -218,11 +299,16 @@ dependencies = [
 name = "axiolid-reference"
 version = "0.1.0"
 dependencies = [
+ "axiolid-contracts",
  "axiolid-core",
  "axiolid-curve",
- "axiolid-kernel",
+ "axiolid-dispatch",
+ "axiolid-guarantees",
  "axiolid-measure",
  "axiolid-mesh",
+ "axiolid-mesh-boolean-contract",
+ "axiolid-mesh-contracts",
+ "axiolid-mesh-section-contract",
  "axiolid-primitive",
  "axiolid-spatial",
  "axiolid-surface",
@@ -244,9 +330,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "axiolid-tessellate"
+name = "axiolid-tessellation-contract"
 version = "0.1.0"
 dependencies = [
+ "axiolid-contracts",
  "axiolid-core",
  "axiolid-mesh",
  "axiolid-model",

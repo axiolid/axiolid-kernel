@@ -5,8 +5,8 @@
 //! decides the radial segment count so a primitive and a swept face of the
 //! same radius agree on what a tolerance means.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point3, Scalar, Tolerance};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_mesh::TriMesh;
 use axiolid_primitive::Primitive;
 
@@ -40,7 +40,7 @@ pub fn tessellate_primitive(primitive: &Primitive, tolerance: Tolerance) -> Geom
         // silently approximated by the nearest one.
         _ => Err(GeomError::Unsupported {
             backend: crate::ScalarBoolean::ID,
-            operation: axiolid_kernel::Operation::Tessellation,
+            operation: axiolid_contracts::Operation::Tessellation,
         }),
     }
 }

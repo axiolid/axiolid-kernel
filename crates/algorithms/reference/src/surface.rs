@@ -34,9 +34,9 @@
 //! tessellate-and-check pipeline the useful operation is evaluation, and the
 //! boolean stack works on meshes.
 
+use axiolid_contracts::BackendId;
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Frame3, Point3, Scalar, Vec3};
-use axiolid_kernel::BackendId;
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_surface::{BSplineSurface, Cone, Cylinder, Plane, Sphere, Surface, Torus};
 
 use crate::curve::{de_boor_recurrence, eval_homogeneous, span_in};
@@ -172,7 +172,7 @@ pub fn evaluate(surface: &Surface, u: Scalar, v: Scalar) -> GeomResult<Point3> {
         Surface::BSpline(b) => bspline_point(b, u, v),
         _ => Err(GeomError::Unsupported {
             backend: ScalarSurface::ID,
-            operation: axiolid_kernel::Operation::SurfaceEvaluation,
+            operation: axiolid_contracts::Operation::SurfaceEvaluation,
         }),
     }?;
     if point.is_finite() {
@@ -259,7 +259,7 @@ pub fn partials(surface: &Surface, u: Scalar, v: Scalar) -> GeomResult<(Vec3, Ve
         Surface::BSpline(b) => bspline_partials(b, u, v),
         _ => Err(GeomError::Unsupported {
             backend: ScalarSurface::ID,
-            operation: axiolid_kernel::Operation::SurfaceEvaluation,
+            operation: axiolid_contracts::Operation::SurfaceEvaluation,
         }),
     }?;
     if value.0.is_finite() && value.1.is_finite() {
@@ -357,7 +357,7 @@ pub fn jet(surface: &Surface, u: Scalar, v: Scalar) -> GeomResult<SurfaceJet> {
         _ => {
             return Err(GeomError::Unsupported {
                 backend: ScalarSurface::ID,
-                operation: axiolid_kernel::Operation::SurfaceEvaluation,
+                operation: axiolid_contracts::Operation::SurfaceEvaluation,
             })
         }
     };
@@ -413,7 +413,7 @@ pub fn normal(surface: &Surface, u: Scalar, v: Scalar) -> GeomResult<Vec3> {
         _ => {
             return Err(GeomError::Unsupported {
                 backend: ScalarSurface::ID,
-                operation: axiolid_kernel::Operation::SurfaceEvaluation,
+                operation: axiolid_contracts::Operation::SurfaceEvaluation,
             })
         }
     };
@@ -1063,7 +1063,7 @@ pub fn invert(
         _ => {
             return Err(GeomError::Unsupported {
                 backend: ScalarSurface::ID,
-                operation: axiolid_kernel::Operation::SurfaceEvaluation,
+                operation: axiolid_contracts::Operation::SurfaceEvaluation,
             });
         }
     };

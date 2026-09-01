@@ -5,7 +5,7 @@
 //! embedded pcurve on the other patch when both endpoints are strictly interior
 //! there. This avoids pretending that an interior segment partitions a disk.
 
-use axiolid_kernel::GeomResult;
+use axiolid_contracts::GeomResult;
 use axiolid_nurbs::{intersect_surface_surface_certified, CertifiedSurfaceSurfaceIntersection3};
 use axiolid_surface::BSplineSurface;
 

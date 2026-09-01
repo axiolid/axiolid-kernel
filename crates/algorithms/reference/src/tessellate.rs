@@ -2,7 +2,7 @@
 //!
 //! # What this closes
 //!
-//! `axiolid-tessellate` declares a `Tessellator` trait that nothing
+//! `axiolid-tessellation-contract` declares a `Tessellator` trait that nothing
 //! implemented, so no curved face could ever become triangles. A B-rep with a
 //! cylindrical or spline face was unreachable, which is most curved
 //! geometry in a real building model.
@@ -23,8 +23,8 @@
 //! human can predict and check by hand. An optimised backend may refine
 //! locally and be validated against this one.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point3, Scalar};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_mesh::TriMesh;
 use axiolid_surface::Surface;
 

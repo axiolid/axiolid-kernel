@@ -5,9 +5,10 @@
 //! if it is *correct*, so this measures volume against the set identity rather
 //! than asserting the call merely returned.
 
+use axiolid_contracts::ExecutionOptions;
 use axiolid_core::{BooleanOperator, Tolerance};
-use axiolid_kernel::{ExecutionOptions, MeshBoolean};
 use axiolid_mesh::TriMesh;
+use axiolid_mesh_boolean_contract::MeshBoolean;
 
 use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
 

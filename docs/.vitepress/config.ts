@@ -74,6 +74,7 @@ export default defineConfig({
           { text: "Architecture", link: "/architecture" },
           { text: "Crate map", link: "/architecture/crate-map" },
           { text: "Dependency graph", link: "/architecture/dependency-graph" },
+          { text: "MCS / Axioval contract map", link: "/architecture/mcs-axioval-contract-map" },
           { text: "Public crate reference", link: "/reference/crates" },
         ],
       },

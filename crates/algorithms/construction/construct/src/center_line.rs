@@ -11,8 +11,8 @@
 //! keeps the approximation in one place and under the caller's chord budget,
 //! which is the same contract every other curved profile already accepts.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point2, Scalar, Tolerance};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_profile::CenterLineProfile;
 
 use crate::profile::Rings;

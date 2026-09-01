@@ -1,6 +1,6 @@
 use axiolid_brep::SurfaceId;
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point2, Point3};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_surface::BSplineSurface;
 use axiolid_topology::{EdgeId, FaceId, Orientation, VertexId};
 

@@ -6,16 +6,17 @@
 //! exactly the wrong answer this family exists to avoid. Each test here
 //! therefore pins a quantity that a mis-oriented sweep cannot reproduce.
 
-use axiolid_compile::ScalarCompiler;
+use axiolid_contracts::{ExecutionOptions, GeomError, Operation};
 use axiolid_core::{Frame3, Point3, Scalar, Tolerance, Vec3};
-use axiolid_kernel::{ExecutionOptions, GeomError, GeometryCompiler, Operation};
 use axiolid_measure::volume_properties;
 use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
+use axiolid_mesh_compile::ReferenceMeshCompiler;
+use axiolid_mesh_compile_contract::MeshCompiler;
 use axiolid_model::{GeometryGraphBuilder, GeometryNode, SolidOperation, SurfaceRelation};
 use axiolid_profile::{Profile, RectangleProfile};
 
-fn compiler() -> ScalarCompiler<BoolmeshBoolean> {
-    ScalarCompiler::new(BoolmeshBoolean::new())
+fn compiler() -> ReferenceMeshCompiler<BoolmeshBoolean> {
+    ReferenceMeshCompiler::new(BoolmeshBoolean::new())
 }
 
 fn options() -> ExecutionOptions {
@@ -91,7 +92,7 @@ fn a_rectangle_swept_around_a_cylinder_matches_pappus() {
     let graph = b.finish(vec![swept]).unwrap();
 
     let mesh = compiler()
-        .compile(&graph, swept, &options())
+        .compile_mesh(&graph, swept, &options())
         .expect("a directrix on its reference surface sweeps");
     let volume = volume_properties(&mesh, Tolerance::MILLIMETRE)
         .expect("a swept solid must be closed and two-manifold")
@@ -164,7 +165,7 @@ fn the_reference_surface_changes_the_result() {
             .unwrap();
         let graph = b.finish(vec![swept]).unwrap();
         compiler()
-            .compile(&graph, swept, &options())
+            .compile_mesh(&graph, swept, &options())
             .expect("both surfaces contain the directrix")
     };
 
@@ -234,7 +235,7 @@ fn a_directrix_off_the_reference_surface_is_refused() {
     let graph = b.finish(vec![swept]).unwrap();
 
     assert!(
-        compiler().compile(&graph, swept, &options()).is_err(),
+        compiler().compile_mesh(&graph, swept, &options()).is_err(),
         "a directrix off its reference surface must not be silently projected"
     );
 }
@@ -288,7 +289,7 @@ fn a_bspline_reference_surface_names_the_missing_capability() {
         .unwrap();
     let graph = b.finish(vec![swept]).unwrap();
 
-    match compiler().compile(&graph, swept, &options()) {
+    match compiler().compile_mesh(&graph, swept, &options()) {
         Err(GeomError::Unsupported { operation, .. }) => {
             assert_eq!(operation, Operation::SurfaceEvaluation);
         }
@@ -394,7 +395,7 @@ fn every_station_stays_square_to_the_surface() {
         .unwrap();
     let graph = b.finish(vec![swept]).unwrap();
     let mesh = compiler()
-        .compile(&graph, swept, &options())
+        .compile_mesh(&graph, swept, &options())
         .expect("a helix on its cylinder sweeps");
     let volume = volume_properties(&mesh, Tolerance::MILLIMETRE)
         .expect("a swept solid must be closed and two-manifold")
@@ -453,7 +454,7 @@ fn linear_extrusion_relation_supplies_surface_normals() {
         .unwrap();
     let graph = builder.finish(vec![swept]).unwrap();
     let mesh = compiler()
-        .compile(&graph, swept, &options())
+        .compile_mesh(&graph, swept, &options())
         .expect("linear-extrusion reference surface sweeps");
     let volume = volume_properties(&mesh, Tolerance::MILLIMETRE)
         .expect("sweep is closed and two-manifold")

@@ -3,12 +3,13 @@ use std::sync::{
     Arc,
 };
 
-use axiolid_core::{Tolerance, Vec3};
-use axiolid_kernel::{
+use axiolid_contracts::{
     Backend, BackendId, DataResidency, DevicePreference, ExecutionOptions, GeomError, GeomResult,
-    GeometryCompiler, Operation, Residency,
+    Operation, Residency,
 };
+use axiolid_core::{Tolerance, Vec3};
 use axiolid_mesh::TriMesh;
+use axiolid_mesh_compile_contract::MeshCompiler;
 use axiolid_model::{GeometryGraph, GeometryGraphBuilder, GeometryNode, NodeId};
 
 use super::*;
@@ -33,7 +34,7 @@ impl GpuGraphExecutor for FakeExecutor {
         Ok(())
     }
 
-    fn compile_batch(
+    fn compile_mesh_batch(
         &self,
         _graph: &GeometryGraph,
         roots: &[NodeId],
@@ -55,7 +56,7 @@ impl GpuGraphExecutor for WrongCardinalityExecutor {
         self.0.validate_options(options)
     }
 
-    fn compile_batch(
+    fn compile_mesh_batch(
         &self,
         _graph: &GeometryGraph,
         _roots: &[NodeId],
@@ -77,7 +78,7 @@ impl GpuGraphExecutor for RejectingOptionsExecutor {
         })
     }
 
-    fn compile_batch(
+    fn compile_mesh_batch(
         &self,
         _graph: &GeometryGraph,
         _roots: &[NodeId],
@@ -111,7 +112,9 @@ fn downstream_executor_proves_its_capability_by_implementing_the_trait() {
     let graph = builder.finish(vec![root]).expect("graph");
     let options = ExecutionOptions::new(Tolerance::METRE);
     assert_eq!(
-        compiler.compile(&graph, root, &options).expect("compile"),
+        compiler
+            .compile_mesh(&graph, root, &options)
+            .expect("compile"),
         TriMesh::default()
     );
     assert_eq!(
@@ -124,7 +127,7 @@ fn downstream_executor_proves_its_capability_by_implementing_the_trait() {
     f32_device.features.float64 = false;
     let f32_only = GpuCompiler::new(FakeExecutor { device: f32_device });
     assert!(matches!(
-        f32_only.compile(&graph, root, &options),
+        f32_only.compile_mesh(&graph, root, &options),
         Err(GeomError::Unsupported {
             backend,
             operation: Operation::GraphCompilation,
@@ -139,7 +142,7 @@ fn adapter_rejects_foreign_roots_before_dispatch() {
     let (_, foreign_root) = point_graph(Vec3::ONE);
 
     assert!(matches!(
-        compiler.compile(
+        compiler.compile_mesh(
             &graph,
             foreign_root,
             &ExecutionOptions::new(Tolerance::METRE),
@@ -157,7 +160,7 @@ fn adapter_enforces_one_result_per_requested_root() {
     let (graph, root) = point_graph(Vec3::ZERO);
 
     assert!(matches!(
-        compiler.compile_batch(&graph, &[root], &ExecutionOptions::new(Tolerance::METRE),),
+        compiler.compile_mesh_batch(&graph, &[root], &ExecutionOptions::new(Tolerance::METRE),),
         Err(GeomError::BackendContractViolation { backend, .. })
             if backend == BackendId::new("wrong-cardinality")
     ));
@@ -173,7 +176,7 @@ fn adapter_runs_executor_policy_validation_before_dispatch() {
     let (graph, root) = point_graph(Vec3::ZERO);
 
     assert!(matches!(
-        compiler.compile(&graph, root, &ExecutionOptions::new(Tolerance::METRE)),
+        compiler.compile_mesh(&graph, root, &ExecutionOptions::new(Tolerance::METRE)),
         Err(GeomError::Unsupported { backend, .. })
             if backend == BackendId::new("policy-rejection")
     ));
@@ -187,7 +190,7 @@ fn adapter_rejects_incompatible_device_preferences() {
     let options = ExecutionOptions::new(Tolerance::METRE).with_device(DevicePreference::Cpu);
 
     assert!(matches!(
-        compiler.compile(&graph, root, &options),
+        compiler.compile_mesh(&graph, root, &options),
         Err(GeomError::Unsupported {
             backend,
             operation: Operation::GraphCompilation,
@@ -229,7 +232,7 @@ fn results_wanted_on_a_foreign_device_are_refused_before_dispatch() {
     ));
 
     assert!(matches!(
-        compiler.compile(&graph, root, &options),
+        compiler.compile_mesh(&graph, root, &options),
         Err(GeomError::Unsupported { backend, .. }) if backend == BackendId::new("home-gpu")
     ));
 }
@@ -248,14 +251,14 @@ fn results_wanted_on_the_executing_device_or_host_are_accepted() {
         let options = ExecutionOptions::new(Tolerance::METRE)
             .with_residency(DataResidency::new(Residency::Host, output));
         assert!(
-            compiler.compile(&graph, root, &options).is_ok(),
+            compiler.compile_mesh(&graph, root, &options).is_ok(),
             "{output:?} must be deliverable"
         );
     }
 }
 
 /// Both batch call shapes must reach the GPU in ONE submission. Overriding only
-/// `compile_batch` would leave `compile_batch_into` silently falling back to a
+/// `compile_mesh_batch` would leave `compile_mesh_batch_into` silently falling back to a
 /// per-root loop -- a real trap, since the fallback still returns correct
 /// results while destroying the batching the seam exists for.
 #[test]
@@ -273,28 +276,32 @@ fn both_batch_call_shapes_use_a_single_submission() {
     let options = ExecutionOptions::new(Tolerance::METRE);
 
     let owned = compiler
-        .compile_batch(&graph, &[a, b, c], &options)
+        .compile_mesh_batch(&graph, &[a, b, c], &options)
         .expect("batch");
     assert_eq!(owned.len(), 3);
-    assert_eq!(submissions.load(Ordering::SeqCst), 1, "compile_batch");
+    assert_eq!(submissions.load(Ordering::SeqCst), 1, "compile_mesh_batch");
 
     submissions.store(0, Ordering::SeqCst);
     let mut destination = Vec::new();
     compiler
-        .compile_batch_into(&graph, &[a, b, c], &options, &mut destination)
+        .compile_mesh_batch_into(&graph, &[a, b, c], &options, &mut destination)
         .expect("batch into");
     assert_eq!(destination.len(), 3);
-    assert_eq!(submissions.load(Ordering::SeqCst), 1, "compile_batch_into");
+    assert_eq!(
+        submissions.load(Ordering::SeqCst),
+        1,
+        "compile_mesh_batch_into"
+    );
 }
 
-/// `compile_batch_into` appends; it must not clear the caller's buffer.
+/// `compile_mesh_batch_into` appends; it must not clear the caller's buffer.
 #[test]
-fn compile_batch_into_appends_rather_than_clearing() {
+fn compile_mesh_batch_into_appends_rather_than_clearing() {
     let compiler = GpuCompiler::new(fake_executor("append-gpu", true));
     let (graph, root) = point_graph(Vec3::ZERO);
     let mut destination = vec![TriMesh::default()];
     compiler
-        .compile_batch_into(
+        .compile_mesh_batch_into(
             &graph,
             &[root],
             &ExecutionOptions::new(Tolerance::METRE),
@@ -319,13 +326,13 @@ impl GpuGraphExecutor for CountingExecutor {
         self.inner.validate_options(options)
     }
 
-    fn compile_batch(
+    fn compile_mesh_batch(
         &self,
         graph: &GeometryGraph,
         roots: &[NodeId],
         options: &ExecutionOptions,
     ) -> GeomResult<Vec<TriMesh>> {
         self.submissions.fetch_add(1, Ordering::SeqCst);
-        self.inner.compile_batch(graph, roots, options)
+        self.inner.compile_mesh_batch(graph, roots, options)
     }
 }

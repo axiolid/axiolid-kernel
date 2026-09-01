@@ -1,9 +1,9 @@
 //! Certified transverse intersections between internally continuous clamped 3D NURBS
 //! curves and surfaces.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point3, Scalar};
 use axiolid_curve::BSplineCurve3;
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_reference::{curve::bspline_jet3, surface::bspline_jet};
 use axiolid_surface::BSplineSurface;
 

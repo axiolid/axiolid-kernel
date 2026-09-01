@@ -4,8 +4,8 @@
 //! finite inputs without overflow or underflow. It performs bounded stack-only
 //! work over the exact binary representation of the original coordinates.
 
+use axiolid_contracts::Sign;
 use axiolid_core::Point3;
-use axiolid_kernel::Sign;
 
 const DYADIC_LIMBS: usize = 100;
 const MIN_TRIPLE_EXPONENT: i32 = -3222;

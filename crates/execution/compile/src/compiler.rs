@@ -1,15 +1,17 @@
-//! The `GeometryCompiler` implementation: graph in, meshes out.
+//! The `MeshCompiler` implementation: graph in, meshes out.
 //!
 //! Evaluation is iterative. The graph forbids non-prior references,
 //! so cycles are structurally impossible, but depth is unbounded and
 //! recursion would risk a stack overflow on adversarial input.
 
-use axiolid_core::{Point3, Scalar, Tolerance, Transform3};
-use axiolid_kernel::{
+use axiolid_contracts::{
     Backend, BackendDescriptor, BackendId, ExecutionOptions, ExecutionTarget, GeomError,
-    GeomResult, GeometryCompiler, MeshBoolean, Operation, ScratchRequirement,
+    GeomResult, Operation, ScratchRequirement,
 };
+use axiolid_core::{Point3, Scalar, Tolerance, Transform3};
 use axiolid_mesh::TriMesh;
+use axiolid_mesh_boolean_contract::MeshBoolean;
+use axiolid_mesh_compile_contract::MeshCompiler;
 use axiolid_model::{GeometryGraph, GeometryNode, NodeId, SolidOperation};
 
 use axiolid_construct::extrude::extrude_profile;
@@ -21,11 +23,11 @@ use axiolid_construct::profile::profile_rings;
 /// particular one: `axiolid-mesh-boolean-boolmesh` is an adapter, and a different provider
 /// swaps in without touching this code.
 #[derive(Debug, Clone)]
-pub struct ScalarCompiler<B> {
+pub struct ReferenceMeshCompiler<B> {
     boolean: B,
 }
 
-impl<B> ScalarCompiler<B> {
+impl<B> ReferenceMeshCompiler<B> {
     /// Bind a boolean provider.
     pub const fn new(boolean: B) -> Self {
         Self { boolean }
@@ -37,7 +39,7 @@ impl<B> ScalarCompiler<B> {
     }
 }
 
-impl<B: MeshBoolean> Backend for ScalarCompiler<B> {
+impl<B: MeshBoolean> Backend for ReferenceMeshCompiler<B> {
     fn descriptor(&self) -> BackendDescriptor {
         BackendDescriptor::new(
             BackendId::new("scalar-compile"),
@@ -88,7 +90,7 @@ enum Step {
 /// would incorrectly reuse a coarse source mesh for a larger instance.
 type Cache = std::collections::HashMap<EvalKey, TriMesh>;
 
-impl<B: MeshBoolean> ScalarCompiler<B> {
+impl<B: MeshBoolean> ReferenceMeshCompiler<B> {
     /// Resolve a node handle, blaming the graph rather than panicking.
     /// Resolve a closed 2D boundary curve into rings.
     ///
@@ -710,14 +712,14 @@ fn append_mesh(target: &mut TriMesh, source: &TriMesh) {
         .extend(source.indices.iter().map(|&i| i + offset));
 }
 
-impl<B: MeshBoolean> GeometryCompiler for ScalarCompiler<B> {
+impl<B: MeshBoolean> MeshCompiler for ReferenceMeshCompiler<B> {
     /// Bounded by the peak mesh size, which is data-dependent, so the honest
     /// answer is unbounded rather than an invented constant.
     fn scratch_requirement(&self) -> ScratchRequirement {
         ScratchRequirement::Unbounded
     }
 
-    fn compile(
+    fn compile_mesh(
         &self,
         graph: &GeometryGraph,
         root: NodeId,
@@ -729,7 +731,7 @@ impl<B: MeshBoolean> GeometryCompiler for ScalarCompiler<B> {
 
     /// Overriding the `_into` seam gives both call shapes one shared cache,
     /// so a subtree referenced by several roots is compiled once per batch.
-    fn compile_batch_into(
+    fn compile_mesh_batch_into(
         &self,
         graph: &GeometryGraph,
         roots: &[NodeId],
@@ -745,7 +747,7 @@ impl<B: MeshBoolean> GeometryCompiler for ScalarCompiler<B> {
     }
 }
 
-impl<B: MeshBoolean> ScalarCompiler<B> {
+impl<B: MeshBoolean> ReferenceMeshCompiler<B> {
     /// The boolean provider this compiler dispatches to.
     ///
     /// Exposed so an application can apply its own source-format set

@@ -1,6 +1,6 @@
-# axiolid-compile instructions
+# axiolid-mesh-compile instructions
 
-Purpose: the scalar reference `GeometryCompiler`. Turns `GeometryGraph` nodes
+Purpose: the scalar reference `MeshCompiler`. Turns `GeometryGraph` nodes
 into `TriMesh`: profile flattening, triangulation, linear extrusion, transform
 composition, and boolean dispatch.
 

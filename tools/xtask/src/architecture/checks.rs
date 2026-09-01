@@ -82,7 +82,7 @@ pub fn validate(architecture: &Architecture) -> Result<()> {
                 ));
             }
         }
-        for dependency in &package.actual_internal_dependencies {
+        for dependency in &package.production_internal_dependencies {
             let dependency_package = &architecture.packages[dependency];
             if !layer_edge_allowed(&package.layer, &dependency_package.layer) {
                 errors.push(format!(

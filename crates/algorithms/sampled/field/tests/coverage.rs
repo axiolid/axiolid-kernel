@@ -3,7 +3,7 @@
 mod fixtures;
 
 use axiolid_core::{Tolerance, Vec3};
-use axiolid_field::{
+use axiolid_field_ops::{
     sample_triangles_cpu, CpuCoverageProvider, LayeredFieldError, SurfaceFacing, Triangle3,
 };
 
@@ -113,7 +113,7 @@ fn input_order_does_not_change_stored_layer_order() {
 
     let a = sample_triangles_cpu(&config, &forward).unwrap();
     let b = sample_triangles_cpu(&config, &reversed).unwrap();
-    let layers = |f: &axiolid_field::LayeredField| -> Vec<f64> {
+    let layers = |f: &axiolid_field_ops::LayeredField| -> Vec<f64> {
         f.cell(0, 0)
             .unwrap()
             .surfaces()
@@ -201,7 +201,7 @@ fn non_finite_geometry_is_rejected() {
 #[test]
 fn sample_budget_is_enforced_by_the_caller_not_a_fixed_cap() {
     use axiolid_core::Vec3 as V;
-    use axiolid_field::{FieldBounds, FieldConfig, FieldResourceBudget};
+    use axiolid_field_ops::{FieldBounds, FieldConfig, FieldResourceBudget};
     let frame = fixtures::z_up_frame();
     let config = FieldConfig::new(
         frame,

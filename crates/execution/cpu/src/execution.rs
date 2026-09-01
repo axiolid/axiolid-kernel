@@ -10,7 +10,7 @@ use crate::{CpuConfigError, CpuFeatures, CpuInstructionSet};
 /// CPU execution context with runtime ISA detection and an optional local pool.
 ///
 /// This type deliberately implements no geometry operation trait. A provider
-/// only implements `MeshBoolean`, `GeometryCompiler`, or another capability
+/// only implements `MeshBoolean`, `MeshCompiler`, or another capability
 /// after the algorithm exists and is verified.
 #[derive(Clone)]
 pub struct CpuExecution {

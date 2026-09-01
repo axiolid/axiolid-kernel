@@ -1,4 +1,4 @@
-# axiolid-tessellate instructions
+# axiolid-tessellation-contract instructions
 
 Purpose: Exact-to-discrete conversion contracts.
 

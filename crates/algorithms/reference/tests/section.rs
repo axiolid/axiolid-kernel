@@ -1,10 +1,10 @@
 //! Independent analytic fixtures for the scalar mesh plane-section oracle.
 
+use axiolid_contracts::{CancellationToken, ExecutionOptions, GeomError};
 use axiolid_core::{Frame3, Point2, Point3, Tolerance, Vec3};
-use axiolid_kernel::{
-    CancellationToken, ExecutionOptions, GeomError, MeshPlaneSectionRegistry, SectionLimits,
-};
+use axiolid_dispatch::MeshPlaneSectionRegistry;
 use axiolid_mesh::TriMesh;
+use axiolid_mesh_section_contract::SectionLimits;
 use axiolid_reference::ScalarSection;
 
 fn cube() -> TriMesh {

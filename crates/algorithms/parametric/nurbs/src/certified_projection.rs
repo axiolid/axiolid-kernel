@@ -1,7 +1,7 @@
 //! Public policy and certificate values for exhaustive projection.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point2, Point3, Scalar, Tolerance};
-use axiolid_kernel::{GeomError, GeomResult};
 
 /// Closed native-parameter interval that may contain a global minimizer.
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -37,5 +37,5 @@ not report `scalar-compile` after this split.
 ## Tests
 
 Unit-like generation tests live in `tests/` here. Tests that verify a generated
-mesh is accepted by an L3 Boolean provider stay in `axiolid-compile/tests/`:
+mesh is accepted by an L3 Boolean provider stay in `axiolid-mesh-compile/tests/`:
 letting this L2 crate dev-depend on that provider violates the tier boundary.

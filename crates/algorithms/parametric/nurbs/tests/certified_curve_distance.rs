@@ -1,6 +1,6 @@
+use axiolid_contracts::GeomError;
 use axiolid_core::{Point2, Point3, Tolerance};
 use axiolid_curve::{BSplineCurve, KnotSpec};
-use axiolid_kernel::GeomError;
 use axiolid_nurbs::{
     distance_curve2_certified, distance_curve3_certified, CertifiedProjectionOptions,
 };

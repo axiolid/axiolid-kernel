@@ -98,8 +98,9 @@ pub fn sample_triangles_cpu(
         });
     }
 
-    let mut field = LayeredField::with_config(config)?;
+    let empty = LayeredField::with_config(config)?;
     let (width, height) = config.dimensions();
+    let mut cells = empty.cells().to_vec();
     let mut stored = 0usize;
 
     for y in 0..height {
@@ -152,15 +153,14 @@ pub fn sample_triangles_cpu(
             if stored > budget.max_intervals {
                 return Err(LayeredFieldError::SampleBudgetExceeded);
             }
-            let index = field
+            let index = empty
                 .linear_index(x, y)
                 .ok_or(LayeredFieldError::NodeOutsideField)?;
-            field.set_cell(index, LayeredCell::with_layers(hits, Vec::new())?);
+            cells[index] = LayeredCell::with_layers(hits, Vec::new())?;
         }
     }
 
-    field.set_evidence(evidence);
-    Ok(field)
+    LayeredField::from_cells(width, height, cells, evidence)
 }
 
 struct Prepared {

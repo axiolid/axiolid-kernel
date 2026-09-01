@@ -79,7 +79,7 @@ oracle's defining property: it is never *approximately* right.
 An ordering rule that lives only in prose gets violated silently — as this one
 was. It is now enforced by construction:
 
-- `axiolid_kernel::conformance` is generic over `impl MeshBoolean`, so
+- `axiolid_contracts::conformance` is generic over `impl MeshBoolean`, so
   obligations attach to the contract rather than to a provider.
 - `MeshBooleanRegistry::register_conformant` refuses a non-conformant provider
   at registration, returning the failing report.

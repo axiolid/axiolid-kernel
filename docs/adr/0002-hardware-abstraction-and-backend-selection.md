@@ -8,7 +8,7 @@
 > **Amended by [0004](0004-package-layout-and-backend-features.md).** The
 > reasoning below stands. The backends are no longer separate crates: they are
 > `axiolid-kernel`'s `backend::{scalar,simd,gpu}` modules behind cargo features,
-> and `axiolid-dispatch` is now `axiolid_kernel::backend::Dispatcher`.
+> and `axiolid-dispatch` is now `axiolid_contracts::backend::Dispatcher`.
 >
 > **Topology and oracle ownership superseded by
 > [0012](0012-scalar-reference-ownership.md).** The crate names in this ADR

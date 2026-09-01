@@ -2,7 +2,7 @@
 
 Purpose: API-neutral GPU executor adapter.
 
-Allowed internal dependencies: axiolid-kernel, axiolid-model, axiolid-mesh. Follow parent `../AGENTS.md`. Do not read
+Allowed internal dependencies: axiolid-contracts, axiolid-mesh-compile-contract, axiolid-model, axiolid-mesh. Follow parent `../AGENTS.md`. Do not read
 `PLAN.md` unless assigned implementation or roadmap work.
 
 ## Module ownership
@@ -18,7 +18,7 @@ transfer. The adapter validates device preference, f32/f64 policy, graph-root
 ownership, and result cardinality, then invokes the executor's required
 operation-specific option-validation hook before submission. Result residency is
 validated before dispatch: a device cannot deliver into another device's memory,
-and an unrecognized future residency is refused rather than assumed. The adapter overrides `compile_batch_into` (not `compile_batch`) so both batch
+and an unrecognized future residency is refused rather than assumed. The adapter overrides `compile_mesh_batch_into` (not `compile_mesh_batch`) so both batch
 call shapes reach the device in one submission. Executor output
 contract violations use `BackendContractViolation`; they are not caller input
 errors. Concrete executors must honor forwarded determinism and memory-budget

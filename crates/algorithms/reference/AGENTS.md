@@ -2,7 +2,7 @@
 
 Purpose: portable scalar reference implementation and correctness oracle (ADR 0012).
 
-Allowed internal dependencies: axiolid-core, axiolid-kernel, axiolid-mesh,
+Allowed internal dependencies: axiolid-core, guarantees/common/operation contracts, axiolid-mesh,
 axiolid-curve. Follow parent `../AGENTS.md`. Do not read
 `PLAN.md` unless assigned implementation or roadmap work.
 

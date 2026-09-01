@@ -1,6 +1,6 @@
+use axiolid_contracts::GeomError;
 use axiolid_core::{Point3, Tolerance};
 use axiolid_curve::KnotSpec;
-use axiolid_kernel::GeomError;
 use axiolid_nurbs::{
     project_surface_certified, CertifiedSurfaceProjection3, CertifiedSurfaceProjectionOptions,
     SurfaceProjectionCertificate3, SurfaceProjectionUnresolvedReason,

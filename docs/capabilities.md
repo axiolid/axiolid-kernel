@@ -21,7 +21,7 @@ evidence that an algorithm exists.
 
 ## Where the implementation stands against the ambition
 
-Graph execution today still **stores results as triangles**: `axiolid-compile`
+Graph execution today still **stores results as triangles**: `axiolid-mesh-compile`
 memoises every graph node as a `TriMesh`, so a surface it can represent exactly
 is discretised at the first graph edge. The focused certified affine trace
 arrangement in `axiolid-construct` now returns an analytic `ExactBRep`, but it is
@@ -40,10 +40,10 @@ any exactness claim as applying to *evaluation*, not to *operation results*.
 | Mesh values, polygon/triangle utilities and views | Implemented | `axiolid-mesh` |
 | Robust-orientation and in-circle / in-sphere predicate reference paths | Implemented | `axiolid-reference` with degeneracy and filter tests |
 | Scalar geometry generation | Implemented broad discrete path plus focused analytic arrangement | `axiolid-construct`; profile/path families remain mesh results. A one-owner certified affine surface trace becomes two closed trimmed faces plus an explicit embedded pcurve on the containing face; see [ADR 0029](/adr/0029-certified-trace-topology-integration) |
-| Scalar graph compilation | Implemented reference path | `axiolid-compile`; DAG traversal, caching, model-driven directrices, and B-rep face tessellation. Consumes `axiolid-construct` rather than owning sweeps. Produces meshes today; see [ADR 0020](/adr/0020-exact-brep-kernel-model) |
-| Polygon triangulation | Implemented provider | `axiolid-tessellate` adopts Earcut under the contract in [ADR 0015](/adr/0015-adopt-earcut-polygon-triangulation) |
+| Scalar graph compilation | Implemented reference path | `axiolid-mesh-compile`; DAG traversal, caching, model-driven directrices, and B-rep face tessellation. Consumes `axiolid-construct` rather than owning sweeps. Produces meshes today; see [ADR 0020](/adr/0020-exact-brep-kernel-model) |
+| Polygon triangulation | Implemented provider | `axiolid-tessellation-contract` adopts Earcut under the contract in [ADR 0015](/adr/0015-adopt-earcut-polygon-triangulation) |
 | Mesh Boolean execution | Optional provider | `axiolid-mesh-boolean-boolmesh`; limited to its mesh contract and tests |
-| Mesh plane section | Implemented scalar oracle | `axiolid-kernel::MeshPlaneSection` plus `axiolid-reference::ScalarSection`; exact binary64 plane-side classification, source-topology stitching of outward-oriented closed solids, closed plane-local contours, explicit limits/cancellation/scratch preflight, and input-mesh provenance. Coplanar surface overlap and open/non-manifold results fail closed; no analytic exactness or region nesting is claimed. See [ADR 0033](/adr/0033-mesh-plane-section-contract) |
+| Mesh plane section | Implemented scalar oracle | `axiolid-mesh-section-contract::MeshPlaneSection` plus `axiolid-reference::ScalarSection`; exact binary64 plane-side classification, source-topology stitching of outward-oriented closed solids, closed plane-local contours, explicit limits/cancellation/scratch preflight, and input-mesh provenance. Coplanar surface overlap and open/non-manifold results fail closed; no analytic exactness or region nesting is claimed. See [ADR 0033](/adr/0033-mesh-plane-section-contract) |
 
 ## Geometry representation
 
@@ -62,7 +62,7 @@ any exactness claim as applying to *evaluation*, not to *operation results*.
 | NURBS exact transformations | Implemented | `axiolid-nurbs`; homogeneous curve knot insertion/reversal/split/Bézier decomposition and surface U/V insertion/reversal preserve the represented shape |
 | Verified periodic curve views | Implemented bounded semantics | `axiolid-nurbs`; `PeriodicCurve2`/`PeriodicCurve3` require declared closure plus verified positional seam continuity, report C0/C1/C2 continuity, wrap only explicit view evaluation, canonicalize interior insertion/split parameters, revalidate insertion, and return neutral edited/open curves. They do not define periodic control-net or surface topology; see [ADR 0031](/adr/0031-verified-periodic-curve-views) |
 | Explicit periodic B-spline surfaces | Implemented fixed-topology semantics | Cyclic U/V/UV schema, wrapped jets, alias-safe edits, and certified projection; see [ADR 0032](/adr/0032-explicit-periodic-bspline-surfaces) |
-| Trimmed curved-face tessellation | Implemented bounded reference path | `axiolid-compile`; endpoint-inclusive pcurve boundaries and holes, guarded structured-grid/Earcut seeds, topological seam reuse, explicit outer/bound orientation, face-level conforming support-surface refinement, periodic face charts, and fail-closed input/per-edge/per-face/aggregate/depth limits; see [ADR 0019](/adr/0019-validate-and-refine-nurbs-on-the-scalar-read-path) |
+| Trimmed curved-face tessellation | Implemented bounded reference path | `axiolid-mesh-compile`; endpoint-inclusive pcurve boundaries and holes, guarded structured-grid/Earcut seeds, topological seam reuse, explicit outer/bound orientation, face-level conforming support-surface refinement, periodic face charts, and fail-closed input/per-edge/per-face/aggregate/depth limits; see [ADR 0019](/adr/0019-validate-and-refine-nurbs-on-the-scalar-read-path) |
 | Topology / B-rep vocabulary | Represented | `axiolid-topology` provides generic typed-role topology; `axiolid-brep` provides strict owned analytic catalogs and required native trim spans |
 | Exact B-rep result contract | Implemented contract with one focused constructor | `axiolid-brep::ExactBRep` refuses missing supports/spans and generic topology failures. `axiolid-construct` constructs the certified one-owner affine trace arrangement; see [ADR 0024](/adr/0024-exact-brep-result-contracts) and [ADR 0029](/adr/0029-certified-trace-topology-integration) |
 | Exact B-rep operation results | Focused affine arrangement only; general operations planned | One bounded surface-pair slice returns analytic supports, closed trims, an embedded face curve, native spans, and a residual certificate. Sweeps, booleans, solids, graph persistence, and curved intersections remain unimplemented |

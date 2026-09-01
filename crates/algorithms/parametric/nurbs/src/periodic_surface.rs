@@ -1,7 +1,7 @@
 //! Explicit cyclic B-spline surface semantics.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point3, Scalar};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_reference::surface::{bspline_jet, SurfaceJet};
 use axiolid_surface::BSplineSurface;
 

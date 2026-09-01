@@ -4,7 +4,7 @@
 //!
 //! `axiolid-curve` declares `Curve2`/`Curve3` and a `CurveEvaluator` trait. Until
 //! now nothing in the workspace implemented that trait, so every declared curve
-//! family was inert data. `axiolid-compile` worked around this with its own
+//! family was inert data. `axiolid-mesh-compile` worked around this with its own
 //! private circle flattener and refused ellipses and B-splines outright.
 //!
 //! # Design
@@ -31,12 +31,12 @@
 //! written rather than orthonormalizing, so a caller sees the geometry its
 //! source actually declared. Validation is a separate concern (`axiolid-heal`).
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Frame2, Frame3, Interval, Point2, Point3, Scalar, Tolerance, Vec2, Vec3};
 use axiolid_curve::{
     BSplineCurve, BSplineCurve2, BSplineCurve3, Circle2, Circle3, Curve2, Curve3, CurveEvaluator,
     Ellipse2, Ellipse3, Line2, Line3, Polyline2, Polyline3,
 };
-use axiolid_kernel::{GeomError, GeomResult};
 
 use crate::nurbs::SplineAxis;
 
@@ -161,8 +161,8 @@ pub fn evaluate2(curve: &Curve2, t: Scalar) -> GeomResult<Point2> {
         // `Curve*` is #[non_exhaustive]. An unknown family is refused by name
         // rather than approximated by whichever arm happens to be nearest.
         _ => Err(GeomError::Unsupported {
-            backend: axiolid_kernel::BackendId::new("axiolid-reference"),
-            operation: axiolid_kernel::Operation::CurveEvaluation,
+            backend: axiolid_contracts::BackendId::new("axiolid-reference"),
+            operation: axiolid_contracts::Operation::CurveEvaluation,
         }),
     }?;
     finite2(value, "curve point")
@@ -180,8 +180,8 @@ pub fn derivative2(curve: &Curve2, t: Scalar) -> GeomResult<Vec2> {
         // `Curve*` is #[non_exhaustive]. An unknown family is refused by name
         // rather than approximated by whichever arm happens to be nearest.
         _ => Err(GeomError::Unsupported {
-            backend: axiolid_kernel::BackendId::new("axiolid-reference"),
-            operation: axiolid_kernel::Operation::CurveEvaluation,
+            backend: axiolid_contracts::BackendId::new("axiolid-reference"),
+            operation: axiolid_contracts::Operation::CurveEvaluation,
         }),
     }?;
     finite2(value, "curve derivative")
@@ -198,8 +198,8 @@ pub fn second_derivative2(curve: &Curve2, t: Scalar) -> GeomResult<Vec2> {
             de_boor_second_derivative(b, t, |p| [p.x, p.y], |c| Vec2::new(c[0], c[1]))
         }
         _ => Err(GeomError::Unsupported {
-            backend: axiolid_kernel::BackendId::new("axiolid-reference"),
-            operation: axiolid_kernel::Operation::CurveEvaluation,
+            backend: axiolid_contracts::BackendId::new("axiolid-reference"),
+            operation: axiolid_contracts::Operation::CurveEvaluation,
         }),
     }?;
     finite2(value, "curve second derivative")
@@ -237,8 +237,8 @@ pub fn evaluate3(curve: &Curve3, t: Scalar) -> GeomResult<Point3> {
         // `Curve*` is #[non_exhaustive]. An unknown family is refused by name
         // rather than approximated by whichever arm happens to be nearest.
         _ => Err(GeomError::Unsupported {
-            backend: axiolid_kernel::BackendId::new("axiolid-reference"),
-            operation: axiolid_kernel::Operation::CurveEvaluation,
+            backend: axiolid_contracts::BackendId::new("axiolid-reference"),
+            operation: axiolid_contracts::Operation::CurveEvaluation,
         }),
     }?;
     finite3(value, "curve point")
@@ -258,8 +258,8 @@ pub fn derivative3(curve: &Curve3, t: Scalar) -> GeomResult<Vec3> {
         // `Curve*` is #[non_exhaustive]. An unknown family is refused by name
         // rather than approximated by whichever arm happens to be nearest.
         _ => Err(GeomError::Unsupported {
-            backend: axiolid_kernel::BackendId::new("axiolid-reference"),
-            operation: axiolid_kernel::Operation::CurveEvaluation,
+            backend: axiolid_contracts::BackendId::new("axiolid-reference"),
+            operation: axiolid_contracts::Operation::CurveEvaluation,
         }),
     }?;
     finite3(value, "curve derivative")
@@ -276,8 +276,8 @@ pub fn second_derivative3(curve: &Curve3, t: Scalar) -> GeomResult<Vec3> {
             de_boor_second_derivative(b, t, |p| [p.x, p.y, p.z], |c| Vec3::new(c[0], c[1], c[2]))
         }
         _ => Err(GeomError::Unsupported {
-            backend: axiolid_kernel::BackendId::new("axiolid-reference"),
-            operation: axiolid_kernel::Operation::CurveEvaluation,
+            backend: axiolid_contracts::BackendId::new("axiolid-reference"),
+            operation: axiolid_contracts::Operation::CurveEvaluation,
         }),
     }?;
     finite3(value, "curve second derivative")

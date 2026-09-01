@@ -4,8 +4,8 @@
 mod fixtures;
 
 use axiolid_core::Vec3;
-use axiolid_field::navigate::{RouteOutcome, TraversalEnvelope, TraversalGraph};
-use axiolid_field::{sample_triangles_cpu, LayeredFieldError, Triangle3};
+use axiolid_field_ops::navigate::{RouteOutcome, TraversalEnvelope, TraversalGraph};
+use axiolid_field_ops::{sample_triangles_cpu, LayeredFieldError, Triangle3};
 
 fn envelope(radius: f64, height: f64, step: f64, slope: f64) -> TraversalEnvelope {
     TraversalEnvelope {

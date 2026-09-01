@@ -17,8 +17,8 @@ ROOT = Path(__file__).resolve().parent.parent
 
 SUITES = [
     ["cargo", "test", "-p", "axiolid-reference", "--all-features", "--test", "curve"],
-    ["cargo", "test", "-p", "axiolid-compile", "--all-features", "--test", "extrusion_volume"],
-    ["cargo", "test", "-p", "axiolid-compile", "--all-features", "--test", "extrusion"],
+    ["cargo", "test", "-p", "axiolid-mesh-compile", "--all-features", "--test", "extrusion_volume"],
+    ["cargo", "test", "-p", "axiolid-mesh-compile", "--all-features", "--test", "extrusion"],
 ]
 
 # (name, relative path, find, replace)

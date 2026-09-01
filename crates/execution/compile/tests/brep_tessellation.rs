@@ -1,9 +1,10 @@
 //! Faceted B-rep tessellation gates.
 
-use axiolid_compile::ScalarCompiler;
+use axiolid_contracts::ExecutionOptions;
 use axiolid_core::Vec3;
-use axiolid_kernel::{ExecutionOptions, GeometryCompiler};
 use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
+use axiolid_mesh_compile::ReferenceMeshCompiler;
+use axiolid_mesh_compile_contract::MeshCompiler;
 use axiolid_model::{GeometryGraphBuilder, GeometryNode};
 use axiolid_topology::audit_brep;
 use axiolid_topology::{
@@ -181,12 +182,12 @@ fn planar_face_with_bound_roles(
 
 fn compile_result(
     brep: BRep<axiolid_model::NodeId>,
-) -> axiolid_kernel::GeomResult<axiolid_mesh::TriMesh> {
+) -> axiolid_contracts::GeomResult<axiolid_mesh::TriMesh> {
     let mut builder = GeometryGraphBuilder::new();
     let root = builder.push(GeometryNode::BRep(brep)).expect("push");
     let graph = builder.finish(vec![root]).expect("finish");
-    let compiler = ScalarCompiler::new(BoolmeshBoolean::new());
-    compiler.compile(
+    let compiler = ReferenceMeshCompiler::new(BoolmeshBoolean::new());
+    compiler.compile_mesh(
         &graph,
         root,
         &ExecutionOptions::new(axiolid_core::Tolerance::METRE),
@@ -216,7 +217,7 @@ fn a_solid_with_an_empty_outer_shell_is_rejected() {
 
     let error = compile_result(brep).expect_err("a solid cannot have an empty outer shell");
     assert!(
-        matches!(error, axiolid_kernel::GeomError::InvalidInput(_)),
+        matches!(error, axiolid_contracts::GeomError::InvalidInput(_)),
         "expected malformed outer shell, got {error:?}"
     );
 }
@@ -227,7 +228,7 @@ fn a_face_without_an_outer_bound_is_rejected_before_tessellation() {
     let error = compile_result(planar_face_without_outer(&points))
         .expect_err("a face must designate one outer bound");
     match error {
-        axiolid_kernel::GeomError::InvalidInput(message) => assert!(
+        axiolid_contracts::GeomError::InvalidInput(message) => assert!(
             message.contains("faces_without_outer_bound: 1"),
             "diagnostic must name the missing outer bound: {message}"
         ),
@@ -259,7 +260,7 @@ fn a_face_with_an_empty_outer_loop_is_rejected_before_tessellation() {
 
     let error = compile_result(brep).expect_err("an empty loop cannot bound a face");
     match error {
-        axiolid_kernel::GeomError::InvalidInput(message) => assert!(
+        axiolid_contracts::GeomError::InvalidInput(message) => assert!(
             message.contains("empty_loops: 1"),
             "diagnostic must name the empty loop: {message}"
         ),
@@ -274,7 +275,7 @@ fn non_finite_planar_bounds_are_rejected() {
         let error = compile_result(planar_face(&points))
             .expect_err("non-finite planar input cannot be tessellated");
         match error {
-            axiolid_kernel::GeomError::Degenerate(message) => assert!(
+            axiolid_contracts::GeomError::Degenerate(message) => assert!(
                 message.contains("non-finite"),
                 "{label} diagnostic must identify non-finite area: {message}"
             ),
@@ -293,7 +294,7 @@ fn multiple_outer_bounds_are_rejected_before_tessellation() {
 
     let error = compile_result(brep).expect_err("multiple outer bounds must fail closed");
     match error {
-        axiolid_kernel::GeomError::InvalidInput(message) => assert!(
+        axiolid_contracts::GeomError::InvalidInput(message) => assert!(
             message.contains("faces_with_multiple_outer_bounds: 1"),
             "diagnostic must name the malformed face: {message}"
         ),
@@ -306,7 +307,7 @@ fn a_two_edge_planar_bound_is_rejected() {
     let brep = planar_face(&[Vec3::ZERO, Vec3::X]);
     let error = compile_result(brep).expect_err("two edges cannot bound a planar face");
     assert!(
-        matches!(error, axiolid_kernel::GeomError::Degenerate(_)),
+        matches!(error, axiolid_contracts::GeomError::Degenerate(_)),
         "expected degenerate planar bound, got {error:?}"
     );
 }
@@ -316,7 +317,7 @@ fn a_zero_area_planar_bound_is_rejected() {
     let brep = planar_face(&[Vec3::ZERO, Vec3::X, Vec3::X * 2.0]);
     let error = compile_result(brep).expect_err("collinear vertices define no planar face");
     assert!(
-        matches!(error, axiolid_kernel::GeomError::Degenerate(_)),
+        matches!(error, axiolid_contracts::GeomError::Degenerate(_)),
         "expected zero-area planar bound, got {error:?}"
     );
 }
@@ -333,7 +334,7 @@ fn a_two_edge_inner_bound_is_rejected() {
     let error = compile_result(planar_face_with_holes(&outer, &[&hole]))
         .expect_err("two edges cannot bound a planar hole");
     assert!(
-        matches!(error, axiolid_kernel::GeomError::Degenerate(_)),
+        matches!(error, axiolid_contracts::GeomError::Degenerate(_)),
         "expected undersized inner bound, got {error:?}"
     );
 }
@@ -354,7 +355,7 @@ fn a_zero_area_inner_bound_is_rejected() {
     let error = compile_result(planar_face_with_holes(&outer, &[&hole]))
         .expect_err("a collinear inner bound cannot define a hole");
     assert!(
-        matches!(error, axiolid_kernel::GeomError::Degenerate(_)),
+        matches!(error, axiolid_contracts::GeomError::Degenerate(_)),
         "expected zero-area inner bound, got {error:?}"
     );
 }
@@ -685,8 +686,8 @@ fn a_curved_face_is_refused_not_flattened() {
         .push(GeometryNode::BRep(rebuilt))
         .expect("push brep");
     let graph = builder.finish(vec![root]).expect("finish");
-    let compiler = ScalarCompiler::new(BoolmeshBoolean::new());
-    let outcome = compiler.compile(
+    let compiler = ReferenceMeshCompiler::new(BoolmeshBoolean::new());
+    let outcome = compiler.compile_mesh(
         &graph,
         root,
         &ExecutionOptions::new(axiolid_core::Tolerance::METRE),
@@ -796,9 +797,9 @@ fn a_curved_face_with_a_pcurve_is_sampled_on_its_surface() {
 
     let root = builder.push(GeometryNode::BRep(brep)).expect("brep");
     let graph = builder.finish(vec![root]).expect("finish");
-    let compiler = ScalarCompiler::new(BoolmeshBoolean::new());
+    let compiler = ReferenceMeshCompiler::new(BoolmeshBoolean::new());
     let mesh = compiler
-        .compile(
+        .compile_mesh(
             &graph,
             root,
             &ExecutionOptions::new(axiolid_core::Tolerance::MILLIMETRE),
@@ -883,8 +884,8 @@ fn unsound_topology_is_refused_before_tessellation() {
     let mut builder = GeometryGraphBuilder::new();
     let root = builder.push(GeometryNode::BRep(brep)).expect("push");
     let graph = builder.finish(vec![root]).expect("finish");
-    let compiler = ScalarCompiler::new(BoolmeshBoolean::new());
-    let result = compiler.compile(
+    let compiler = ReferenceMeshCompiler::new(BoolmeshBoolean::new());
+    let result = compiler.compile_mesh(
         &graph,
         root,
         &ExecutionOptions::new(axiolid_core::Tolerance::METRE),
@@ -1086,9 +1087,9 @@ fn two_curved_faces_share_their_seam_vertices() {
 
     let root = builder.push(GeometryNode::BRep(brep)).expect("push");
     let graph = builder.finish(vec![root]).expect("finish");
-    let compiler = ScalarCompiler::new(BoolmeshBoolean::new());
+    let compiler = ReferenceMeshCompiler::new(BoolmeshBoolean::new());
     let mesh = compiler
-        .compile(
+        .compile_mesh(
             &graph,
             root,
             &ExecutionOptions::new(axiolid_core::Tolerance::MILLIMETRE),
@@ -1242,8 +1243,8 @@ fn a_periodic_seam_closes_the_tube() {
 
     let root = builder.push(GeometryNode::BRep(brep)).expect("brep");
     let graph = builder.finish(vec![root]).expect("finish");
-    let mesh = ScalarCompiler::new(BoolmeshBoolean::new())
-        .compile(
+    let mesh = ReferenceMeshCompiler::new(BoolmeshBoolean::new())
+        .compile_mesh(
             &graph,
             root,
             &ExecutionOptions::new(axiolid_core::Tolerance::MILLIMETRE),
@@ -1462,8 +1463,8 @@ fn a_half_cylinder_is_not_welded_shut() {
     });
     let root = builder.push(GeometryNode::BRep(brep)).expect("brep");
     let graph = builder.finish(vec![root]).expect("finish");
-    let mesh = ScalarCompiler::new(BoolmeshBoolean::new())
-        .compile(
+    let mesh = ReferenceMeshCompiler::new(BoolmeshBoolean::new())
+        .compile_mesh(
             &graph,
             root,
             &ExecutionOptions::new(axiolid_core::Tolerance::MILLIMETRE),
@@ -1639,8 +1640,8 @@ fn a_periodic_patch_with_interior_rows_closes_across_the_seam() {
 
     let root = builder.push(GeometryNode::BRep(brep)).expect("brep");
     let graph = builder.finish(vec![root]).expect("finish");
-    let mesh = ScalarCompiler::new(BoolmeshBoolean::new())
-        .compile(
+    let mesh = ReferenceMeshCompiler::new(BoolmeshBoolean::new())
+        .compile_mesh(
             &graph,
             root,
             &ExecutionOptions::new(axiolid_core::Tolerance::MILLIMETRE),
@@ -1805,8 +1806,8 @@ fn a_curved_face_with_a_hole_is_not_gridded() {
 
     let root = builder.push(GeometryNode::BRep(brep)).expect("brep");
     let graph = builder.finish(vec![root]).expect("finish");
-    let mesh = ScalarCompiler::new(BoolmeshBoolean::new())
-        .compile(
+    let mesh = ReferenceMeshCompiler::new(BoolmeshBoolean::new())
+        .compile_mesh(
             &graph,
             root,
             &ExecutionOptions::new(axiolid_core::Tolerance::MILLIMETRE),
@@ -1941,8 +1942,8 @@ fn a_slanted_trim_is_not_gridded() {
 
     let root = builder.push(GeometryNode::BRep(brep)).expect("brep");
     let graph = builder.finish(vec![root]).expect("finish");
-    let mesh = ScalarCompiler::new(BoolmeshBoolean::new())
-        .compile(
+    let mesh = ReferenceMeshCompiler::new(BoolmeshBoolean::new())
+        .compile_mesh(
             &graph,
             root,
             &ExecutionOptions::new(axiolid_core::Tolerance::MILLIMETRE),
@@ -2108,8 +2109,8 @@ fn a_trimmed_rational_bspline_face_refines_its_support_surface() {
     let root = builder.push(GeometryNode::BRep(brep)).expect("B-rep");
     let graph = builder.finish(vec![root]).expect("graph");
     let tolerance = Tolerance::MILLIMETRE;
-    let mesh = ScalarCompiler::new(BoolmeshBoolean::new())
-        .compile(&graph, root, &ExecutionOptions::new(tolerance))
+    let mesh = ReferenceMeshCompiler::new(BoolmeshBoolean::new())
+        .compile_mesh(&graph, root, &ExecutionOptions::new(tolerance))
         .expect("trimmed rational B-spline face tessellates");
 
     assert!(!mesh.indices.is_empty());
@@ -2257,8 +2258,8 @@ fn a_curved_face_preserves_a_pcurve_hole_during_refinement() {
 
     let root = builder.push(GeometryNode::BRep(brep)).unwrap();
     let graph = builder.finish(vec![root]).unwrap();
-    let mesh = ScalarCompiler::new(BoolmeshBoolean::new())
-        .compile(&graph, root, &ExecutionOptions::new(Tolerance::MILLIMETRE))
+    let mesh = ReferenceMeshCompiler::new(BoolmeshBoolean::new())
+        .compile_mesh(&graph, root, &ExecutionOptions::new(Tolerance::MILLIMETRE))
         .expect("curved face with a hole tessellates");
 
     let parameter = |index: u32| {

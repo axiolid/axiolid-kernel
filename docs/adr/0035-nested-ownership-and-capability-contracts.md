@@ -7,7 +7,7 @@
 
 Axiolid has sound lower-level decisions—format neutrality, exact-intent preservation, independently consumable representations, portable reference oracles, swappable providers, and fail-closed contracts—but its flat `crates/facade/axiolid-*` filesystem obscures those roles. The mixed `axiolid-kernel` package also places guarantee vocabulary, provider/execution policy, operation seams, registries, evidence, and graph-to-mesh compilation behind one dependency boundary.
 
-ADR 0020 already decides that exact B-rep is the kernel model and tessellation is an explicit output. The existing `GeometryCompiler -> TriMesh` contract contradicts that direction by making a discrete result the universal graph currency.
+ADR 0020 already decides that exact B-rep is the kernel model and tessellation is an explicit output. The former `GeometryCompiler -> TriMesh` contract contradicted that direction by making a discrete result the universal graph currency.
 
 The broader capability ecosystem needs stable operation semantics which can be mapped to external capability claims without importing Pkl, Protobuf, IFC, vendor, transport, or source-format types into Axiolid.
 
@@ -41,7 +41,7 @@ The portable scalar implementation remains an algorithmic reference oracle and i
 
 ## Dependency policy
 
-The checker enforces a role-based DAG. At minimum:
+The checker enforces a role-based DAG over production/build edges and an exact declared allowlist over all internal edges, including dev integration dependencies. At minimum:
 
 - foundation has no Axiolid sibling dependency;
 - representations do not depend on contracts, algorithms, providers, execution, facade, or formats;

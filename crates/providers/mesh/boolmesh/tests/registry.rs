@@ -5,8 +5,9 @@
 
 mod support;
 
+use axiolid_contracts::ExecutionOptions;
 use axiolid_core::{BooleanOperator, Tolerance};
-use axiolid_kernel::{ExecutionOptions, MeshBooleanRegistry};
+use axiolid_dispatch::MeshBooleanRegistry;
 use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
 use support::{boxx, volume};
 
@@ -51,7 +52,7 @@ fn a_bounded_memory_budget_refuses_this_provider() {
         .expect_err("an unbounded provider cannot fit a declared budget");
 
     assert!(
-        matches!(error, axiolid_kernel::GeomError::BudgetExceeded { .. }),
+        matches!(error, axiolid_contracts::GeomError::BudgetExceeded { .. }),
         "expected BudgetExceeded, got {error:?}"
     );
 }

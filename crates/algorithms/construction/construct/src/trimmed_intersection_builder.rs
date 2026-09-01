@@ -1,7 +1,7 @@
 use axiolid_brep::{Curve2Id, ExactBRep, ExactBRepBuilder, SurfaceId};
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Interval, Point2, Point3};
 use axiolid_curve::{Curve2, Curve3, Line2, Line3};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_surface::Surface;
 use axiolid_topology::{
     Edge, EdgeId, EdgeUse, Face, FaceBound, FaceId, Loop, LoopId, Orientation, Vertex, VertexId,

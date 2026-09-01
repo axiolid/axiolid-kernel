@@ -11,8 +11,8 @@
 //! units: a boundary in millimetres and the same boundary in metres
 //! produce the same shape.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Plane3, Point2, Scalar, Tolerance, Vec3};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_mesh::TriMesh;
 use axiolid_primitive::{ClipMargin, HalfSpace};
 

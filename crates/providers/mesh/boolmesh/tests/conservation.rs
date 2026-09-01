@@ -7,10 +7,11 @@
 
 mod support;
 
+use axiolid_contracts::ExecutionOptions;
 use axiolid_core::{BooleanOperator, Tolerance};
-use axiolid_kernel::{ExecutionOptions, MeshBoolean};
 use axiolid_mesh::TriMesh;
 use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
+use axiolid_mesh_boolean_contract::MeshBoolean;
 use support::{boxx, volume};
 
 fn options() -> ExecutionOptions {

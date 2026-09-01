@@ -3,7 +3,7 @@
 mod fixtures;
 
 use axiolid_core::{Interval, Vec3};
-use axiolid_field::{
+use axiolid_field_ops::{
     clearance_above, clearance_below, largest_free_span, sample_triangles_cpu, FieldChannel,
     LayeredFieldError, PlanarMask, Triangle3,
 };

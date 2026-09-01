@@ -1,7 +1,7 @@
 //! Explicit policy and honest outcomes for bounded inverse queries.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point2, Point3, Scalar, Tolerance};
-use axiolid_kernel::{GeomError, GeomResult};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 /// Explicit work and convergence policy for bounded projection.

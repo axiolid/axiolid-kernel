@@ -7,9 +7,10 @@
 //! If these fail, the oracle is wrong and every conformance verdict built on
 //! it is void -- so they run before the conformance suite, not after.
 
+use axiolid_contracts::{ExecutionOptions, GeomError};
 use axiolid_core::{BooleanOperator, Point3, Tolerance};
-use axiolid_kernel::{ExecutionOptions, GeomError, MeshBoolean};
 use axiolid_mesh::TriMesh;
+use axiolid_mesh_boolean_contract::MeshBoolean;
 use axiolid_reference::ScalarBoolean;
 
 fn options() -> ExecutionOptions {

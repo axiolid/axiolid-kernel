@@ -5,7 +5,7 @@
 #![allow(dead_code)]
 
 use axiolid_core::{Frame3, Tolerance, Vec3};
-use axiolid_field::{FieldBounds, FieldConfig, FieldResourceBudget, Triangle3};
+use axiolid_field_ops::{FieldBounds, FieldConfig, FieldResourceBudget, Triangle3};
 
 /// World-aligned frame: local z is world +Z.
 pub fn z_up_frame() -> Frame3 {

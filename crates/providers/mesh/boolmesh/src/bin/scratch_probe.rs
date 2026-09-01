@@ -13,9 +13,10 @@
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use axiolid_contracts::ExecutionOptions;
 use axiolid_core::{BooleanOperator, Point3, Tolerance};
-use axiolid_kernel::{ExecutionOptions, MeshBoolean};
 use axiolid_mesh::TriMesh;
+use axiolid_mesh_boolean_contract::MeshBoolean;
 
 use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
 

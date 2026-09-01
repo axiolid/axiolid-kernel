@@ -1,8 +1,8 @@
 //! Exact shape-preserving NURBS transformations.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point2, Point3, Scalar};
 use axiolid_curve::{BSplineCurve, BSplineCurve2, BSplineCurve3};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_reference::curve::{bspline_jet2, bspline_jet3};
 
 /// Reverse a planar B-spline curve without changing its image.

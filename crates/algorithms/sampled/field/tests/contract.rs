@@ -3,7 +3,7 @@
 mod fixtures;
 
 use axiolid_core::{Frame3, Interval, Tolerance, Vec3};
-use axiolid_field::{
+use axiolid_field_ops::{
     FieldBounds, FieldConfig, FieldResourceBudget, LayeredCell, LayeredField, LayeredFieldError,
     SurfaceFacing, SurfaceHit,
 };

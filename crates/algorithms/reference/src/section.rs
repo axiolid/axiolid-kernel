@@ -6,13 +6,15 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use axiolid_core::{Frame3, Point2, Point3};
-use axiolid_kernel::{
+use axiolid_contracts::{
     Backend, BackendDescriptor, BackendId, CancellationGranularity, ExecutionOptions,
-    ExecutionTarget, GeomError, GeomResult, MeshPlaneSection, ScratchRequirement, SectionContour,
-    SectionEvidence, SectionLimits, SectionOutcome, Sign,
+    ExecutionTarget, GeomError, GeomResult, ScratchRequirement, Sign,
 };
+use axiolid_core::{Frame3, Point2, Point3};
 use axiolid_mesh::TriMesh;
+use axiolid_mesh_section_contract::{
+    MeshPlaneSection, SectionContour, SectionEvidence, SectionLimits, SectionOutcome,
+};
 
 use crate::orient3::orient3d;
 use crate::orientation::orient2d;
@@ -224,7 +226,7 @@ impl ExactSectionPlane {
 
     fn classify(self, point: Point3) -> GeomResult<Classification> {
         let sign = match orient3d(self.origin, self.x_point, self.y_point, point) {
-            axiolid_kernel::Certified::Certain { sign, .. } => sign,
+            axiolid_contracts::Certified::Certain { sign, .. } => sign,
             _ => {
                 return Err(GeomError::Degenerate(
                     "certified plane-side predicate returned an uncertain sign".into(),
@@ -533,8 +535,8 @@ mod tests {
         let certified = orient3d(plane.origin, plane.x_point, plane.y_point, point);
         assert!(matches!(
             certified,
-            axiolid_kernel::Certified::Certain {
-                precision: axiolid_kernel::Precision::Exact,
+            axiolid_contracts::Certified::Certain {
+                precision: axiolid_contracts::Precision::Exact,
                 ..
             }
         ));

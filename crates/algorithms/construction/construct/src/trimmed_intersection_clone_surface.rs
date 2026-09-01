@@ -1,4 +1,4 @@
-use axiolid_kernel::GeomResult;
+use axiolid_contracts::GeomResult;
 use axiolid_surface::BSplineSurface;
 
 use crate::trimmed_intersection_builder::allocation_error;

@@ -6,7 +6,7 @@
 //! the result is used for.
 
 use axiolid_core::Tolerance;
-use axiolid_tessellate::{InvalidTessellationOptions, TessellationOptions};
+use axiolid_tessellation_contract::{InvalidTessellationOptions, TessellationOptions};
 
 fn tolerance() -> Tolerance {
     Tolerance::new(1.0e-6, 1.0e-9).expect("valid tolerance")

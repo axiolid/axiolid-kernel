@@ -1,14 +1,14 @@
 #![forbid(unsafe_code)]
 
-//! Scalar reference `GeometryCompiler`.
+//! Scalar reference `MeshCompiler`.
 
 mod brep;
 mod directrix;
 
-use axiolid_kernel::BackendId;
+use axiolid_contracts::BackendId;
 
 /// This provider's identity.
 pub const BACKEND_ID: BackendId = BackendId::new("scalar-compile");
 
 mod compiler;
-pub use compiler::ScalarCompiler;
+pub use compiler::ReferenceMeshCompiler;

@@ -5,9 +5,10 @@ All notable changes to Axiolid are documented in this file.
 ## [Unreleased]
 
 ### Added
+- Stable, typed capability IDs for tessellation, mesh Boolean, mesh section, and graph-to-mesh contracts, plus the MCS/Axioval semantic mapping and transport-independent package identity rule.
 - Added L1 `axiolid-brep`: strict owned exact B-rep results with separately typed 3D curve, 2D pcurve, and surface catalogs plus explicit native trim intervals. The facade exposes it through the new `brep` feature; see [ADR 0024](./adr/0024-exact-brep-result-contracts.md).
 - Adaptive analytic `Curve3` directrix sampling and validated `parameter_range` trimming for sweeps, with dimension-generic chord subdivision shared by the 2D and 3D flatteners.
-- Test suites for `axiolid-curve`, `axiolid-surface`, `axiolid-primitive`, `axiolid-profile`, `axiolid-tessellate`, and `axiolid-backend-cpu`, pinning vocabulary contracts, validation refusals, and CPU feature selection.
+- Test suites for `axiolid-curve`, `axiolid-surface`, `axiolid-primitive`, `axiolid-profile`, `axiolid-tessellation-contract`, and `axiolid-backend-cpu`, pinning vocabulary contracts, validation refusals, and CPU feature selection.
 - Added analytic rational B-spline surface partials and normals, plus bounded conforming support-surface refinement for pcurve-trimmed curved B-rep faces with holes, periodic charts, guarded structured-grid/Earcut seeds, and shared seam vertices.
 - Added the format-neutral `axiolid-nurbs` algorithm crate and `axiolid/nurbs` facade feature with analytic second-order differential geometry, explicitly budgeted curve/surface projection, verified closed-curve seam wrapping, exact curve knot insertion/reversal/split/Bézier decomposition, and exact surface U/V insertion/reversal.
 - Added outward-rounded global certificates for clamped NURBS point-to-curve projection and curve-pair minimum distance in 2D/3D, with interval-aware homogeneous knot refinement, unresolved minimizer cells, deterministic work budgets, and pre-allocation Cartesian guards; see [ADR 0025](./adr/0025-certified-nurbs-subdivision-oracle.md).
@@ -22,15 +23,18 @@ All notable changes to Axiolid are documented in this file.
 - Added a format-neutral authored `OpenProfile` graph declaration for conservative bounded-open exact 2D curve paths, with finite/structurally valid curve, 2D-offset, instance, and trim-selector validation, shared-DAG-linear traversal, exact same-endpoint refusal, explicit no-area/no-width semantics, solid-operation exclusion, and curve-evaluation classification; see [ADR 0034](./adr/0034-authored-open-profile-contract.md).
 
 ### Changed
+- Replaced the mixed `axiolid-kernel` package with `axiolid-guarantees`, `axiolid-contracts`, `axiolid-mesh-contracts`, operation-specific contract packages, and execution-owned `axiolid-dispatch`.
+- Split `axiolid-field` values from `axiolid-field-ops`; the facade now exposes additive `field`, `field-ops`, and `field-navigation` tiers.
+- Renamed the generic mesh-valued `GeometryCompiler` API to explicit `MeshCompiler::{compile_mesh, compile_mesh_batch, compile_mesh_batch_into}` and the reference package/type to `axiolid-mesh-compile::ReferenceMeshCompiler`.
 - Nested Cargo packages by architectural ownership and renamed implementation packages to role-specific `axiolid-reference`, `axiolid-construct`, and `axiolid-mesh-boolean-boolmesh`; downstream manifests and Rust imports must migrate atomically.
-- `axiolid-compile` now converts already-triangular `PolygonMesh` faces directly to `TriMesh` without retriangulation, while continuing to refuse n-gons and faces with holes until an explicit tessellation provider is selected.
+- `axiolid-mesh-compile` now converts already-triangular `PolygonMesh` faces directly to `TriMesh` without retriangulation, while continuing to refuse n-gons and faces with holes until an explicit tessellation provider is selected.
 - `axiolid-construct` now defines explicit `GenerationRequest` and `GeneratedGeometry` contracts. Exact B-rep and tolerance-bearing tessellation are separate variants; future exact construction must refuse unsupported cases instead of returning a mesh fallback.
 - Documented the kernel's direction: Axiolid is striving to be a multipurpose **exact B-rep kernel**, with tessellation as a requested output rather than the model. Surface/surface intersection and geometric inversion are now in scope; see [ADR 0020](./adr/0020-exact-brep-kernel-model.md). Performance work is explicitly parked behind capability work on the roadmap.
 - Topology audit and planar B-rep compilation now reject empty loops or outer shells, invalid outer-bound cardinality, undersized bounds, and zero/non-finite-area bounds instead of silently emitting empty or filled geometry; `BRepHealth` exposes dedicated empty-loop and multiple-outer counters.
 - Reject malformed compact knot encodings, non-finite controls/frames/derived evaluations, and non-positive rational weights before or during spline evaluation.
 - Curve flattening and curved-face boundary/interior tessellation now preserve explicit outer/bound orientation and fail closed on non-finite error metrics or unmet tolerance, depth, segment, per-face, input, and aggregate work limits.
 - Extracted the format-agnostic geometry kernel from the Nehirde workspace and renamed its public crate prefix from `geom-` to `axiolid-`.
-- Extracted scalar solid generation — profiles, lofts, sweeps, revolutions, extrusion, and bounded half-space clipping — from the L3 DAG compiler into the new L2 `axiolid-construct` crate. `axiolid-compile` now owns graph traversal, caching, model-driven directrices, and B-rep tessellation only; see [ADR 0023](./adr/0023-solid-generation-is-an-l2-crate.md).
+- Extracted scalar solid generation — profiles, lofts, sweeps, revolutions, extrusion, and bounded half-space clipping — from the L3 DAG compiler into the new L2 `axiolid-construct` crate. `axiolid-mesh-compile` now owns graph traversal, caching, model-driven directrices, and B-rep tessellation only; see [ADR 0023](./adr/0023-solid-generation-is-an-l2-crate.md).
 
 ### Fixed
 - Solid admission and boolmesh result validation now reject finite-coordinate meshes when signed-volume accumulation overflows or otherwise becomes non-finite, instead of accepting non-finite volume as outward orientation.

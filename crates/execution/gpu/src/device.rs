@@ -1,6 +1,6 @@
 //! API-neutral GPU device description.
 
-use axiolid_kernel::BackendId;
+use axiolid_contracts::BackendId;
 
 /// Relevant compute features without exposing CUDA, Metal, Vulkan, or WebGPU
 /// types in the public kernel contract.

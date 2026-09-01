@@ -1,11 +1,11 @@
-# axiolid-compile plan
+# axiolid-mesh-compile plan
 
 ## Done
 - Profile flattening: rectangle, circle, ellipse, hollow variants, contours,
   and `Derived` (2D placement) which every real IFC profile uses.
 - `earcut` triangulation with holes (ADR 0015); `axiolid-reference` audits it.
 - Linear extrusion with caps and sides; edge-parity verified.
-- `ScalarCompiler`: iterative post-order walk, memoised, boolean dispatch.
+- `ReferenceMeshCompiler`: iterative post-order walk, memoised, boolean dispatch.
 
 ## Invariants
 - Outer rings CCW, holes CW. Mirrored placements are re-oriented, never

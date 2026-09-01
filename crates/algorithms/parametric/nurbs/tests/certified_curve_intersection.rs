@@ -1,6 +1,6 @@
+use axiolid_contracts::GeomError;
 use axiolid_core::Point2;
 use axiolid_curve::{BSplineCurve, KnotSpec};
-use axiolid_kernel::GeomError;
 use axiolid_nurbs::{
     intersect_curve2_certified, CertifiedCurveIntersection2, CertifiedCurveIntersectionOptions,
     CurveIntersectionDegeneracy, TransverseCurveIntersection2,

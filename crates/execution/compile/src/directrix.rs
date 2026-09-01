@@ -1,7 +1,7 @@
 //! Safe resolution of graph-referenced 3D sweep directrices.
 
+use axiolid_contracts::{ExecutionOptions, GeomError, GeomResult};
 use axiolid_core::{Point3, Scalar};
-use axiolid_kernel::{ExecutionOptions, GeomError, GeomResult};
 use axiolid_model::{
     CurveRelation, GeometryGraph, GeometryNode, MasterRepresentation, NodeId, TrimSelector,
     TrimmingPreference,
@@ -113,8 +113,8 @@ fn resolve(
 
 fn unsupported_curve_evaluation() -> GeomError {
     GeomError::Unsupported {
-        backend: axiolid_kernel::BackendId::new("scalar-compile"),
-        operation: axiolid_kernel::Operation::CurveEvaluation,
+        backend: axiolid_contracts::BackendId::new("scalar-compile"),
+        operation: axiolid_contracts::Operation::CurveEvaluation,
     }
 }
 

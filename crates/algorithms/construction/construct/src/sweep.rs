@@ -5,8 +5,8 @@
 //! surface-curve sweep takes its up vector from a surface normal. The
 //! stitching is shared with every other sweep in `loft`.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point2, Point3, Scalar, Tolerance, Vec3};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_mesh::TriMesh;
 
 use crate::loft::{self, Frame, Station};
@@ -239,7 +239,7 @@ pub fn swept_disk(
     if fillet_radius.is_some() {
         return Err(GeomError::Unsupported {
             backend: crate::BACKEND_ID,
-            operation: axiolid_kernel::Operation::Sweep,
+            operation: axiolid_contracts::Operation::Sweep,
         });
     }
     if !radius.is_finite() || radius <= 0.0 {

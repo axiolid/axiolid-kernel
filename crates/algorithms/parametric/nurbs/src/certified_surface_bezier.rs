@@ -1,7 +1,7 @@
 //! Interval-aware tensor-product NURBS refinement for certified surface queries.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::Scalar;
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_surface::BSplineSurface;
 
 use crate::{

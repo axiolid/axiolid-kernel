@@ -41,7 +41,7 @@ does not yet exist.
 - `OutputBound` with `write_offsets` -- the exclusive prefix scan that turns
   per-element output counts into disjoint write offsets, removing the need for
   a global atomic counter or a growing vector on the hot path.
-- `compile_batch_into` -- batch operations write into a caller-owned
+- `compile_mesh_batch_into` -- batch operations write into a caller-owned
   destination, so a provider can reserve once and workers can fill disjoint
   slots.
 
@@ -101,8 +101,8 @@ does not yet exist.
   predicates exist, because it is more interesting to write. ADR 0012's
   ordering rule (scalar reference first) and this ADR's trigger table are the
   guard.
-- `compile_batch_into` is the seam a batching provider must override.
-  Overriding only `compile_batch` silently leaves `_into` on the serial
+- `compile_mesh_batch_into` is the seam a batching provider must override.
+  Overriding only `compile_mesh_batch` silently leaves `_into` on the serial
   fallback -- correct results, no batching. Pinned by
   `both_batch_call_shapes_use_a_single_submission`.
 
@@ -112,7 +112,7 @@ does not yet exist.
   `EscalationLadder`; the f32/f64/exact ladder.
 - `crates/contracts/common/src/execution.rs` -- `OutputBound`,
   `ScratchRequirement`, `DataResidency`, `Determinism`.
-- `crates/contracts/common/src/compile.rs` -- `compile_batch_into`,
+- `crates/contracts/common/src/compile.rs` -- `compile_mesh_batch_into`,
   `output_bound`.
 - `crates/execution/cpu/src/features.rs` -- `avx2_fma` detection
   already present, unused pending an arithmetic kernel.

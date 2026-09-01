@@ -5,8 +5,8 @@
 //! unmatched entries, and expanding an attacker-controlled multiplicity before
 //! checking the expected total is an allocation denial of service.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::Scalar;
-use axiolid_kernel::{GeomError, GeomResult};
 
 /// Validated expanded knot axis used by the scalar de Boor evaluators.
 pub(crate) struct SplineAxis {

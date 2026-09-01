@@ -100,7 +100,7 @@ fn three_dimensional_escalation_also_tracks_degeneracy() {
 /// expected sign is known without an oracle: it must be exactly zero.
 #[test]
 fn degenerate_cases_are_answered_exactly_at_every_tier() {
-    use axiolid_kernel::Sign;
+    use axiolid_contracts::Sign;
 
     for rate in DegeneracyRate::ALL {
         let scene = orient2_scene(20_000, rate, 0xC0FF_EE01);
@@ -155,7 +155,7 @@ fn degenerate_cases_are_answered_exactly_at_every_tier() {
 /// ULP off the plane force the filter to defer AND require a definite sign.
 #[test]
 fn near_degenerate_cases_recover_a_definite_sign() {
-    use axiolid_kernel::Sign;
+    use axiolid_contracts::Sign;
     use axiolid_reference::scene::near_coplanar_scene;
 
     let scene = near_coplanar_scene(20_000, 0xBEEF_0001);

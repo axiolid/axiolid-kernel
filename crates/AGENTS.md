@@ -1,142 +1,40 @@
-# Geometry package instructions
+# Crates
 
-Applies to `crates/**`. A deeper `AGENTS.md` adds crate/module
-specific invariants.
+This directory is physically organized by architectural ownership. Folders communicate ownership; Cargo packages remain the actual dependency/trust/compilation boundaries.
 
-## Scope
+## Direct children
 
-This package is a pure-Rust, IFC-agnostic geometry stack. No file-format entity,
-GlobalId, IFC unit, IFC placement, representation identifier, or vendor model
-type may cross this directory boundary. Source adapters lower into
-`axiolid-model::GeometryGraph`; applications choose operation providers and
-execution contexts.
+- `foundation/` — unique dependency root (`axiolid-core`).
+- `representations/` — portable analytic, region, topology, B-rep, mesh, sampled-field, and authored-graph values.
+- `contracts/` — guarantees, common vocabulary, mesh admissibility, and operation-specific portable schemas.
+- `algorithms/` — format-neutral reference, parametric, construction, planar, query, sampled, and repair implementations.
+- `providers/` — concrete optional operation providers.
+- `execution/` — provider dispatch, graph execution, and CPU/GPU contexts/adapters.
+- `facade/` — feature-gated public `axiolid` package.
 
-`PLAN.md` files are deliberately not ambient context. Read a plan only when the
-assigned task is implementing or reviewing roadmap work. Ordinary consumers and
-maintenance agents should follow `AGENTS.md` without ingesting speculative work.
+Read the nested `AGENTS.md` before editing a child.
 
-## Dependency direction
+## Dependency rules
+
+`cargo xtask architecture check` validates package metadata, explicit members, exact internal dependency allowlists, production/build role direction, nested placement, source-format neutrality, placeholders, unsafe policy, and generated-doc freshness.
+
+Production direction is:
 
 ```text
-L0 values
-  axiolid-core
-       |
-L1 representations
-  axiolid-mesh  axiolid-profile  axiolid-curve  axiolid-surface
-  axiolid-topology  axiolid-brep  axiolid-primitive  axiolid-model
-       |
-L2 algorithms and contracts
-  axiolid-tessellate  axiolid-spatial  axiolid-measure  axiolid-overlay
-  axiolid-field  axiolid-heal  axiolid-nurbs  axiolid-reference
-  axiolid-construct  axiolid-kernel
-       |
-L3 execution/adapters and reference compilation
-  axiolid-mesh-boolean-boolmesh  axiolid-compile  axiolid-backend-cpu  axiolid-backend-gpu
-       |
-L4 opt-in facade
-  axiolid
+foundation <- representations <- contracts <- algorithms/providers <- execution <- facade
 ```
 
-Dependencies point downward only. `axiolid-model` composes L1 values but performs
-no algorithms. `axiolid-kernel` is operation traits/policy/errors only. Execution
-contexts and operation adapters remain separate crates so Cargo feature
-unification cannot leak an implementation into `ifc-geometry`.
+This is a role DAG, not a license to depend on every earlier layer. Exact package edges remain allowlisted. Contracts may depend on representation values required by typed schemas, but never providers or dispatch. Algorithms do not select execution policy. Explicit dev-only upward edges are limited to integration/conformance tests.
 
-## Stable boundaries
+## Required gates
 
-- `axiolid-core`: f64 values, transforms, bounds, explicit tolerance. No algorithms
-  beyond local value operations and no serialization policy.
-- `axiolid-model`: immutable append-only DAG. Every edge references a prior node,
-  making CSG/mapped-item cycles impossible after construction.
-- `axiolid-kernel`: narrow operation traits (`GeometryCompiler`, `MeshBoolean`),
-  identity descriptors, execution policy, structured errors. Implementing an
-  operation trait is the only capability claim; never duplicate it with flags.
-- `axiolid-brep`: strict exact B-rep result vocabulary: typed analytic support
-  catalogs, topology, and explicit native trim spans. It is L1 composition only;
-  no tessellation or geometric solving.
-- `axiolid-construct`: model-free scalar construction algorithms — profiles,
-  lofts, sweeps, revolutions, extrusion, and bounded half-space clipping. It is
-  L2: consumes representations, chooses no provider, and produces the current
-  mesh reference result. It must not depend on `axiolid-model`, a backend, or
-  any L3 crate. Future exact B-rep generation belongs beside it, not in a DAG
-  compiler; see ADR 0023.
-- Backend crates: runtime hardware contexts or operation-specific adapters. They
-  do not implement an operation trait until a working algorithm exists.
-- `axiolid`: convenience reexports and semantic feature bundles only.
-
-## Representation rules
-
-- Preserve exact intent until an explicit tessellation call. Never approximate
-  circles, NURBS, profiles, booleans, or placements in a source adapter.
-- Keep n-gons and holes as `PolygonMesh`; emit `TriMesh` only after explicit
-  triangulation.
-- Keep topology separate from geometry. `BRep<Curve3, Curve2, Surface>` uses
-  distinct caller-chosen handle types for 3D edge curves, face-use pcurves, and
-  face surfaces. `axiolid-brep::ExactBRep` owns the strict analytic catalogs and
-  native trim spans; a partial generic `BRep` is never an exact result.
-- Reuse geometry via DAG `NodeId` and `Instance`; do not recursively clone
-  mapped geometry.
-- Units are already resolved when data enters this package. Generic geometry
-  does not know which source unit was used.
-- Every costly or tolerance-sensitive operation receives policy explicitly.
-  No process-global epsilon, thread pool, backend, or model tolerance.
-
-## Backend and hardware rules
-
-- Every optimized operation provider requires a portable scalar oracle. Until
-  that oracle works, the provider does not implement/register the trait.
-- SIMD code uses target-specific modules plus runtime feature detection. Never
-  set workspace-wide `target-cpu=native`.
-- Parallel execution is optional and bounded. Use context-local pools; do not
-  mutate Rayon's global pool from a library.
-- GPU contracts expose device facts and narrow batch operations, not
-  CUDA/Metal/Vulkan/WebGPU types. API-specific crates implement
-  `GpuGraphExecutor` or another operation-specific executor.
-- GPU f32 is not equivalent to the f64 model. Each operation provider validates
-  `ExecutionOptions` and rejects work whose precision it cannot honor.
-- Third-party or future AArch64/x86/GPU/accelerator providers remain possible by
-  implementing open traits for downstream-owned types.
-- Do not rank GPU above CPU by folklore. Selection thresholds require benchmark
-  evidence for the workload and target.
-
-## Public API conventions
-
-- Public value types implement `Debug` and `Clone`; add `Copy`, `Eq`, `Hash`,
-  `Default`, `Display`, `Error`, `IntoIterator`, or `AsRef` only when their
-  semantics are honest.
-- Use typed newtype IDs instead of interchangeable integers.
-- Use builders for validated multi-field configuration; do not use builders for
-  trivial values.
-- Mark extensible public enums/errors `#[non_exhaustive]` unless exhaustiveness
-  is a deliberate compatibility contract.
-- Return structured errors. Unsupported capability is distinct from invalid
-  input, unavailable hardware, cancellation, and numerical failure.
-- Prefer borrowed views (`MeshView`) and batch APIs to forced copies and one-item
-  accelerator dispatch.
-- Representation, facade, contract, and GPU adapter crates forbid unsafe code.
-  CPU provider crates may use localized unsafe intrinsics only with an invariant
-  comment, Miri-capable scalar tests where applicable, and measured need.
-
-## File and module growth
-
-Split by responsibility before a Rust file reaches roughly 500 lines. A file may
-exceed that only when generated or when splitting would obscure one cohesive
-algorithm. Keep data, validation, algorithms, dispatch, and tests in separate
-modules. Do not add empty placeholder modules: add the file when it owns a real
-type, trait, invariant, test, or implementation.
-
-## Gates
-
-Run targeted crate tests while iterating. Before merging geometry-wide changes:
+From repository root:
 
 ```bash
 cargo xtask architecture check
+scripts/probe_layering_gate.sh
 scripts/geometry-feature-matrix.sh
-cargo test -p ifc-geometry --test declaration_manifest
-cargo test -p ifc-geometry --test no_backend_dependency
-scripts/gate.sh
+cargo test --workspace --all-features
 ```
 
-The feature matrix must include no-default, every facade capability alone, full,
-CPU parallel/SIMD, and a non-x86 compile target. Architecture gates must be
-mutation-verified before being trusted.
+Run `cargo xtask architecture docs` after metadata/package changes, then rerun the checker.

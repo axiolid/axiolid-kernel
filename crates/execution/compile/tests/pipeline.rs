@@ -7,10 +7,11 @@
 
 use axiolid_construct::extrude::extrude;
 use axiolid_construct::profile::{profile_rings, triangulate, Rings};
+use axiolid_contracts::ExecutionOptions;
 use axiolid_core::{BooleanOperator, Point3, Tolerance, Vec3};
-use axiolid_kernel::{ExecutionOptions, MeshBoolean};
 use axiolid_mesh::TriMesh;
 use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
+use axiolid_mesh_boolean_contract::MeshBoolean;
 use axiolid_profile::{Profile, RectangleProfile};
 
 fn volume(m: &TriMesh) -> f64 {

@@ -58,7 +58,7 @@ fn projection_fails_closed_when_the_aggregate_start_budget_is_too_small() {
     let error = project_curve2(&curve(), Point2::new(2.0, 2.0), policy).unwrap_err();
     assert!(matches!(
         error,
-        axiolid_kernel::GeomError::BudgetExceeded { .. }
+        axiolid_contracts::GeomError::BudgetExceeded { .. }
     ));
 }
 
@@ -71,7 +71,7 @@ fn projection_rejects_hostile_knot_multiplicity_without_expanding_it() {
         let error = project_curve2(&hostile, Point2::ZERO, options()).unwrap_err();
         assert!(matches!(
             error,
-            axiolid_kernel::GeomError::InvalidInput(message)
+            axiolid_contracts::GeomError::InvalidInput(message)
                 if message.contains("compact knot vector")
         ));
     }

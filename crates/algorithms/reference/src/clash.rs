@@ -18,8 +18,8 @@
 //! exact topological answer with an approximate metric one is how a checker
 //! ends up unable to say why it flagged something.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Aabb, Point2, Point3, Scalar, Tolerance};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_measure::WindingMesh;
 use axiolid_mesh::TriMesh;
 
@@ -308,10 +308,10 @@ fn between(p: Point2, q: Point2, r: Point2) -> bool {
 }
 
 /// Certified sign as a small integer.
-fn sign_of(c: axiolid_kernel::Certified) -> i32 {
+fn sign_of(c: axiolid_contracts::Certified) -> i32 {
     match c.sign() {
-        Some(axiolid_kernel::Sign::Positive) => 1,
-        Some(axiolid_kernel::Sign::Negative) => -1,
+        Some(axiolid_contracts::Sign::Positive) => 1,
+        Some(axiolid_contracts::Sign::Negative) => -1,
         _ => 0,
     }
 }

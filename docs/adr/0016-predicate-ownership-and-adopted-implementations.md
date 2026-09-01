@@ -40,7 +40,7 @@ role and it needs no negotiation with anyone's licence.
 
 **2. They are the audit oracle for adopted implementations.** ADR 0012 makes
 `axiolid-reference` the correctness reference. An adopted crate is *verified, not
-trusted*: `axiolid-compile/tests/oracle.rs` already checks `earcut` against our
+trusted*: `axiolid-mesh-compile/tests/oracle.rs` already checks `earcut` against our
 certified triangulator on every hole-free polygon. The predicate suite extends
 that pattern to geometric decisions — we can assert that an adopted result is
 consistent with signs we can prove, without touching its source.
@@ -121,7 +121,7 @@ clean inputs, and because the margin grows with the predicate's degree.
 
 **Follow-ups**
 
-- Wire `orient3d` into a manifold-orientation check so `axiolid-compile` validates
+- Wire `orient3d` into a manifold-orientation check so `axiolid-mesh-compile` validates
   its own output with certified signs rather than a raw determinant.
 - Add a differential harness comparing `boolmesh` boolean results against
   certified-sign expectations on the fixture corpus, closing the audit loop for

@@ -9,8 +9,8 @@
 //! Writing that once means winding, hole orientation and cap pairing are
 //! fixed in one place rather than re-derived per family.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point2, Point3, Scalar, Vec3};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_mesh::TriMesh;
 
 use crate::profile::Rings;

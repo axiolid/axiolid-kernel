@@ -5,20 +5,21 @@
 //! to sample, and these tests pin that the decision is driven by the chord
 //! budget and by the curve's own parameterisation.
 
-use axiolid_compile::ScalarCompiler;
+use axiolid_contracts::ExecutionOptions;
 use axiolid_core::{Frame3, Point3, Scalar, Tolerance, Vec3};
 use axiolid_curve::{Curve3, Line3};
-use axiolid_kernel::{ExecutionOptions, GeometryCompiler};
 use axiolid_measure::volume_properties;
 use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
+use axiolid_mesh_compile::ReferenceMeshCompiler;
+use axiolid_mesh_compile_contract::MeshCompiler;
 use axiolid_model::{
     CurveRelation, CurveSegment, GeometryGraphBuilder, GeometryNode, MasterRepresentation,
     SolidOperation, Transition, TrimSelector, TrimmingPreference,
 };
 use axiolid_profile::{Profile, RectangleProfile};
 
-fn compiler() -> ScalarCompiler<BoolmeshBoolean> {
-    ScalarCompiler::new(BoolmeshBoolean::new())
+fn compiler() -> ReferenceMeshCompiler<BoolmeshBoolean> {
+    ReferenceMeshCompiler::new(BoolmeshBoolean::new())
 }
 
 fn options() -> ExecutionOptions {
@@ -49,7 +50,7 @@ fn frame() -> Frame3 {
 fn sweep_along(
     curve: axiolid_curve::Curve3,
     range: Option<(Scalar, Scalar)>,
-) -> axiolid_kernel::GeomResult<axiolid_mesh::TriMesh> {
+) -> axiolid_contracts::GeomResult<axiolid_mesh::TriMesh> {
     let mut b = GeometryGraphBuilder::new();
     let profile = b.push(GeometryNode::Profile(rect(1.0, 2.0))).unwrap();
     let directrix = b.push(GeometryNode::Curve3(curve)).unwrap();
@@ -64,7 +65,7 @@ fn sweep_along(
         ))
         .unwrap();
     let graph = b.finish(vec![swept]).unwrap();
-    compiler().compile(&graph, swept, &options())
+    compiler().compile_mesh(&graph, swept, &options())
 }
 
 /// A circular directrix sweeps a torus whose volume Pappus gives exactly.
@@ -130,7 +131,7 @@ fn a_tighter_tolerance_samples_more_finely() {
             .unwrap();
         let graph = b.finish(vec![swept]).unwrap();
         compiler()
-            .compile(&graph, swept, &ExecutionOptions::new(tolerance))
+            .compile_mesh(&graph, swept, &ExecutionOptions::new(tolerance))
             .expect("compiles at either tolerance")
     };
 
@@ -229,7 +230,7 @@ fn an_empty_range_is_refused() {
     // code rejects for its own reasons; without pinning the message this
     // test would pass even if the range check were removed entirely.
     match empty {
-        Err(axiolid_kernel::GeomError::Degenerate(message)) => {
+        Err(axiolid_contracts::GeomError::Degenerate(message)) => {
             assert!(
                 message.contains("empty"),
                 "expected the range to be named as empty, got: {message}"
@@ -325,7 +326,7 @@ fn swept_disk_accepts_trimmed_composite_directrix_with_segment_sense() {
     let graph = builder.finish(vec![sweep]).unwrap();
 
     let mesh = compiler()
-        .compile(&graph, sweep, &options())
+        .compile_mesh(&graph, sweep, &options())
         .expect("composite relation directrix");
     assert!(!mesh.indices.is_empty());
     assert!(mesh.positions.iter().all(|p| p.is_finite()));
@@ -362,7 +363,7 @@ fn surface_curve_master_representation_is_not_silently_ignored() {
             }))
             .unwrap();
         let graph = builder.finish(vec![sweep]).unwrap();
-        compiler().compile(&graph, sweep, &options())
+        compiler().compile_mesh(&graph, sweep, &options())
     };
 
     compile(MasterRepresentation::Curve3d).expect("Curve3d master is supported");
@@ -374,8 +375,8 @@ fn surface_curve_master_representation_is_not_silently_ignored() {
         assert!(
             matches!(
                 compile(master),
-                Err(axiolid_kernel::GeomError::Unsupported {
-                    operation: axiolid_kernel::Operation::CurveEvaluation,
+                Err(axiolid_contracts::GeomError::Unsupported {
+                    operation: axiolid_contracts::Operation::CurveEvaluation,
                     ..
                 })
             ),

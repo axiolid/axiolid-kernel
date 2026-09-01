@@ -1,0 +1,32 @@
+[package]
+name = "axiolid-dispatch"
+description = "Provider registration, ordering, fallback, and execution policy"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[features]
+default = []
+mesh-boolean = ["dep:axiolid-core", "dep:axiolid-mesh", "dep:axiolid-mesh-contracts", "dep:axiolid-mesh-boolean-contract"]
+mesh-section = ["dep:axiolid-core", "dep:axiolid-mesh", "dep:axiolid-mesh-contracts", "dep:axiolid-mesh-section-contract"]
+
+[dependencies]
+axiolid-contracts.workspace = true
+axiolid-core = { workspace = true, optional = true }
+axiolid-mesh = { workspace = true, optional = true }
+axiolid-mesh-contracts = { workspace = true, optional = true }
+axiolid-mesh-boolean-contract = { workspace = true, optional = true }
+axiolid-mesh-section-contract = { workspace = true, optional = true }
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "execution"
+role = "execution.dispatch"
+domain = "providers"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-contracts", "axiolid-core", "axiolid-mesh", "axiolid-mesh-boolean-contract", "axiolid-mesh-contracts", "axiolid-mesh-section-contract"]

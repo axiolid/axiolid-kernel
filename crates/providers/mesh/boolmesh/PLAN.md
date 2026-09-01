@@ -1,7 +1,7 @@
 # axiolid-mesh-boolean-boolmesh plan
 
 Owner: geometry
-Depends on: axiolid-kernel, axiolid-mesh, axiolid-core
+Depends on: axiolid-mesh-boolean-contract, axiolid-mesh-contracts, axiolid-contracts, axiolid-mesh, axiolid-core
 
 ## Done
 

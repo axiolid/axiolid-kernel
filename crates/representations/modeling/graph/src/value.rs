@@ -24,8 +24,8 @@ mod private {
 /// A built-in neutral value that can be inserted into a [`crate::GeometryGraph`].
 ///
 /// This is sealed deliberately. Third-party kernels extend execution through
-/// the open operation traits in `axiolid-kernel`; source adapters extend input by
-/// translating their values into one of the canonical node families.
+/// the open traits in operation-contract packages; source adapters extend input
+/// by translating their values into one of the canonical node families.
 ///
 /// ```compile_fail
 /// use axiolid_model::{BuiltInNode, GeometryNode};

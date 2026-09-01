@@ -11,7 +11,11 @@ readme.workspace = true
 
 [dependencies]
 axiolid-core.workspace = true
-axiolid-kernel = { workspace = true, features = ["mesh-boolean", "mesh-section"] }
+axiolid-contracts.workspace = true
+axiolid-guarantees.workspace = true
+axiolid-mesh-contracts.workspace = true
+axiolid-mesh-boolean-contract.workspace = true
+axiolid-mesh-section-contract.workspace = true
 axiolid-curve.workspace = true
 axiolid-measure.workspace = true
 axiolid-mesh.workspace = true
@@ -29,6 +33,9 @@ name = "predicates"
 # which is the pairing that makes either number interpretable.
 harness = false
 
+[dev-dependencies]
+axiolid-dispatch = { workspace = true, features = ["mesh-section"] }
+
 [package.metadata.axiolid]
 architecture-version = 1
 layer = "algorithms"
@@ -36,4 +43,4 @@ role = "algorithm.reference"
 domain = "reference"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-core", "axiolid-curve", "axiolid-kernel", "axiolid-measure", "axiolid-mesh", "axiolid-primitive", "axiolid-spatial", "axiolid-surface"]
+allowed-internal-dependencies = ["axiolid-core", "axiolid-curve", "axiolid-contracts", "axiolid-dispatch", "axiolid-guarantees", "axiolid-mesh-boolean-contract", "axiolid-mesh-contracts", "axiolid-mesh-section-contract", "axiolid-measure", "axiolid-mesh", "axiolid-primitive", "axiolid-spatial", "axiolid-surface"]

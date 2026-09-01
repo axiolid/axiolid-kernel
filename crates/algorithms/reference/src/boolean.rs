@@ -42,14 +42,14 @@
 //! Those cases already pin the algebra: identity, annihilation, idempotence,
 //! and containment. See `tests/oracle.rs`.
 
+use axiolid_contracts::{
+    Backend, BackendDescriptor, BackendId, CancellationGranularity, ExecutionOptions,
+    ExecutionTarget, GeomError, GeomResult, Operation, ScratchRequirement, Sign,
+};
 use axiolid_core::BooleanOperator;
 use axiolid_core::Point3;
-use axiolid_kernel::{
-    Backend, BackendDescriptor, BackendId, BooleanEvidence, BooleanOutcome,
-    CancellationGranularity, ExecutionOptions, ExecutionTarget, GeomError, GeomResult, MeshBoolean,
-    Operation, ScratchRequirement, Sign,
-};
 use axiolid_mesh::TriMesh;
+use axiolid_mesh_boolean_contract::{BooleanEvidence, BooleanOutcome, MeshBoolean};
 
 use crate::orient3d;
 
@@ -172,7 +172,7 @@ impl MeshBoolean for ScalarBoolean {
 /// always return `Certain`, so `Uncertain` is unreachable. Treating it as
 /// [`Sign::Zero`] keeps that assumption from becoming a panic: a degenerate
 /// answer makes callers refuse or retry, which is the safe direction.
-fn exact_sign(certified: axiolid_kernel::Certified) -> Sign {
+fn exact_sign(certified: axiolid_contracts::Certified) -> Sign {
     certified.sign().unwrap_or(Sign::Zero)
 }
 

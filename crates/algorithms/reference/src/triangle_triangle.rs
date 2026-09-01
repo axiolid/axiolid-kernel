@@ -3,8 +3,8 @@
 //! Coplanar triangle overlap is deliberately reported as [`TriangleTriangleRelation::Coplanar`]
 //! rather than collapsed into contact. It requires a caller to make any 2D surface policy explicit.
 
+use axiolid_contracts::Sign;
 use axiolid_core::{Point2, Point3};
-use axiolid_kernel::Sign;
 
 use crate::{orient2d, segment_triangle_relation, SegmentTriangleRelation};
 
@@ -135,6 +135,6 @@ fn project(point: Point3, axis: usize) -> Point2 {
     }
 }
 
-fn sign(value: axiolid_kernel::Certified) -> Sign {
+fn sign(value: axiolid_contracts::Certified) -> Sign {
     value.sign().expect("certified predicates are total")
 }

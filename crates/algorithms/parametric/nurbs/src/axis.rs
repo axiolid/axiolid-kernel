@@ -1,5 +1,5 @@
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::Scalar;
-use axiolid_kernel::{GeomError, GeomResult};
 
 pub(crate) fn active_spans(
     knots: &[Scalar],

@@ -2,9 +2,9 @@
 
 use crate::axis::active_spans;
 use crate::projection::{CurveProjection2, CurveProjection3, ProjectionOptions, ProjectionStatus};
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point2, Point3, Scalar};
 use axiolid_curve::{BSplineCurve2, BSplineCurve3};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_reference::curve::{bspline_jet2, bspline_jet3};
 
 /// Find the best planar-curve projection candidate within explicit budgets.

@@ -166,7 +166,7 @@ fn a_bspline_is_refused_by_name() {
     });
     let err = invert(&s, Point3::ZERO, Tolerance::MILLIMETRE).expect_err("must refuse");
     assert!(
-        matches!(err, axiolid_kernel::GeomError::Unsupported { .. }),
+        matches!(err, axiolid_contracts::GeomError::Unsupported { .. }),
         "expected a named capability refusal, got {err:?}"
     );
 }

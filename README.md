@@ -26,7 +26,7 @@ Geometry infrastructure should not force an application into a source format, a 
 - **Pure Rust:** no C++ or OpenCascade dependency graph.
 - **Pay for capability:** use a leaf crate, the small `axiolid` facade, or opt into algorithms and execution contexts deliberately.
 - **Honest seams:** stable data and operation contracts are separate from providers; a provider advertises only what it implements.
-- **Portable correctness first:** the scalar crate is the reference oracle for optimized paths; CPU dispatch is runtime-selected, never `target-cpu=native`.
+- **Portable correctness first:** the reference package is the scalar oracle for optimized paths; CPU dispatch is runtime-selected, never `target-cpu=native`.
 
 Read the [documentation site](https://axiolid.github.io/axiolid-kernel/) for architecture, capability status, decisions, and contributor guidance.
 
@@ -74,12 +74,12 @@ format adapters / applications
               ▼
       axiolid facade ─────────────── leaf representation crates
               │
+      portable operation contracts
+              │
+       algorithms / providers
+              │
               ▼
-       axiolid-kernel contracts
-         │                 │
-         ▼                 ▼
-scalar reference      CPU / GPU provider seams
-(correctness oracle)  (replaceable execution)
+    dispatch and execution contexts
 ```
 
 The central invariant is a downward-only dependency graph: representation does not know source formats or execution APIs; adapters do not depend on concrete backends. See [Architecture](https://axiolid.github.io/axiolid-kernel/architecture).

@@ -222,7 +222,7 @@ with a mesh.
 
 - `axiolid-construct` has a stable output contract for future exact extrusion,
   revolution, sweep, loft, profile, centre-line, and half-space construction.
-- `axiolid-compile` remains L3 DAG/cache orchestration. Its cache can later store
+- `axiolid-mesh-compile` remains L3 DAG/cache orchestration. Its cache can later store
   `ExactBRep` and perform a separate tolerance-bearing tessellation request;
   it must not collapse exact nodes to `TriMesh`.
 - The current mesh construction path remains supported and clearly discrete.

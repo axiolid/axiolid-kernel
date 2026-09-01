@@ -1,12 +1,14 @@
 //! The `MeshBoolean` implementation.
 
-use axiolid_core::BooleanOperator;
-use axiolid_kernel::{
-    symmetric_difference_via_composition, Backend, BackendDescriptor, BackendId, BooleanEvidence,
-    BooleanOutcome, CancellationGranularity, ExecutionOptions, ExecutionTarget, GeomError,
-    GeomResult, MeshBoolean, ScratchRequirement,
+use axiolid_contracts::{
+    Backend, BackendDescriptor, BackendId, CancellationGranularity, ExecutionOptions,
+    ExecutionTarget, GeomError, GeomResult, ScratchRequirement,
 };
+use axiolid_core::BooleanOperator;
 use axiolid_mesh::TriMesh;
+use axiolid_mesh_boolean_contract::{
+    symmetric_difference_via_composition, BooleanEvidence, BooleanOutcome, MeshBoolean,
+};
 use boolmesh::prelude::{compute_boolean, OpType};
 
 use crate::convert::{from_manifold, six_signed_volume, to_manifold};
@@ -148,7 +150,7 @@ impl MeshBoolean for BoolmeshBoolean {
             _ => {
                 return Err(GeomError::Unsupported {
                     backend: BoolmeshBoolean::ID,
-                    operation: axiolid_kernel::Operation::MeshBoolean,
+                    operation: axiolid_contracts::Operation::MeshBoolean,
                 })
             }
         };

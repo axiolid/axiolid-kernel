@@ -1,10 +1,11 @@
 //! Adapter from an API-specific GPU executor to graph compilation.
 
-use axiolid_kernel::{
+use axiolid_contracts::{
     Backend, BackendDescriptor, BackendId, DevicePreference, ExecutionOptions, ExecutionTarget,
-    GeomError, GeomResult, GeometryCompiler, Operation, Precision, Residency,
+    GeomError, GeomResult, Operation, Precision, Residency,
 };
 use axiolid_mesh::TriMesh;
+use axiolid_mesh_compile_contract::MeshCompiler;
 use axiolid_model::{GeometryGraph, NodeId};
 
 use crate::{GpuDeviceDescriptor, GpuGraphExecutor};
@@ -102,8 +103,8 @@ impl<E: GpuGraphExecutor> Backend for GpuCompiler<E> {
     }
 }
 
-impl<E: GpuGraphExecutor> GeometryCompiler for GpuCompiler<E> {
-    fn compile(
+impl<E: GpuGraphExecutor> MeshCompiler for GpuCompiler<E> {
+    fn compile_mesh(
         &self,
         graph: &GeometryGraph,
         root: NodeId,
@@ -111,7 +112,7 @@ impl<E: GpuGraphExecutor> GeometryCompiler for GpuCompiler<E> {
     ) -> GeomResult<TriMesh> {
         self.validate_options(options)?;
         Self::validate_roots(graph, &[root])?;
-        let results = self.executor.compile_batch(graph, &[root], options)?;
+        let results = self.executor.compile_mesh_batch(graph, &[root], options)?;
         Self::validate_result_count(self.executor.device().id, 1, results.len())?;
         results
             .into_iter()
@@ -123,12 +124,12 @@ impl<E: GpuGraphExecutor> GeometryCompiler for GpuCompiler<E> {
     }
 
     /// Overriding the `_into` seam keeps *both* batch call shapes on the
-    /// single-dispatch GPU path; overriding only `compile_batch` would leave
-    /// `compile_batch_into` silently falling back to one submission per root.
+    /// single-dispatch GPU path; overriding only `compile_mesh_batch` would leave
+    /// `compile_mesh_batch_into` silently falling back to one submission per root.
     /// Overriding the `_into` seam keeps *both* batch call shapes on the
-    /// single-dispatch GPU path; overriding only `compile_batch` would leave
-    /// `compile_batch_into` silently falling back to one submission per root.
-    fn compile_batch_into(
+    /// single-dispatch GPU path; overriding only `compile_mesh_batch` would leave
+    /// `compile_mesh_batch_into` silently falling back to one submission per root.
+    fn compile_mesh_batch_into(
         &self,
         graph: &GeometryGraph,
         roots: &[NodeId],
@@ -137,7 +138,7 @@ impl<E: GpuGraphExecutor> GeometryCompiler for GpuCompiler<E> {
     ) -> GeomResult<()> {
         self.validate_options(options)?;
         Self::validate_roots(graph, roots)?;
-        let results = self.executor.compile_batch(graph, roots, options)?;
+        let results = self.executor.compile_mesh_batch(graph, roots, options)?;
         Self::validate_result_count(self.executor.device().id, roots.len(), results.len())?;
         destination.reserve(results.len());
         destination.extend(results);

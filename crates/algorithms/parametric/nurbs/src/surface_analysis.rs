@@ -1,7 +1,7 @@
 //! Differential properties of regular parametric surfaces.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point3, Scalar, Tolerance, Vec3};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_reference::surface::jet;
 use axiolid_surface::Surface;
 

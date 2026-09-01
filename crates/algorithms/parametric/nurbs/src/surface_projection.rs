@@ -2,8 +2,8 @@
 
 use crate::axis::active_spans;
 use crate::projection::{ProjectionOptions, ProjectionStatus, SurfaceProjection};
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point3, Scalar};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_reference::surface::bspline_jet;
 use axiolid_surface::BSplineSurface;
 

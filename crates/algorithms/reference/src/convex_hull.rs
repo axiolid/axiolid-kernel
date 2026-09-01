@@ -1,7 +1,7 @@
 //! Deterministic 2D convex hulls and oriented bounding rectangles.
 use crate::orient2d;
+use axiolid_contracts::{GeomError, GeomResult, Sign};
 use axiolid_core::{Point2, Scalar};
-use axiolid_kernel::{GeomError, GeomResult, Sign};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct OrientedRectangle2 {
@@ -121,6 +121,6 @@ fn push_strict(hull: &mut Vec<usize>, index: usize, points: &[Point2]) {
     }
     hull.push(index);
 }
-fn sign(value: axiolid_kernel::Certified) -> Sign {
+fn sign(value: axiolid_contracts::Certified) -> Sign {
     value.sign().expect("orient2d is total")
 }

@@ -1,5 +1,5 @@
+use axiolid_contracts::GeomResult;
 use axiolid_core::Interval;
-use axiolid_kernel::GeomResult;
 use axiolid_nurbs::TransverseSurfaceSurfaceTrace3;
 use axiolid_surface::{BSplineSurface, Surface};
 

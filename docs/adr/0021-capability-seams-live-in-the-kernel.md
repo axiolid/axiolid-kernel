@@ -8,7 +8,7 @@
 ## Supersession note
 
 ADR 0021 was correct to retire the empty `axiolid-sweep` trait crate. Its
-claim that sweep construction belonged in `axiolid-compile` was not measured
+claim that sweep construction belonged in `axiolid-mesh-compile` was not measured
 and was wrong: the construction modules form a model-free, dispatch-free L2
 cluster. [ADR 0023](./0023-solid-generation-is-an-l2-crate.md) supersedes this
 decision and extracts that cluster into `axiolid-construct`.
@@ -82,7 +82,7 @@ Concretely:
   can depend on behaviour that never existed.
 - The facade's `sweeps` feature and `axiolid::sweep` module are removed with
   it, because they advertise a capability the workspace does not provide.
-- The sweep implementation stays in `axiolid-compile` for now. That is where
+- The sweep implementation stays in `axiolid-mesh-compile` for now. That is where
   the working code lives, and it is reachable through the compiler.
 - When sweeps need to become provider-swappable, the trait is reintroduced in
   `axiolid-kernel` **together with** at least one implementor, a conformance
@@ -97,7 +97,7 @@ compiler's sweep families are untouched.
 | --- | --- |
 | Leave the crate as an aspirational seam | It has been unreferenced since it landed, and the facade advertises it as a capability. An empty seam is worse than no seam: it implies swappability that does not exist. |
 | Move the compiler's sweep code into `axiolid-sweep` | Plausible on the surface, but the sweep code depends on the compiler's evaluation context, profile resolution, and tolerance plumbing. Extracting it now would either drag those in or invert the dependency. Worth revisiting once ADR 0020's exact model settles what a sweep produces. |
-| Implement `Sweeper` in `axiolid-compile` to justify the crate | Adds an indirection with exactly one implementor and no second candidate. The contract would be shaped by its only implementation, which is the failure mode ADR 0017 warns about for booleans. |
+| Implement `Sweeper` in `axiolid-mesh-compile` to justify the crate | Adds an indirection with exactly one implementor and no second candidate. The contract would be shaped by its only implementation, which is the failure mode ADR 0017 warns about for booleans. |
 | Keep the crate, add tests to it | There is nothing to test. Tests over a trait with no implementors assert nothing. |
 
 ## Consequences

@@ -1,7 +1,7 @@
 //! Outward-rounded homogeneous Bézier enclosures for certification algorithms.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::Scalar;
-use axiolid_kernel::{GeomError, GeomResult};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Interval {

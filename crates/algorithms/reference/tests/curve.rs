@@ -6,11 +6,11 @@
 //!
 //! The point is that none of these compare the evaluator to itself.
 
+use axiolid_contracts::GeomError;
 use axiolid_core::{Frame2, Frame3, Interval, Point2, Point3, Scalar, Vec2, Vec3};
 use axiolid_curve::{
     BSplineCurve2, Circle2, Circle3, Curve2, Curve3, Ellipse2, KnotSpec, Line2, Polyline2,
 };
-use axiolid_kernel::GeomError;
 use axiolid_reference::curve::{derivative2, derivative3, domain2, evaluate2, evaluate3, flatten2};
 
 const TAU: Scalar = core::f64::consts::TAU;

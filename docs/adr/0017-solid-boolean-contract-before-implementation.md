@@ -149,7 +149,7 @@ Sections 1-4 landed on 2026-08-26; the table records what closed and how.
 | 4 | Cancellation is fictional | **Closed** | `CancellationToken` + `ExecutionOptions::with_cancellation`; providers declare `CancellationGranularity` honestly rather than claiming responsiveness they lack. |
 | 5 | Provider declares `Unbounded` scratch | **Closed** | Measured with a counting allocator (`axiolid-mesh-boolean-boolmesh/src/bin/scratch_probe.rs`): linear, ~1.1 KiB/triangle asymptotically, 2,660 B/triangle worst at small N. Declared `PerElement { bytes_per_element: 4096 }`. |
 | 6 | No scalar boolean oracle | **Closed** | `axiolid_reference::ScalarBoolean`: exact `orient3d` classification and ray parity, `O(n·m)`, no shared code path with `boolmesh`. Validated against analytic volumes in `axiolid-reference/tests/oracle.rs`. |
-| 7 | Provider tests bind the concrete type | **Closed** | `axiolid_kernel::conformance` is generic over `impl MeshBoolean` and exported. `MeshBooleanRegistry::register_conformant` makes passing it a precondition of registration. |
+| 7 | Provider tests bind the concrete type | **Closed** | `axiolid_contracts::conformance` is generic over `impl MeshBoolean` and exported. `MeshBooleanRegistry::register_conformant` makes passing it a precondition of registration. |
 
 ### Consequences of the landed work
 

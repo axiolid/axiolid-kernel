@@ -20,9 +20,9 @@ impl CertifiedSurfacePairSplitOptions {
     pub fn new(
         intersection: CertifiedSurfaceSurfaceIntersectionOptions,
         max_surface_residual: Scalar,
-    ) -> Result<Self, axiolid_kernel::GeomError> {
+    ) -> Result<Self, axiolid_contracts::GeomError> {
         if !max_surface_residual.is_finite() || max_surface_residual <= 0.0 {
-            return Err(axiolid_kernel::GeomError::InvalidInput(
+            return Err(axiolid_contracts::GeomError::InvalidInput(
                 "surface-pair split residual must be finite and positive".into(),
             ));
         }

@@ -8,8 +8,8 @@
 //! Pappus gives the oracle: a full revolution has volume `2*pi*R*A`, where
 //! `R` is the centroid's distance from the axis and `A` the profile area.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point3, Scalar, Tolerance, Vec3};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_mesh::TriMesh;
 
 use crate::profile::Rings;

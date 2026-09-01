@@ -13,8 +13,8 @@
 //!
 //! Step 1 succeeds for almost all real inputs, so the exact path is rare.
 
+use axiolid_contracts::{Certified, Precision, Sign};
 use axiolid_core::Point2;
-use axiolid_kernel::{Certified, Precision, Sign};
 
 use crate::expansion::{two_diff, two_product, two_sum};
 

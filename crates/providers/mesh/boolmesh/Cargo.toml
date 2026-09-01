@@ -12,7 +12,9 @@ readme.workspace = true
 [dependencies]
 axiolid-core.workspace = true
 axiolid-mesh.workspace = true
-axiolid-kernel = { workspace = true, features = ["mesh-boolean"] }
+axiolid-contracts.workspace = true
+axiolid-mesh-contracts.workspace = true
+axiolid-mesh-boolean-contract.workspace = true
 boolmesh = "0.1.9"
 
 [[bench]]
@@ -24,6 +26,7 @@ harness = false
 # dev-dependency deliberately: the production provider must never depend on the
 # reference implementation at runtime.
 axiolid-reference.workspace = true
+axiolid-dispatch = { workspace = true, features = ["mesh-boolean"] }
 
 [package.metadata.axiolid]
 architecture-version = 1
@@ -32,4 +35,4 @@ role = "provider.mesh"
 domain = "mesh.boolean"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-core", "axiolid-kernel", "axiolid-mesh", "axiolid-reference"]
+allowed-internal-dependencies = ["axiolid-core", "axiolid-contracts", "axiolid-dispatch", "axiolid-mesh", "axiolid-mesh-boolean-contract", "axiolid-mesh-contracts", "axiolid-reference"]

@@ -7,7 +7,7 @@
 
 ## Context
 
-`GeometryCompiler` needs to turn an IFC profile into triangles. Profiles have
+`MeshCompiler` needs to turn an IFC profile into triangles. Profiles have
 holes: `IfcArbitraryProfileDefWithVoids`, hollow rectangular and circular
 sections, and every wall whose section is a ring.
 
@@ -25,7 +25,7 @@ absorbed the edge cases.
 ## Decision
 
 Adopt `earcut` (MIT OR Apache-2.0) for polygon triangulation, behind
-`axiolid-compile`, which is an L3 adapter crate exactly like `axiolid-mesh-boolean-boolmesh`.
+`axiolid-mesh-compile`, which is an L3 adapter crate exactly like `axiolid-mesh-boolean-boolmesh`.
 
 `axiolid-reference` keeps its certified `triangulate_simple` for the hole-free case.
 It is **not** dead code: it is the differential oracle that audits earcut on
@@ -58,7 +58,7 @@ gates.
 **Negative / costs**
 
 - A second adopted geometry dependency. Mitigated by the same seam argument:
-  `axiolid-compile` is the only crate that names `earcut`, and it is not
+  `axiolid-mesh-compile` is the only crate that names `earcut`, and it is not
   re-exported, so replacing it is one crate's work rather than an API break.
 - earcut is f64 but not exactness-certified; it can in principle emit a wrong
   triangulation on pathological input. The differential oracle covers the
@@ -69,7 +69,7 @@ gates.
 - Extend the differential oracle to holes if `axiolid-reference` ever grows a working
   hole path, so the audit is total rather than partial.
 - Corner radii on rectangle profiles are not yet approximated; they currently
-  produce sharp corners. Tracked in `axiolid-compile/PLAN.md`.
+  produce sharp corners. Tracked in `axiolid-mesh-compile/PLAN.md`.
 
 ## Relation to existing code
 

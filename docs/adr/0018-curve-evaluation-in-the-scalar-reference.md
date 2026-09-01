@@ -16,7 +16,7 @@ Nothing in the workspace implemented that trait. A search for
 `SurfaceEvaluator`, `Sweeper`, `Tessellator`, `Diagnose`, and `Repair`. Every
 declared curve family was inert data.
 
-`axiolid-compile` needed flattened rings anyway, so it grew its own private
+`axiolid-mesh-compile` needed flattened rings anyway, so it grew its own private
 path in `profile.rs`:
 
 - a `circle_segments(radius, chord_error)` closed-form count, and a
@@ -46,7 +46,7 @@ after — the only implementation was an ad-hoc one inside a consumer.
 ## Decision
 
 **Curve evaluation is a scalar-reference algorithm and lives in
-`axiolid-reference` (L2). `axiolid-compile` consumes it.**
+`axiolid-reference` (L2). `axiolid-mesh-compile` consumes it.**
 
 Concretely:
 
@@ -63,7 +63,7 @@ Concretely:
   `max_depth`. A closed-form segment count is a circle-only device; measured
   deviation generalizes to every family, including rational splines whose
   curvature varies within a span.
-- `axiolid-compile` deletes `circle_segments` and `circle_ring` and routes
+- `axiolid-mesh-compile` deletes `circle_segments` and `circle_ring` and routes
   `segment_points`, `circle_rings`, and the new `ellipse_rings` through
   `flatten2`.
 
@@ -89,7 +89,7 @@ vertex loss produces a wrong wall; a refusal produces a fixable error.
 
 | Option | Why not |
 | --- | --- |
-| Leave evaluation in `axiolid-compile` | Puts an L2 algorithm at L3. Revolution and surface tessellation would each re-derive it or depend upward. |
+| Leave evaluation in `axiolid-mesh-compile` | Puts an L2 algorithm at L3. Revolution and surface tessellation would each re-derive it or depend upward. |
 | Put it in `axiolid-curve` (L1) | L1 is representation: types and data, no solving. Evaluation is an algorithm, and mixing them removes the ability to use curve data without pulling in evaluation. |
 | Keep the closed-form segment count and extend it per family | There is no closed-form count for a rational B-spline whose curvature varies inside a span. Each family would need bespoke analysis, and none would be verifiable against a stated tolerance. |
 | Generic subdivision for all families | Throws away exactness where it is available. A circle's points would carry subdivision error instead of being right to machine precision. |

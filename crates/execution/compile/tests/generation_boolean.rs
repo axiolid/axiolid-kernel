@@ -7,10 +7,11 @@
 
 use axiolid_construct::extrude::extrude_profile;
 use axiolid_construct::profile::profile_rings;
+use axiolid_contracts::ExecutionOptions;
 use axiolid_core::{BooleanOperator, Scalar, Tolerance, Vec3};
-use axiolid_kernel::{ExecutionOptions, MeshBoolean};
 use axiolid_mesh::TriMesh;
 use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
+use axiolid_mesh_boolean_contract::MeshBoolean;
 use axiolid_profile::{CircleProfile, Profile, RectangleProfile};
 
 /// Volume measured through the audited oracle.

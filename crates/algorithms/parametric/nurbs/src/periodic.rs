@@ -4,9 +4,9 @@ use crate::{
     axis::active_spans,
     transform::{insert_knot2, insert_knot3, split2, split3},
 };
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point2, Point3, Scalar, Tolerance, Vec2, Vec3};
 use axiolid_curve::{BSplineCurve2, BSplineCurve3};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_reference::curve::{bspline_jet2, bspline_jet3, CurveJet};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

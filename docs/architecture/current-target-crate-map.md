@@ -1,91 +1,77 @@
-# Axiolid restructure: current-to-target crate map
+# Axiolid restructure: implemented crate map
 
-Status: implementation baseline at `372b16f64fa9be962df48751a654f8cda3f3b4a0`.
+Implemented from base `372b16f64fa9be962df48751a654f8cda3f3b4a0` under ADR 0035.
 
-This document records repository truth before the physical move. It is not a capability-status claim.
+## Physical ownership
 
-## Baseline
+| Package | Path | Role |
+| --- | --- | --- |
+| `axiolid-core` | `crates/foundation/core` | dependency root |
+| `axiolid-curve`, `axiolid-surface`, `axiolid-primitive` | `crates/representations/analytic/*` | analytic values |
+| `axiolid-profile` | `crates/representations/region/profile` | bounded region values |
+| `axiolid-topology`, `axiolid-brep` | `crates/representations/{topology,brep}` | topology/exact B-rep values |
+| `axiolid-mesh` | `crates/representations/discrete/mesh` | discrete mesh values |
+| `axiolid-field` | `crates/representations/sampled/field` | sampled-field values/configuration/evidence |
+| `axiolid-model` | `crates/representations/modeling/graph` | authored immutable graph |
+| `axiolid-guarantees` | `crates/contracts/guarantees` | certification/escalation/precision vocabulary |
+| `axiolid-contracts` | `crates/contracts/common/base` | common backend/execution/diagnostic contracts |
+| `axiolid-mesh-contracts` | `crates/contracts/common/mesh` | shared mesh admissibility |
+| operation contract packages | `crates/contracts/operations/*` | tessellation, mesh Boolean, mesh section, graph-to-mesh compile schemas |
+| focused algorithm packages | `crates/algorithms/*` | reference, NURBS, construction, query, planar, sampled, repair |
+| `axiolid-mesh-boolean-boolmesh` | `crates/providers/mesh/boolmesh` | concrete optional provider |
+| `axiolid-dispatch` | `crates/execution/dispatch` | registration/fallback/device/budget policy |
+| `axiolid-mesh-compile` | `crates/execution/compile` | reference graph-to-mesh execution |
+| CPU/GPU packages | `crates/execution/{cpu,gpu}` | execution contexts/adapters |
+| `axiolid` | `crates/facade/axiolid` | additive public feature facade |
 
-- 24 workspace packages, approximately 33k Rust source lines.
-- Root package graph is acyclic and currently enforced by a mutation-probed coarse tier test.
-- `axiolid-kernel` mixes guarantee vocabulary, common provider/execution contracts, and three operation seams.
-- `axiolid-field` mixes stored sampled-field values with sampling, morphology, clearance, and navigation algorithms.
-- `axiolid-reference` is the portable correctness/reference implementation, not a CPU runtime.
-- `axiolid-construct` owns constructive modeling algorithms.
-- `axiolid-mesh-boolean-boolmesh` is an adopted, replaceable mesh-Boolean provider.
-- `GeometryCompiler` currently means graph-to-`TriMesh`; ADR 0020 requires tessellation to become explicit rather than the universal exact-geometry result.
+The generated [crate map](./crate-map.md) and [dependency graph](./dependency-graph.md) are authoritative and freshness-checked by `cargo xtask architecture check`.
 
-## Mechanical move map
+## Public migration table
 
-The first stage changes paths only. Package names and Rust APIs remain stable.
+| Before | After | Reason |
+| --- | --- | --- |
+| `axiolid-scalar` / `axiolid_scalar` | `axiolid-reference` / `axiolid_reference` | reference algorithm role, not scalar storage |
+| `axiolid-generate` / `axiolid_generate` | `axiolid-construct` / `axiolid_construct` | construction semantics instead of vague verb |
+| `axiolid-boolmesh` | `axiolid-mesh-boolean-boolmesh` | operation and concrete provider are explicit |
+| `axiolid-kernel` aggregate | guarantees/common/mesh/operation contract packages plus `axiolid-dispatch` | portable contracts no longer own runtime policy |
+| `axiolid-tessellate` | `axiolid-tessellation-contract` | package already defines a portable seam, not an implementation |
+| `axiolid-compile` | `axiolid-mesh-compile` | output result domain is explicit |
+| `GeometryCompiler::compile` | `MeshCompiler::compile_mesh` | exact B-rep and discrete mesh results cannot be silently conflated |
+| `ScalarCompiler` | `ReferenceMeshCompiler` | reference implementation and output domain are explicit |
+| combined `axiolid-field` | `axiolid-field` values + `axiolid-field-ops` algorithms | representation-only consumers remain light |
 
-| Current package path | Mechanical target path | Architectural role |
-|---|---|---|
-| `crates/foundation/core` | `crates/foundation/core` | foundational values |
-| `crates/representations/analytic/curve` | `crates/representations/analytic/curve` | analytic representation |
-| `crates/representations/analytic/surface` | `crates/representations/analytic/surface` | analytic representation |
-| `crates/representations/analytic/primitive` | `crates/representations/analytic/primitive` | analytic/volumetric intent |
-| `crates/representations/region/profile` | `crates/representations/region/profile` | region/profile representation |
-| `crates/representations/topology` | `crates/representations/topology` | neutral topology representation |
-| `crates/representations/brep` | `crates/representations/brep` | geometry-supported exact B-rep |
-| `crates/representations/discrete/mesh` | `crates/representations/discrete/mesh` | discrete representation |
-| `crates/representations/modeling/graph` | `crates/representations/modeling/graph` | authored modeling DAG |
-| `crates/contracts/operations/tessellate` | `crates/contracts/operations/tessellate` | existing explicit tessellation seam |
-| `crates/contracts/common` | `crates/contracts/common` | temporary mixed contract package |
-| `crates/algorithms/reference` | `crates/algorithms/reference` | portable reference/oracle algorithms |
-| `crates/algorithms/parametric/nurbs` | `crates/algorithms/parametric/nurbs` | parametric algorithms |
-| `crates/algorithms/construction/construct` | `crates/algorithms/construction/construct` | constructive modeling algorithms |
-| `crates/algorithms/planar/overlay` | `crates/algorithms/planar/overlay` | planar algorithms |
-| `crates/algorithms/query/spatial` | `crates/algorithms/query/spatial` | spatial query algorithms |
-| `crates/algorithms/query/measure` | `crates/algorithms/query/measure` | measurement algorithms |
-| `crates/algorithms/sampled/field` | `crates/algorithms/sampled/field` | temporary mixed sampled field package |
-| `crates/algorithms/repair/heal` | `crates/algorithms/repair/heal` | repair algorithms |
-| `crates/providers/mesh/boolmesh` | `crates/providers/mesh/boolmesh` | adopted mesh Boolean provider |
-| `crates/execution/compile` | `crates/execution/compile` | graph traversal/orchestration |
-| `crates/execution/cpu` | `crates/execution/cpu` | CPU execution context |
-| `crates/execution/gpu` | `crates/execution/gpu` | GPU execution context/adapter |
-| `crates/facade/axiolid` | `crates/facade/axiolid` | optional facade |
+Facade feature migration:
 
-## Semantic target changes
+- `kernel` is replaced by `contracts`.
+- `field` is value-only; add `field-ops` or `field-navigation` for algorithms.
+- `mesh-boolean`, `mesh-section`, and `graph-compile` expose portable contracts.
+- provider selection is opt-in through `dispatch-mesh-boolean` or `dispatch-mesh-section`.
 
-After the mechanical checkpoint:
+## Resolved conflicts
 
-1. `axiolid-kernel` is decomposed into `axiolid-guarantees`, `axiolid-contracts`, and real operation contracts. Mesh Boolean and mesh section become `axiolid-op-mesh-boolean` and `axiolid-op-mesh-section`. The existing tessellation seam becomes `axiolid-op-tessellate` only when its complete public contract is defined.
-2. `GeometryCompiler -> TriMesh` is removed as a universal compilation claim. Graph traversal/caching remains in `axiolid-compile`; graph-to-mesh becomes explicit tessellation. No universal geometry-result enum is introduced.
-3. `axiolid-reference` becomes `axiolid-reference`, preserving portable oracle semantics and mutation suites.
-4. `axiolid-construct` becomes `axiolid-construct`.
-5. `axiolid-field` retains data/config/evidence only at `representations/sampled/field`; sampling, morphology, clearance, and navigation move to `axiolid-field-ops` under algorithms.
-6. `axiolid-mesh-boolean-boolmesh` becomes `axiolid-provider-boolmesh`.
-7. The facade retains additive feature behavior and directly consumable leaf crates.
+- Exact B-rep ownership from ADRs 0020/0024 is preserved. Mesh compilation was renamed rather than generalized falsely.
+- The existing default facade remains `mesh + cpu`; default-feature changes are outside this restructure.
+- IFC, CSET, Pkl, Protobuf, and vendor interpretation remain outside Axiolid geometry packages.
+- No MCS/Axioval source schema existed in the repository, so no transport DTOs were invented. The neutral packages remain suitable targets for external mappings.
+- Dev-only upward edges are permitted only when explicitly allowlisted for integration/conformance tests; production/build edges still obey the role DAG.
 
-## Material conflicts and resolutions
+## Downstream
 
-- **Brief versus ADR 0020:** the brief agrees with ADR 0020. Exact B-rep remains the kernel model; mesh compilation is reclassified as explicit tessellation.
-- **Proposed linear DAG versus real composition:** enforcement is role-based. Narrow representation-to-representation edges are declared rather than forcing a fake linear chain.
-- **`axiolid-tessellate` name:** current code is already a contract crate, not an implementation. Its physical move precedes any package rename.
-- **Field placement during migration:** the mixed package is temporarily classified as an algorithm. It may not claim representation-only status until field algorithms are extracted.
-- **Guarantee vocabulary:** extraction is mandatory from the mixed contract package. Certified predicate implementation remains in the reference algorithm, not foundation.
-- **Narrow numeric substrate:** extraction is deferred until dependency, consumer, conformance, and timing evidence passes the brief's threshold.
-- **MCS/Axioval source:** no MCS/Pkl source document or generated DTO exists in this repository. The supplied restructure brief defines the boundary; no transport/schema package is introduced into Axiolid.
-- **Downstream IFC:** current IFC pins pre-OpenProfile Axiolid `1db0184...`. Rewiring must update to the landed restructure commit and adopt the format-neutral OpenProfile declaration without introducing operation/provider dependencies.
+`openbim/ifc-geometry` must pin the landed Axiolid commit, retain source-format lowering outside Axiolid, and use the format-neutral authored `OpenProfile` graph declaration. A facade-only model consumer must continue to work with:
 
-## Package rename migration
+```toml
+axiolid = { default-features = false, features = ["model"] }
+```
 
-The restructure is intentionally breaking while the workspace remains at `0.1.0`:
+without compiler, provider, field-operation, source-format, or GPU dependencies.
 
-| Previous package / Rust path | Replacement | Reason |
-|---|---|---|
-| `axiolid-scalar` / `axiolid_scalar` | `axiolid-reference` / `axiolid_reference` | Identifies the correctness-oracle role rather than an arithmetic implementation detail. |
-| `axiolid-generate` / `axiolid_generate` | `axiolid-construct` / `axiolid_construct` | Names construction semantics rather than the vague act of generation. |
-| `axiolid-boolmesh` / `axiolid_boolmesh` | `axiolid-mesh-boolean-boolmesh` / `axiolid_mesh_boolean_boolmesh` | Makes operation family and concrete provider explicit. |
+## Measurement
 
-No compatibility shim packages are published: a shim would preserve misleading ownership and add feature-unification surface. Downstream manifests and imports must migrate atomically.
+Fresh-target `cargo check -p axiolid --no-default-features` measurements on the same host and Rust 1.88.0:
 
-## Landing order
+| Feature | Before packages | After packages | Before elapsed | After elapsed |
+|---|---:|---:|---:|---:|
+| `model` | 17 | 17 | 1.915 s | 1.915 s |
+| `field` | 5 | 5 | 1.781 s | 1.815 s |
 
-1. Axiolid mechanical move and checker.
-2. Axiolid package renames and semantic splits.
-3. Axiolid immutable review and guarded publication.
-4. IFC child pin/import/feature/OpenProfile adaptation.
-5. IFC child review and publication.
-6. Openbim superproject pin update, only after child commits are remote-verifiable.
+The package split changes ownership and compilation units, not external normal-dependency count. This single cold run is noise-equivalent and is **not** evidence of a performance improvement.

@@ -16,7 +16,7 @@ compiler" because it "depends on the compiler's evaluation context, its
 tolerance policy and its profile machinery". That claim was never measured. It
 is false.
 
-Measuring the actual import graph of `axiolid-compile`:
+Measuring the actual import graph of `axiolid-mesh-compile`:
 
 | module        | internal deps    | external deps                                  |
 |---------------|------------------|------------------------------------------------|
@@ -41,7 +41,7 @@ variants). Only `compiler` consumes them.
 That is not "part of the compiler". That is a self-contained subsystem of
 roughly 1,400 lines that happened to be born inside an L3 crate.
 
-The distinction matters beyond tidiness. `axiolid-compile` is L3 because it
+The distinction matters beyond tidiness. `axiolid-mesh-compile` is L3 because it
 walks a DAG, caches by node, and reports as a provider. A caller who has an
 exact profile and a path and wants a solid should not have to adopt a graph,
 a cache, and a model vocabulary to get one — which, before this change, was
@@ -51,14 +51,14 @@ the only way to reach `extrude`.
 
 Extract the seven modules into a new crate, **`axiolid-construct`**, at **L2**.
 
-`axiolid-compile` keeps exactly what its name implies: `compiler` (DAG walk,
+`axiolid-mesh-compile` keeps exactly what its name implies: `compiler` (DAG walk,
 caching, provider identity), `brep` (B-rep face tessellation) and `directrix`
 (model-driven path extraction). It depends on `axiolid-construct` like any
 other consumer.
 
 L2 is the correct tier by the workspace's own rule — algorithms over L1
 representations. `axiolid-construct` sits beside `axiolid-reference`,
-`axiolid-tessellate` and `axiolid-measure`: it consumes representation types
+`axiolid-tessellation-contract` and `axiolid-measure`: it consumes representation types
 and produces meshes, and it solves rather than merely describes. It is not L1
 (it is not a value vocabulary) and not L3 (it owns no execution context,
 selects no backend, and implements no provider trait).
@@ -69,7 +69,7 @@ untrue: a refusal raised while building a swept solid did not come from the
 compiler.
 
 The facade exposes it as an opt-in `generate` feature and an
-`axiolid::generate` module. `axiolid-compile` remains unexposed — the graph
+`axiolid::generate` module. `axiolid-mesh-compile` remains unexposed — the graph
 compiler is an implementation detail; generation is a capability.
 
 ### On the retired `Sweeper` trait
@@ -90,7 +90,7 @@ local change.
 
 ## Consequences
 
-- `axiolid-compile` drops from 4,595 to roughly 3,200 lines and loses its
+- `axiolid-mesh-compile` drops from 4,595 to roughly 3,200 lines and loses its
   direct `earcut` dependency in the generation path.
 - Solid generation is usable without the DAG, the node cache, or
   `axiolid-model`. The facade's `generate` feature is verified by a test that
@@ -100,7 +100,7 @@ local change.
   implicit intra-crate coupling into an explicit, reviewable interface, which
   is the point.
 - Seven test files moved with their modules. Two tests that cross the
-  generation/boolean seam stayed at L3 in `axiolid-compile`, because
+  generation/boolean seam stayed at L3 in `axiolid-mesh-compile`, because
   `axiolid-mesh-boolean-boolmesh` is L3 and an L2 crate must not depend on it. The layering
   test caught this: the first attempt moved them wholesale and failed with
   `crates/algorithms/construction/construct (tier 2) depends on axiolid-mesh-boolean-boolmesh (tier 3)`.
@@ -109,7 +109,7 @@ local change.
 
 ## Alternatives considered
 
-**Leave it in `axiolid-compile`.** Rejected: it makes generation unreachable
+**Leave it in `axiolid-mesh-compile`.** Rejected: it makes generation unreachable
 without the graph, and it was the unexamined position ADR 0021 defended.
 
 **Move only `sweep` and `loft`.** Rejected: `sweep` depends on `profile`, and

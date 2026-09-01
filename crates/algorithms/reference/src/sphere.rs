@@ -12,8 +12,8 @@
 //! than `orient*`'s and the filter fails sooner -- which is why the escalation
 //! rate is measured rather than assumed.
 
+use axiolid_contracts::{Certified, Precision, Sign};
 use axiolid_core::{Point2, Point3};
-use axiolid_kernel::{Certified, Precision, Sign};
 
 use crate::arithmetic::{expansion_sign, expansion_sum, negate_expansion, scale_expansion};
 use crate::orient3::orient3d_cofactor;

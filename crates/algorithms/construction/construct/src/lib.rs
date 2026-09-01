@@ -13,7 +13,7 @@
 //! None of that needs an operation graph. These functions take geometry and
 //! return geometry; they do not walk a DAG, cache results, resolve node
 //! references, or dispatch to a backend. That is why they live here and not
-//! in `axiolid-compile`, which does all four.
+//! in `axiolid-mesh-compile`, which does all four.
 //!
 //! The split matters beyond tidiness. A caller that wants a swept solid --
 //! a CAD front end, a test, a future exact B-rep generator -- should not have
@@ -27,12 +27,12 @@
 //! constructor; it does not imply exact sweeps, booleans, or solids. Per ADR
 //! 0020, those broader exact results remain the intended end state.
 
-use axiolid_kernel::BackendId;
+use axiolid_contracts::BackendId;
 
 /// Identity these generators report in diagnostics.
 ///
 /// Distinct from the compiler's: a failure raised while building a swept
-/// solid comes from this crate, and attributing it to `axiolid-compile`
+/// solid comes from this crate, and attributing it to `axiolid-mesh-compile`
 /// would send a reader to the wrong place. Sweeps already reported a
 /// separate identity before the split; this makes every generator
 /// consistent with that.

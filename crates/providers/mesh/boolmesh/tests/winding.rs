@@ -6,10 +6,11 @@
 
 mod support;
 
+use axiolid_contracts::{ExecutionOptions, GeomError};
 use axiolid_core::BooleanOperator;
 use axiolid_core::Tolerance;
-use axiolid_kernel::{ExecutionOptions, GeomError, MeshBoolean};
 use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
+use axiolid_mesh_boolean_contract::MeshBoolean;
 use support::{boxx, inverted, volume};
 
 fn options() -> ExecutionOptions {

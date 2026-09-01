@@ -13,7 +13,10 @@ readme.workspace = true
 axiolid-brep.workspace = true
 axiolid-core.workspace = true
 axiolid-curve.workspace = true
-axiolid-kernel = { workspace = true, features = ["mesh-boolean"] }
+axiolid-contracts.workspace = true
+axiolid-guarantees.workspace = true
+axiolid-mesh-contracts.workspace = true
+axiolid-mesh-boolean-contract.workspace = true
 axiolid-mesh.workspace = true
 axiolid-nurbs.workspace = true
 axiolid-primitive.workspace = true
@@ -36,4 +39,4 @@ role = "algorithm.construction"
 domain = "construction"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-kernel", "axiolid-measure", "axiolid-mesh", "axiolid-nurbs", "axiolid-primitive", "axiolid-profile", "axiolid-reference", "axiolid-surface", "axiolid-topology"]
+allowed-internal-dependencies = ["axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-contracts", "axiolid-guarantees", "axiolid-mesh-boolean-contract", "axiolid-mesh-contracts", "axiolid-measure", "axiolid-mesh", "axiolid-nurbs", "axiolid-primitive", "axiolid-profile", "axiolid-reference", "axiolid-surface", "axiolid-topology"]

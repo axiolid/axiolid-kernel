@@ -2,7 +2,7 @@
 
 Purpose: Portable/runtime-specialized CPU execution context.
 
-Allowed internal dependencies: axiolid-kernel plus L2 algorithms. Follow parent `../AGENTS.md`. Do not read
+Allowed internal dependencies: `axiolid-contracts` and operation contracts plus L2 algorithms. Follow parent `../AGENTS.md`. Do not read
 `PLAN.md` unless assigned implementation or roadmap work.
 
 ## Module ownership

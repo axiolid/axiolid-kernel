@@ -3,12 +3,13 @@
 //! The shape under test is the one `ifc-geometry` actually emits: a Profile
 //! feeding an Extrusion, wrapped in Instance placements, combined by Boolean.
 
-use axiolid_compile::ScalarCompiler;
+use axiolid_contracts::{ExecutionOptions, GeomError, Operation};
 use axiolid_core::{BooleanOperator, Plane3, Point3, Tolerance, Transform3, Vec3};
 use axiolid_curve::{Curve3, Polyline3};
-use axiolid_kernel::{ExecutionOptions, GeomError, GeometryCompiler, Operation};
 use axiolid_mesh::{PolygonFace, PolygonMesh, TriMesh};
 use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
+use axiolid_mesh_compile::ReferenceMeshCompiler;
+use axiolid_mesh_compile_contract::MeshCompiler;
 use axiolid_model::{GeometryGraphBuilder, GeometryNode, Instance, SolidOperation};
 use axiolid_primitive::HalfSpace;
 use axiolid_profile::{CircleProfile, Profile, RectangleProfile};
@@ -17,8 +18,8 @@ fn options() -> ExecutionOptions {
     ExecutionOptions::new(Tolerance::METRE)
 }
 
-fn compiler() -> ScalarCompiler<BoolmeshBoolean> {
-    ScalarCompiler::new(BoolmeshBoolean::new())
+fn compiler() -> ReferenceMeshCompiler<BoolmeshBoolean> {
+    ReferenceMeshCompiler::new(BoolmeshBoolean::new())
 }
 
 /// Divergence-theorem volume: triangulation-invariant.
@@ -85,7 +86,7 @@ fn a_wall_minus_an_opening_compiles_to_the_expected_volume() {
     let graph = b.finish(vec![cut]).unwrap();
 
     let mesh = compiler()
-        .compile(&graph, cut, &options())
+        .compile_mesh(&graph, cut, &options())
         .expect("compile");
     // 4 x 0.2 x 3 = 2.4 minus 1 x 0.2 x 1.2 (the opening is clipped to the
     // wall thickness) = 2.4 - 0.24 = 2.16.
@@ -123,7 +124,7 @@ fn a_shared_subtree_is_reused_across_roots() {
     let graph = b.finish(vec![left, right]).unwrap();
 
     let meshes = compiler()
-        .compile_batch(&graph, &[left, right], &options())
+        .compile_mesh_batch(&graph, &[left, right], &options())
         .expect("batch");
     assert_eq!(meshes.len(), 2);
     assert!((volume(&meshes[0]) - 4.0).abs() < 1e-9);
@@ -134,7 +135,7 @@ fn a_shared_subtree_is_reused_across_roots() {
 
 /// Both batch call shapes must behave identically.
 #[test]
-fn compile_batch_into_appends_and_matches_compile_batch() {
+fn compile_mesh_batch_into_appends_and_matches_compile_mesh_batch() {
     let mut b = GeometryGraphBuilder::new();
     let profile = b.push(GeometryNode::Profile(rect(1.0, 1.0))).unwrap();
     let solid = b
@@ -148,7 +149,7 @@ fn compile_batch_into_appends_and_matches_compile_batch() {
 
     let mut destination = vec![TriMesh::default()];
     compiler()
-        .compile_batch_into(&graph, &[solid], &options(), &mut destination)
+        .compile_mesh_batch_into(&graph, &[solid], &options(), &mut destination)
         .expect("into");
     assert_eq!(destination.len(), 2, "must append, never clear");
     assert!((volume(&destination[1]) - 2.0).abs() < 1e-9);
@@ -181,7 +182,7 @@ fn authored_triangle_faces_compile_without_retriangulation() {
     let graph = b.finish(vec![triangles]).unwrap();
 
     let mesh = compiler()
-        .compile(&graph, triangles, &options())
+        .compile_mesh(&graph, triangles, &options())
         .expect("authored triangles compile by exact index conversion");
     assert_eq!(mesh.positions, positions);
     assert_eq!(mesh.indices, vec![0, 1, 2, 2, 1, 3]);
@@ -207,7 +208,7 @@ fn polygon_faces_still_require_a_tessellation_provider() {
     let graph = b.finish(vec![polygon]).unwrap();
 
     assert!(matches!(
-        compiler().compile(&graph, polygon, &options()),
+        compiler().compile_mesh(&graph, polygon, &options()),
         Err(GeomError::Unsupported {
             operation: Operation::Tessellation,
             ..
@@ -230,7 +231,7 @@ fn polygon_faces_with_holes_still_require_a_tessellation_provider() {
     let graph = b.finish(vec![polygon]).unwrap();
 
     assert!(matches!(
-        compiler().compile(&graph, polygon, &options()),
+        compiler().compile_mesh(&graph, polygon, &options()),
         Err(GeomError::Unsupported {
             operation: Operation::Tessellation,
             ..
@@ -253,7 +254,7 @@ fn malformed_authored_triangle_indices_are_rejected() {
     let graph = b.finish(vec![triangles]).unwrap();
 
     assert!(matches!(
-        compiler().compile(&graph, triangles, &options()),
+        compiler().compile_mesh(&graph, triangles, &options()),
         Err(GeomError::InvalidInput(_))
     ));
 }
@@ -267,7 +268,7 @@ fn an_unsupported_node_reports_the_capability_it_would_need() {
     let graph = b.finish(vec![profile]).unwrap();
 
     let error = compiler()
-        .compile(&graph, profile, &options())
+        .compile_mesh(&graph, profile, &options())
         .expect_err("a bare profile is not a solid");
     match error {
         GeomError::Unsupported { operation, .. } => {
@@ -342,7 +343,7 @@ fn an_unimplemented_solid_family_is_refused_not_approximated() {
     // Assert the NAMED capability, not merely that it failed: a caller uses
     // this to decide which provider to register. What is missing here is
     // surface evaluation for this surface kind, not the sweep itself.
-    match compiler().compile(&graph, swept, &options()) {
+    match compiler().compile_mesh(&graph, swept, &options()) {
         Err(GeomError::Unsupported { operation, .. }) => {
             assert_eq!(operation, Operation::SurfaceEvaluation);
         }
@@ -371,7 +372,7 @@ fn a_foreign_node_handle_is_refused() {
 
     // `pc` belongs to graph_c, not graph_a.
     assert!(matches!(
-        compiler().compile(&graph_a, pc, &options()),
+        compiler().compile_mesh(&graph_a, pc, &options()),
         Err(GeomError::InvalidInput(_))
     ));
 }
@@ -405,7 +406,7 @@ fn a_deep_instance_chain_does_not_overflow_the_stack() {
     let graph = b.finish(vec![current]).unwrap();
 
     let mesh = compiler()
-        .compile(&graph, current, &options())
+        .compile_mesh(&graph, current, &options())
         .expect("deep chain must compile");
     assert!((volume(&mesh) - 1.0).abs() < 1e-9);
 }
@@ -448,7 +449,7 @@ fn shared_subtrees_are_not_recompiled_exponentially() {
 
     let start = std::time::Instant::now();
     let mesh = compiler()
-        .compile(&graph, current, &options())
+        .compile_mesh(&graph, current, &options())
         .expect("compile");
     let elapsed = start.elapsed();
 
@@ -489,7 +490,7 @@ fn a_mirrored_placement_keeps_the_solid_outward_facing() {
     let graph = b.finish(vec![mirrored]).unwrap();
 
     let mesh = compiler()
-        .compile(&graph, mirrored, &options())
+        .compile_mesh(&graph, mirrored, &options())
         .expect("compile");
     // Positive volume means outward winding survived the mirror.
     assert!(
@@ -510,8 +511,8 @@ fn a_mirrored_placement_keeps_the_solid_outward_facing() {
         }))
         .unwrap();
     let g2 = c.finish(vec![s2]).unwrap();
-    let tool = compiler().compile(&g2, s2, &options()).expect("tool");
-    use axiolid_kernel::MeshBoolean;
+    let tool = compiler().compile_mesh(&g2, s2, &options()).expect("tool");
+    use axiolid_mesh_boolean_contract::MeshBoolean;
     // The assertion is that an admissible mirrored solid is accepted; the
     // resulting geometry is not what this test is about.
     BoolmeshBoolean::new()
@@ -554,7 +555,7 @@ fn a_collection_rebases_indices_when_merging() {
     let graph = b.finish(vec![both]).unwrap();
 
     let mesh = compiler()
-        .compile(&graph, both, &options())
+        .compile_mesh(&graph, both, &options())
         .expect("compile");
     // Two disjoint unit cubes. Un-rebased indices would collapse the second
     // onto the first, halving the volume.
@@ -616,7 +617,7 @@ fn scaled_instances_tessellate_sources_at_instance_local_tolerance() {
     let graph = b.finish(vec![both]).unwrap();
 
     let mesh = compiler()
-        .compile(&graph, both, &ExecutionOptions::new(Tolerance::MILLIMETRE))
+        .compile_mesh(&graph, both, &ExecutionOptions::new(Tolerance::MILLIMETRE))
         .expect("scaled sources must be tessellated in local coordinates");
     assert!(
         mesh.positions.len() >= 40,
@@ -657,7 +658,7 @@ fn boolean_difference_materializes_unbounded_half_space_from_subject_bounds() {
     let graph = b.finish(vec![clipped]).unwrap();
 
     let mesh = compiler()
-        .compile(&graph, clipped, &options())
+        .compile_mesh(&graph, clipped, &options())
         .expect("finite subject must bound its half-space operand");
     assert!((volume(&mesh) - 4.0).abs() < 1e-6, "got {}", volume(&mesh));
     assert!(mesh.positions.iter().all(|p| p.is_finite()));
@@ -693,7 +694,7 @@ fn boolean_intersection_materializes_unbounded_half_space_from_subject_bounds() 
     let graph = b.finish(vec![clipped]).unwrap();
 
     let mesh = compiler()
-        .compile(&graph, clipped, &options())
+        .compile_mesh(&graph, clipped, &options())
         .expect("finite subject must bound its half-space intersection");
     assert!((volume(&mesh) - 4.0).abs() < 1e-6, "got {}", volume(&mesh));
     assert!(mesh.positions.iter().all(|p| p.is_finite()));

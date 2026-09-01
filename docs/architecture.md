@@ -1,52 +1,65 @@
 # Architecture
 
-Axiolid separates **values**, **operation contracts**, and **execution providers**. The separation is intentional: imported formats remain adapters, and hardware APIs remain replaceable providers.
+Axiolid separates **representations**, **portable operation contracts**, **algorithms/providers**, **execution policy**, and the **facade**. Cargo packages mark real dependency, trust, compilation, provider, licensing, and conformance boundaries; conceptual taxonomy does not force a crate per noun.
 
 ## Dependency direction
 
 ```text
-application / source-format adapter
-              │
-              ▼
-  axiolid facade and leaf value crates
-              │
-              ▼
-  axiolid-model / axiolid-kernel contracts
-              │
-      ┌───────┼────────┐
-      ▼       ▼        ▼
- scalar    CPU context  GPU adapter seam
- oracle    providers    out-of-tree providers
+source-format adapters / applications
+                 |
+                 v
+        facade and leaf consumers
+                 |
+      +----------+-----------+
+      |                      |
+      v                      v
+representations         portable contracts
+      |                      |
+      +----------+-----------+
+                 |
+          algorithms/providers
+                 |
+                 v
+       execution / dispatch policy
 ```
 
-Dependencies point downward. In particular:
+The executable role DAG is checked by `cargo xtask architecture check`. Every workspace package declares its layer, role, domain, format neutrality, and exact internal-dependency allowlist. Production/build edges must point downward; explicit dev-only upward edges are allowed solely for integration and conformance tests.
 
-- Representation crates must not depend on IFC, STEP, rendering, or GPU APIs.
-- A format adapter can depend on neutral values and contracts, never a concrete execution provider.
-- A provider implements an operation-specific trait; it cannot claim capability merely by being selected.
-- The `axiolid` facade is optional. Leaf crates remain valid public entry points.
+Key rules:
 
-The full rationale is in [ADR 0009](/adr/0009-layered-geometry-dag).
+- Representation packages contain format-neutral values and cannot depend on algorithms, providers, execution, or source-format packages.
+- `axiolid-guarantees` owns proof/refusal vocabulary; `axiolid-contracts` owns common backend, execution, and diagnostics vocabulary.
+- Each operation contract owns typed inputs, results, evidence, refusals, and conformance behavior. It does not select providers.
+- `axiolid-dispatch` owns provider registration, ordering, device matching, fallback, and budget admission.
+- Execution plans are internal runtime policy, never portable capability schemas.
+- Source-format interpretation remains in external adapters such as openbim/IFC.
+
+See the generated [crate map](/architecture/crate-map), [dependency graph](/architecture/dependency-graph), and [ADR 0035](/adr/0035-nested-ownership-and-capability-contracts).
 
 ## Neutral geometry DAG
 
-`axiolid-model` stores shared geometry in an immutable, append-only graph. Nodes use typed IDs and only refer backward, making cyclic construction invalid before a compiler sees it. This supports sharing, mapped instances, reproducible diagnostics, and bounded traversal without recursive boxed shape trees.
+`axiolid-model` stores shared geometry in an immutable append-only graph. Typed IDs refer only backward, so cyclic construction is rejected before evaluation. The graph captures neutral authored intent; it is not a source-format AST and does not imply every represented family has an evaluator.
 
-The graph models neutral geometry intent. It does not become a source-format AST, nor does storage alone imply evaluation of every represented shape family.
+## Result-domain honesty
 
-## Operation contracts and providers
+Exact B-rep values live in `axiolid-brep`. Triangle output is requested through `axiolid-mesh-compile-contract::MeshCompiler`; the API and method names explicitly say mesh. Tessellation remains a tolerance-bearing projection contract in `axiolid-tessellation-contract`. No generic “geometry compiler” silently collapses exact and discrete result domains.
 
-`axiolid-kernel` owns backend identity, policy, errors, and narrow operation contracts. Concrete implementations live outside it:
+## Contracts, providers, and execution
 
-- `axiolid-reference` is readable, portable reference work used as a correctness oracle.
-- `axiolid-backend-cpu` owns execution context and opt-in scheduling/dispatch support.
-- `axiolid-backend-gpu` is an API-neutral adapter seam.
-- `axiolid-mesh-boolean-boolmesh` is a deliberately isolated mesh Boolean provider.
+Portable seams are split by operation:
 
-This division prevents an application from accidentally pulling native or GPU dependencies into its format boundary and makes the implementation behind an operation observable.
+- `axiolid-mesh-boolean-contract`;
+- `axiolid-mesh-section-contract`;
+- `axiolid-mesh-compile-contract`;
+- `axiolid-tessellation-contract`.
+
+Implementations remain independently replaceable:
+
+- `axiolid-reference` is readable portable reference work and the scalar oracle;
+- `axiolid-mesh-boolean-boolmesh` is an isolated mesh-Boolean provider;
+- `axiolid-backend-cpu` and `axiolid-backend-gpu` are execution contexts/adapters;
+- `axiolid-mesh-compile` is the reference graph-to-mesh execution pipeline.
 
 ## Tolerance and numerical work
 
-Tolerance is explicit operation input rather than an ambient global epsilon. Numerically sensitive predicates are owned by the scalar reference layer, including filtering/escalation paths where appropriate. A faster path has to earn its complexity with a benchmark and differential evidence—not an architecture document.
-
-See [ADR 0012](/adr/0012-scalar-reference-ownership) and [ADR 0016](/adr/0016-predicate-ownership-and-adopted-implementations).
+Tolerance is explicit operation input rather than an ambient global epsilon. Numerically sensitive predicates are owned by the reference layer, with typed certification/escalation where implemented. An optimized path must be supported by differential tests and benchmarks, not merely an architecture claim.

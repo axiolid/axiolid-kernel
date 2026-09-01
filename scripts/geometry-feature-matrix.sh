@@ -15,8 +15,9 @@ step "axiolid facade: core only" cargo check -q -p axiolid --no-default-features
 
 features=(
     mesh profiles curves surfaces topology primitives model
-    nurbs tessellation spatial measure heal
-    kernel mesh-boolean mesh-section graph-compile
+    nurbs tessellation spatial measure overlay field field-ops field-navigation heal
+    contracts mesh-contracts mesh-boolean mesh-section graph-compile
+    dispatch-mesh-boolean dispatch-mesh-section generate
     cpu parallel simd gpu
     discrete parametric advanced full
 )
@@ -28,15 +29,17 @@ done
 step "axiolid facade: defaults" cargo test -q -p axiolid
 step "axiolid facade: all features" cargo test -q -p axiolid --all-features
 
-step "kernel contract: identity only" \
-    cargo check -q -p axiolid-kernel --no-default-features
-step "kernel contract: mesh boolean" \
-    cargo test -q -p axiolid-kernel --no-default-features --features mesh-boolean
-step "kernel contract: mesh section" \
-    cargo test -q -p axiolid-kernel --no-default-features --features mesh-section
-step "kernel contract: graph model" \
-    cargo check -q -p axiolid-kernel --no-default-features --features model
-step "kernel contract: all" cargo test -q -p axiolid-kernel --all-features
+step "common contracts" cargo test -q -p axiolid-contracts
+step "guarantee vocabulary" cargo test -q -p axiolid-guarantees
+step "shared mesh contracts" cargo test -q -p axiolid-mesh-contracts
+step "tessellation contract" cargo test -q -p axiolid-tessellation-contract
+step "mesh boolean contract" cargo test -q -p axiolid-mesh-boolean-contract
+step "mesh section contract" cargo test -q -p axiolid-mesh-section-contract
+step "mesh compile contract" cargo test -q -p axiolid-mesh-compile-contract
+step "dispatch: identity only" cargo check -q -p axiolid-dispatch --no-default-features
+step "dispatch: mesh boolean" cargo test -q -p axiolid-dispatch --no-default-features --features mesh-boolean
+step "dispatch: mesh section" cargo test -q -p axiolid-dispatch --no-default-features --features mesh-section
+step "dispatch: all" cargo test -q -p axiolid-dispatch --all-features
 
 step "CPU context: portable" \
     cargo check -q -p axiolid-backend-cpu --no-default-features

@@ -160,7 +160,7 @@ fn options_and_shared_work_budget_are_bounded() {
     .expect_err("refinement cannot fit one work unit");
     assert!(matches!(
         error,
-        axiolid_kernel::GeomError::BudgetExceeded { .. }
+        axiolid_contracts::GeomError::BudgetExceeded { .. }
     ));
 }
 
@@ -182,7 +182,10 @@ fn full_multiplicity_internal_surface_knot_is_unsupported() {
         CertifiedCurveSurfaceIntersectionOptions::default(),
     )
     .expect_err("full-multiplicity internal knot must be unsupported by this query");
-    assert!(matches!(error, axiolid_kernel::GeomError::InvalidInput(_)));
+    assert!(matches!(
+        error,
+        axiolid_contracts::GeomError::InvalidInput(_)
+    ));
 }
 
 #[test]

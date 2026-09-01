@@ -1,6 +1,6 @@
 //! The facade must expose solid generation as its own capability.
 //!
-//! `axiolid-compile` is not re-exported: the graph compiler is an
+//! `axiolid-mesh-compile` is not re-exported: the graph compiler is an
 //! implementation detail. Generation is not -- a caller with an exact profile
 //! and a path should be able to build a solid without adopting the DAG.
 

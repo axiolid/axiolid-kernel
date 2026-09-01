@@ -3,8 +3,8 @@
 //! Orientation is decided by the certified `orient2d` predicate rather than a
 //! raw sign test, so a near-degenerate vertex cannot silently flip a triangle.
 
+use axiolid_contracts::{GeomError, GeomResult, Sign};
 use axiolid_core::{Point2, Scalar};
-use axiolid_kernel::{GeomError, GeomResult, Sign};
 
 use crate::orient2d;
 

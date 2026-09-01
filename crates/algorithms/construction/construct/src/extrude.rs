@@ -5,8 +5,8 @@
 //! produces a mesh that looks valid and computes wrong booleans -- the failure
 //! mode that has already cost two debugging sessions.
 
+use axiolid_contracts::{GeomError, GeomResult, Sign};
 use axiolid_core::{Point2, Point3, Scalar, Vec3};
-use axiolid_kernel::{GeomError, GeomResult, Sign};
 use axiolid_mesh::TriMesh;
 use axiolid_reference::arithmetic::{
     expansion_sign, expansion_sum, grow_expansion, scale_expansion,

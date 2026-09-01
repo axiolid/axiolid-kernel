@@ -3,9 +3,9 @@
 use crate::certified_bezier::{distance_between_point_intervals_upper, Interval};
 use crate::certified_projection::{CurvePairParameterBox, ParameterInterval};
 use crate::certified_refinement::{piecewise_bezier_cells, RefinementBudget};
+use axiolid_contracts::{GeomError, GeomResult, Sign};
 use axiolid_core::{Point2, Scalar};
 use axiolid_curve::BSplineCurve2;
-use axiolid_kernel::{GeomError, GeomResult, Sign};
 use axiolid_reference::{curve::bspline_jet2, orient2d};
 
 const MAX_CERTIFIED_CURVE_INTERSECTION_NODES: u32 = 100_000;
@@ -132,7 +132,7 @@ pub fn intersect_curve2_certified(
     let visited_nodes = count
         .and_then(|value| u32::try_from(value).ok())
         .filter(|&value| value <= options.max_nodes())
-        .ok_or(axiolid_kernel::GeomError::BudgetExceeded {
+        .ok_or(axiolid_contracts::GeomError::BudgetExceeded {
             resource: "certified curve intersection budget",
         })?;
     if first == second {
@@ -283,7 +283,7 @@ fn classify_nonlinear(
                 visited_nodes = visited_nodes
                     .checked_add(2)
                     .filter(|&count| count <= options.max_nodes())
-                    .ok_or(axiolid_kernel::GeomError::BudgetExceeded {
+                    .ok_or(axiolid_contracts::GeomError::BudgetExceeded {
                         resource: "certified curve intersection budget",
                     })?;
                 if first_cell.end - first_cell.start >= second_cell.end - second_cell.start {

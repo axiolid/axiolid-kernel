@@ -184,7 +184,7 @@ fn options_and_refinement_work_are_bounded() {
     .expect_err("one work unit cannot refine both surfaces");
     assert!(matches!(
         error,
-        axiolid_kernel::GeomError::BudgetExceeded { .. }
+        axiolid_contracts::GeomError::BudgetExceeded { .. }
     ));
 }
 
@@ -279,5 +279,8 @@ fn full_multiplicity_internal_axis_is_unsupported() {
         CertifiedSurfaceSurfaceIntersectionOptions::default(),
     )
     .expect_err("full-multiplicity internal knot is outside the certified domain");
-    assert!(matches!(error, axiolid_kernel::GeomError::InvalidInput(_)));
+    assert!(matches!(
+        error,
+        axiolid_contracts::GeomError::InvalidInput(_)
+    ));
 }

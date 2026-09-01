@@ -28,10 +28,10 @@ fn default_execution_errors_are_standard_errors() {
     error::<axiolid_backend_cpu::CpuConfigError>();
 }
 
-#[cfg(feature = "kernel")]
+#[cfg(feature = "contracts")]
 #[test]
 fn kernel_errors_are_standard_errors() {
-    error::<axiolid::kernel::GeomError>();
+    error::<axiolid::contracts::GeomError>();
 }
 
 #[cfg(feature = "model")]

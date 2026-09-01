@@ -64,7 +64,7 @@ pub mod primitive {
 
 #[cfg(feature = "tessellation")]
 pub mod tessellation {
-    pub use axiolid_tessellate::*;
+    pub use axiolid_tessellation_contract::*;
 }
 
 #[cfg(feature = "spatial")]
@@ -92,13 +92,16 @@ pub mod generate {
     pub use axiolid_construct::*;
 }
 
-/// Frame-neutral sampled layered fields.
-///
-/// Coverage, morphology, and clearance are always available with this feature.
-/// Geometry-only traversal is a further opt-in via `field-navigation`.
+/// Frame-neutral sampled layered-field values and configuration.
 #[cfg(feature = "field")]
 pub mod field {
     pub use axiolid_field::*;
+}
+
+/// Sampling, morphology, clearance, and optional navigation over layered fields.
+#[cfg(feature = "field-ops")]
+pub mod field_ops {
+    pub use axiolid_field_ops::*;
 }
 
 #[cfg(feature = "heal")]
@@ -106,9 +109,34 @@ pub mod heal {
     pub use axiolid_heal::*;
 }
 
-#[cfg(feature = "kernel")]
-pub mod kernel {
-    pub use axiolid_kernel::*;
+#[cfg(feature = "contracts")]
+pub mod contracts {
+    pub use axiolid_contracts::*;
+}
+
+#[cfg(feature = "mesh-contracts")]
+pub mod mesh_contracts {
+    pub use axiolid_mesh_contracts::*;
+}
+
+#[cfg(feature = "mesh-boolean")]
+pub mod mesh_boolean {
+    pub use axiolid_mesh_boolean_contract::*;
+}
+
+#[cfg(feature = "mesh-section")]
+pub mod mesh_section {
+    pub use axiolid_mesh_section_contract::*;
+}
+
+#[cfg(feature = "graph-compile")]
+pub mod graph_compile {
+    pub use axiolid_mesh_compile_contract::*;
+}
+
+#[cfg(any(feature = "dispatch-mesh-boolean", feature = "dispatch-mesh-section"))]
+pub mod dispatch {
+    pub use axiolid_dispatch::*;
 }
 
 #[cfg(feature = "cpu")]

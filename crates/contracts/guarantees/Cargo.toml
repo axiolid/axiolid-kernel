@@ -1,0 +1,19 @@
+[package]
+name = "axiolid-guarantees"
+description = "Certified-value and escalation vocabulary for geometry contracts"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "contracts"
+role = "contract.guarantees"
+domain = "proof"
+public = true
+format-neutral = true
+allowed-internal-dependencies = []

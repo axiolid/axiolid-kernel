@@ -10,8 +10,8 @@
 //! `axiolid_reference::triangulate_simple` is retained as the differential oracle for
 //! the hole-free case, so the adopted implementation is audited, not trusted.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point2, Scalar, Tolerance};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_profile::{CircleProfile, EllipseProfile, Profile, RectangleProfile};
 
 /// Outer ring plus holes, all CCW/CW normalised by the caller's contract:
@@ -71,7 +71,7 @@ pub fn profile_rings(
         }
         other => Err(GeomError::Unsupported {
             backend: crate::BACKEND_ID,
-            operation: axiolid_kernel::Operation::ProfileTriangulation,
+            operation: axiolid_contracts::Operation::ProfileTriangulation,
         })
         .inspect_err(|_| {
             let _ = other;

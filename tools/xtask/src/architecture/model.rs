@@ -1,4 +1,4 @@
-use cargo_metadata::{Metadata, MetadataCommand, Package};
+use cargo_metadata::{DependencyKind, Metadata, MetadataCommand, Package};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -16,6 +16,7 @@ pub struct PackageArchitecture {
     pub format_neutral: bool,
     pub allowed_internal_dependencies: BTreeSet<String>,
     pub actual_internal_dependencies: BTreeSet<String>,
+    pub production_internal_dependencies: BTreeSet<String>,
 }
 
 #[derive(Debug)]
@@ -71,6 +72,13 @@ impl Architecture {
                 .map(|dependency| dependency.name.to_string())
                 .filter(|dependency| workspace_names.contains(dependency))
                 .collect();
+            let production_internal_dependencies = package
+                .dependencies
+                .iter()
+                .filter(|dependency| dependency.kind != DependencyKind::Development)
+                .map(|dependency| dependency.name.to_string())
+                .filter(|dependency| workspace_names.contains(dependency))
+                .collect();
             packages.insert(
                 name.clone(),
                 PackageArchitecture {
@@ -83,6 +91,7 @@ impl Architecture {
                     format_neutral: boolean(table, "format-neutral", &name)?,
                     allowed_internal_dependencies,
                     actual_internal_dependencies,
+                    production_internal_dependencies,
                 },
             );
         }

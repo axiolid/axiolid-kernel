@@ -6,8 +6,8 @@
 //! profiles use, and lifted back. Shared vertices stay shared: the loop
 //! indices already reference interned topology vertices.
 
+use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point2, Scalar, Vec3};
-use axiolid_kernel::{GeomError, GeomResult};
 use axiolid_mesh::TriMesh;
 use axiolid_model::NodeId;
 use axiolid_topology::{BRep, Orientation};
@@ -228,7 +228,7 @@ fn append_face(
     // A face carrying a curved support surface cannot be tessellated by
     // projecting its boundary onto a plane: the interior curves away from
     // that plane and the error is invisible in the output. Refuse instead.
-    // `axiolid-compile/AGENTS.md`: a missing wall is cheap, a wrong wall
+    // `axiolid-mesh-compile/AGENTS.md`: a missing wall is cheap, a wrong wall
     // corrupts every downstream quantity.
     // A curved support cannot be tessellated by projecting the boundary onto
     // a plane: the interior curves away from it and the error is invisible in
@@ -938,7 +938,7 @@ fn curved_boundary(
             let Some(pcurve) = use_.pcurve else {
                 return Err(GeomError::Unsupported {
                     backend: crate::BACKEND_ID,
-                    operation: axiolid_kernel::Operation::Tessellation,
+                    operation: axiolid_contracts::Operation::Tessellation,
                 });
             };
             let Some(axiolid_model::GeometryNode::Curve2(trim)) = graph.get(pcurve) else {

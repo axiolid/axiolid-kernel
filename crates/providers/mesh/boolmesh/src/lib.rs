@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 
-//! `boolmesh`-backed [`axiolid_kernel::MeshBoolean`] provider (ADR 0014).
+//! `boolmesh`-backed [`axiolid_mesh_boolean_contract::MeshBoolean`] provider (ADR 0014).
 
 mod convert;
 mod grouping;

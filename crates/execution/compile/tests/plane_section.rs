@@ -1,7 +1,10 @@
-use axiolid_compile::ScalarCompiler;
+use axiolid_contracts::ExecutionOptions;
 use axiolid_core::{Frame3, Point3, Tolerance, Vec3};
-use axiolid_kernel::{ExecutionOptions, GeometryCompiler, MeshPlaneSectionRegistry, SectionLimits};
+use axiolid_dispatch::MeshPlaneSectionRegistry;
 use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
+use axiolid_mesh_compile::ReferenceMeshCompiler;
+use axiolid_mesh_compile_contract::MeshCompiler;
+use axiolid_mesh_section_contract::SectionLimits;
 use axiolid_model::{GeometryGraphBuilder, GeometryNode, SolidOperation};
 use axiolid_profile::{Profile, RectangleProfile};
 use axiolid_reference::ScalarSection;
@@ -29,8 +32,8 @@ fn body_graph_compiles_and_sections_into_plan_linework() {
         .expect("body");
     let graph = builder.finish(vec![body]).expect("graph");
     let options = ExecutionOptions::new(Tolerance::METRE);
-    let mesh = ScalarCompiler::new(BoolmeshBoolean::new())
-        .compile(&graph, body, &options)
+    let mesh = ReferenceMeshCompiler::new(BoolmeshBoolean::new())
+        .compile_mesh(&graph, body, &options)
         .expect("compile Body DAG");
 
     let mut sections = MeshPlaneSectionRegistry::new();

@@ -4,8 +4,8 @@
 //! construction is deliberately separate: a representable closest point is not
 //! a certified proof of intersection.
 
+use axiolid_contracts::Sign;
 use axiolid_core::Point3;
-use axiolid_kernel::Sign;
 
 use crate::orient3d;
 
@@ -78,7 +78,7 @@ pub fn segment_triangle_relation(
     }
 }
 
-fn sign(value: axiolid_kernel::Certified) -> Sign {
+fn sign(value: axiolid_contracts::Certified) -> Sign {
     // `orient3d` always escalates to an exact, certain sign.
     value
         .sign()

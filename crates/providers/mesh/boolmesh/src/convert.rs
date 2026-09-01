@@ -12,9 +12,10 @@
 //!
 //! So orientation is checked here, on the way in, using the divergence theorem.
 
+use axiolid_contracts::GeomError;
 use axiolid_core::Point3;
-use axiolid_kernel::{GeomError, SolidRequirements};
 use axiolid_mesh::TriMesh;
+use axiolid_mesh_contracts::SolidRequirements;
 use boolmesh::prelude::Manifold;
 
 /// Six times the signed volume of a closed triangle mesh.
