@@ -19,10 +19,11 @@ floating-point progress.
 Axiolid will expose global surface closest-point projection through the separate
 `project_surface_certified` API.
 
-- The certified slice accepts finite, open, clamped polynomial or
+- `project_surface_certified` accepts finite, open, clamped polynomial or
   positive-weight rational B-spline surfaces over their full rectangular native
   domain. Internally continuous multispan surfaces are decomposed into rational
-  Bézier patches. Trims and closed/periodic axes are outside this proof slice.
+  Bézier patches. Trims and neutral closed axes remain outside this entry point.
+  ADR 0032 adds `project_periodic_surface_certified` for validated cyclic schemas.
 - Stored binary64 values are interpreted exactly. Interval-aware homogeneous
   refinement and de Casteljau evaluation widen derived arithmetic outward.
 - Each pending native parameter box receives a global distance lower bound from

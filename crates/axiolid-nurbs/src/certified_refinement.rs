@@ -299,10 +299,16 @@ pub(crate) fn insert_homogeneous_once(
         refined[index + 1] = Some(controls[index].clone());
     }
     for index in span - degree + 1..=span - multiplicity {
-        let numerator = Interval::exact(knot)?.subtract(Interval::exact(knots[index])?)?;
-        let denominator =
-            Interval::exact(knots[index + degree])?.subtract(Interval::exact(knots[index])?)?;
-        let alpha = numerator.divide(denominator)?;
+        let alpha = if knot == knots[index] {
+            Interval::exact(0.0)?
+        } else if knot == knots[index + degree] {
+            Interval::exact(1.0)?
+        } else {
+            let numerator = Interval::exact(knot)?.subtract(Interval::exact(knots[index])?)?;
+            let denominator =
+                Interval::exact(knots[index + degree])?.subtract(Interval::exact(knots[index])?)?;
+            numerator.divide(denominator)?
+        };
         refined[index] = Some(HomogeneousPoint::blend(
             &controls[index - 1],
             &controls[index],

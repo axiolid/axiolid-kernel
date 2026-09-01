@@ -21,6 +21,7 @@ mod certified_surface_surface_intersection;
 mod curve_analysis;
 mod curve_projection;
 mod periodic;
+mod periodic_surface;
 mod projection;
 mod surface_analysis;
 mod surface_projection;
@@ -45,7 +46,9 @@ pub use certified_projection::{
     SurfaceParameterBox, SurfaceProjectionCertificate3, SurfaceProjectionUnresolvedReason,
     MAX_CERTIFIED_SURFACE_PROJECTION_DEPTH, MAX_CERTIFIED_SURFACE_PROJECTION_WORK,
 };
-pub use certified_surface_projection::project_surface_certified;
+pub use certified_surface_projection::{
+    project_periodic_surface_certified, project_surface_certified,
+};
 pub use certified_surface_surface_intersection::{
     intersect_surface_surface_certified, CertifiedSurfaceSurfaceIntersection3,
     CertifiedSurfaceSurfaceIntersectionOptions, SurfaceSurfaceParameterBox,
@@ -57,6 +60,7 @@ pub use periodic::{
     curve2_seam_continuity, curve3_seam_continuity, wrap_curve2_parameter, wrap_curve3_parameter,
     PeriodicCurve2, PeriodicCurve3, SeamContinuity,
 };
+pub use periodic_surface::PeriodicBSplineSurface;
 pub use projection::{
     CurveProjection2, CurveProjection3, ProjectionOptions, ProjectionStatus, SurfaceProjection,
 };

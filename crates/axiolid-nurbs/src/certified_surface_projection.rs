@@ -14,7 +14,10 @@ use crate::{
         SurfaceParameterBox, SurfaceProjectionCertificate3, SurfaceProjectionUnresolvedReason,
     },
     certified_refinement::RefinementBudget,
-    certified_surface_bezier::{piecewise_bezier_patches, Patch},
+    certified_surface_bezier::{
+        piecewise_bezier_patches, piecewise_periodic_bezier_patches, Patch,
+    },
+    PeriodicBSplineSurface,
 };
 
 const DIMENSIONS: usize = 3;
@@ -58,9 +61,45 @@ pub fn project_surface_certified(
     options: CertifiedSurfaceProjectionOptions,
 ) -> GeomResult<CertifiedSurfaceProjection3> {
     validate_query(surface, target)?;
+    project_surface_certified_with_modes(surface, target, options, false, false)
+}
+
+/// Exhaustively bound the global point-to-surface minimum over one canonical
+/// period of an explicitly validated cyclic B-spline surface.
+///
+/// Periodic axes are searched over their complete native period, including the
+/// seam-equivalent endpoints. The returned minimizer boxes therefore form a
+/// sound cover on the quotient domain; callers can canonicalize witness
+/// parameters with [`PeriodicBSplineSurface::wrap_parameters`].
+pub fn project_periodic_surface_certified(
+    surface: &PeriodicBSplineSurface,
+    target: Point3,
+    options: CertifiedSurfaceProjectionOptions,
+) -> GeomResult<CertifiedSurfaceProjection3> {
+    validate_target(target)?;
+    project_surface_certified_with_modes(
+        surface.as_bspline_surface(),
+        target,
+        options,
+        surface.u_is_periodic(),
+        surface.v_is_periodic(),
+    )
+}
+
+fn project_surface_certified_with_modes(
+    surface: &BSplineSurface,
+    target: Point3,
+    options: CertifiedSurfaceProjectionOptions,
+    u_periodic: bool,
+    v_periodic: bool,
+) -> GeomResult<CertifiedSurfaceProjection3> {
     let target_array = target.to_array();
     let mut budget = RefinementBudget::new(options.max_work(), "certified surface projection");
-    let patches = piecewise_bezier_patches(surface, &mut budget)?;
+    let patches = if u_periodic || v_periodic {
+        piecewise_periodic_bezier_patches(surface, u_periodic, v_periodic, &mut budget)?
+    } else {
+        piecewise_bezier_patches(surface, &mut budget)?
+    };
     if patches.is_empty() {
         return Err(GeomError::InvalidInput(
             "certified surface projection requires at least one Bezier patch".to_owned(),
@@ -205,16 +244,21 @@ pub fn project_surface_certified(
 }
 
 fn validate_query(surface: &BSplineSurface, target: Point3) -> GeomResult<()> {
-    if !target.is_finite() {
-        return Err(GeomError::InvalidInput(
-            "surface projection target must be finite".to_owned(),
-        ));
-    }
+    validate_target(target)?;
     if surface.u_closed || surface.v_closed {
         return Err(GeomError::Unsupported {
             backend: BackendId::new("axiolid-nurbs"),
             operation: Operation::SpatialQuery,
         });
+    }
+    Ok(())
+}
+
+fn validate_target(target: Point3) -> GeomResult<()> {
+    if !target.is_finite() {
+        return Err(GeomError::InvalidInput(
+            "surface projection target must be finite".to_owned(),
+        ));
     }
     Ok(())
 }
