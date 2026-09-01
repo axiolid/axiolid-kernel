@@ -43,6 +43,7 @@ any exactness claim as applying to *evaluation*, not to *operation results*.
 | Scalar graph compilation | Implemented reference path | `axiolid-compile`; DAG traversal, caching, model-driven directrices, and B-rep face tessellation. Consumes `axiolid-generate` rather than owning sweeps. Produces meshes today; see [ADR 0020](/adr/0020-exact-brep-kernel-model) |
 | Polygon triangulation | Implemented provider | `axiolid-tessellate` adopts Earcut under the contract in [ADR 0015](/adr/0015-adopt-earcut-polygon-triangulation) |
 | Mesh Boolean execution | Optional provider | `axiolid-boolmesh`; limited to its mesh contract and tests |
+| Mesh plane section | Implemented scalar oracle | `axiolid-kernel::MeshPlaneSection` plus `axiolid-scalar::ScalarSection`; exact binary64 plane-side classification, source-topology stitching of outward-oriented closed solids, closed plane-local contours, explicit limits/cancellation/scratch preflight, and input-mesh provenance. Coplanar surface overlap and open/non-manifold results fail closed; no analytic exactness or region nesting is claimed. See [ADR 0033](/adr/0033-mesh-plane-section-contract) |
 
 ## Geometry representation
 
@@ -93,7 +94,7 @@ intends to do. These broader exact/certified forms do not exist today:
   graph nodes.
 - General curved surface/surface intersection-curve tracing, closed loops, and
   tangent/overlap or seam/trim-owned completion beyond the bounded affine trace slice.
-- Exact booleans, section curves, offsets, and fillets, which all sit
+- Exact analytic booleans, section curves, offsets, and fillets, which all sit
   downstream of intersection.
 
 ## Explicit non-goals today

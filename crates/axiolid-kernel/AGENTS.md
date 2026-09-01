@@ -7,7 +7,8 @@ Allowed internal dependencies: axiolid-core, axiolid-model, axiolid-mesh. Follow
 
 ## Module ownership
 
-backend.rs; capability.rs; certainty.rs; execution.rs; error.rs; compile.rs; boolean.rs. Split a module before unrelated data, validation, and algorithms grow
+backend.rs; capability.rs; certainty.rs; execution.rs; error.rs; compile.rs;
+boolean.rs; section.rs. Split a module before unrelated data, validation, and algorithms grow
 together. Add no empty placeholder files.
 
 ## Invariants

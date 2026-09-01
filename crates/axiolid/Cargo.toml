@@ -41,6 +41,7 @@ field-navigation = ["field", "axiolid-field/navigation"]
 heal = ["mesh", "dep:axiolid-heal"]
 kernel = ["dep:axiolid-kernel"]
 mesh-boolean = ["kernel", "mesh", "axiolid-kernel/mesh-boolean"]
+mesh-section = ["kernel", "mesh", "axiolid-kernel/mesh-section"]
 graph-compile = ["kernel", "model", "mesh", "axiolid-kernel/model"]
 generate = ["mesh", "profiles", "curves", "primitives", "kernel", "brep", "dep:axiolid-generate"]
 
@@ -61,6 +62,7 @@ discrete = [
     "spatial",
     "measure",
     "mesh-boolean",
+    "mesh-section",
     "generate",
     "cpu",
 ]

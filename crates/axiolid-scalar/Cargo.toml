@@ -11,7 +11,7 @@ readme.workspace = true
 
 [dependencies]
 axiolid-core.workspace = true
-axiolid-kernel = { workspace = true, features = ["mesh-boolean"] }
+axiolid-kernel = { workspace = true, features = ["mesh-boolean", "mesh-section"] }
 axiolid-curve.workspace = true
 axiolid-measure.workspace = true
 axiolid-mesh.workspace = true

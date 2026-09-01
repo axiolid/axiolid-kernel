@@ -12,6 +12,7 @@ readme.workspace = true
 [features]
 default = []
 mesh-boolean = ["dep:axiolid-mesh"]
+mesh-section = ["dep:axiolid-mesh"]
 model = ["dep:axiolid-mesh", "dep:axiolid-model"]
 
 [dependencies]

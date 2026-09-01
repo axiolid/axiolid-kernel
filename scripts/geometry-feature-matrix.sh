@@ -16,7 +16,7 @@ step "axiolid facade: core only" cargo check -q -p axiolid --no-default-features
 features=(
     mesh profiles curves surfaces topology primitives model
     nurbs tessellation spatial measure heal
-    kernel mesh-boolean graph-compile
+    kernel mesh-boolean mesh-section graph-compile
     cpu parallel simd gpu
     discrete parametric advanced full
 )
@@ -32,6 +32,8 @@ step "kernel contract: identity only" \
     cargo check -q -p axiolid-kernel --no-default-features
 step "kernel contract: mesh boolean" \
     cargo test -q -p axiolid-kernel --no-default-features --features mesh-boolean
+step "kernel contract: mesh section" \
+    cargo test -q -p axiolid-kernel --no-default-features --features mesh-section
 step "kernel contract: graph model" \
     cargo check -q -p axiolid-kernel --no-default-features --features model
 step "kernel contract: all" cargo test -q -p axiolid-kernel --all-features

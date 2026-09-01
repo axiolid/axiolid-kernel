@@ -35,7 +35,7 @@ Closing that is the main line of work.
 
 ## Next: intersection and inversion
 
-The prerequisites for exact booleans, section curves, offsets, and fillets.
+The prerequisites for exact booleans, analytic section curves, offsets, and fillets.
 Certified clamped NURBS curve projection and global curve-pair minimum distance now
 provide exhaustive outward-rounded subdivision bounds. A bounded planar curve/curve
 slice certifies exact-sign lines and contractive transverse polynomial/rational
@@ -53,6 +53,7 @@ The mesh path remains supported for callers who explicitly want discrete
 results, and as a differential oracle for the exact path.
 
 - Finish and differentially test discrete mesh operations against the scalar oracle.
+- [x] Add bounded mesh-derived plane-section contours with exact binary64 side classification and explicit approximation provenance (ADR 0033).
 - Expand fixture-based robustness coverage for triangulation, mesh booleans, bounds, and spatial queries.
 
 ## Then: parametric and compiled geometry

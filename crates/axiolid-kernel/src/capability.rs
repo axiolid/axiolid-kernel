@@ -183,6 +183,7 @@ pub enum Operation {
     Sweep,
     Tessellation,
     MeshBoolean,
+    MeshPlaneSection,
     SpatialQuery,
     Measurement,
     Healing,

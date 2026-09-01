@@ -11,7 +11,7 @@ pub mod polygon;
 pub mod triangle;
 pub mod view;
 
-pub use audit::{audit_mesh, MeshHealth};
+pub use audit::{audit_mesh, audit_mesh_scratch_bytes, try_audit_mesh, MeshAuditError, MeshHealth};
 pub use error::MeshValidationError;
 pub use polygon::{PolygonFace, PolygonMesh};
 pub use triangle::{NormalAttribute, TriMesh};

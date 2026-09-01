@@ -20,7 +20,9 @@ pub mod error;
 #[cfg(feature = "mesh-boolean")]
 pub mod evidence;
 pub mod execution;
-#[cfg(feature = "mesh-boolean")]
+#[cfg(feature = "mesh-section")]
+pub mod section;
+#[cfg(any(feature = "mesh-boolean", feature = "mesh-section"))]
 pub mod solid;
 
 pub use backend::Backend;
@@ -38,5 +40,10 @@ pub use execution::{
     DataResidency, Determinism, DevicePreference, ExecutionOptions, OutputBound, Parallelism,
     Residency, ScratchRequirement,
 };
-#[cfg(feature = "mesh-boolean")]
+#[cfg(feature = "mesh-section")]
+pub use section::{
+    MeshPlaneSection, MeshPlaneSectionRegistry, SectionContour, SectionEvidence, SectionLimits,
+    SectionOutcome, SectionSource,
+};
+#[cfg(any(feature = "mesh-boolean", feature = "mesh-section"))]
 pub use solid::{enclosed_volume, SolidRejection, SolidRequirements};

@@ -31,3 +31,4 @@ These records capture durable choices that preserve Axiolid’s format-neutral, 
 | [0030](./0030-globally-certified-surface-projection.md) | Surface closest-point certificates require bounded global branch-and-bound |
 | [0031](./0031-verified-periodic-curve-views.md) | Periodic curve behavior is an opt-in verified view |
 | [0032](./0032-explicit-periodic-bspline-surfaces.md) | Periodic B-spline surfaces use an explicit cyclic schema |
+| [0033](./0033-mesh-plane-section-contract.md) | Mesh plane sections are an explicit approximation tier |
