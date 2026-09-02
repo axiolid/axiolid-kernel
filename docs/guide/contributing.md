@@ -2,6 +2,12 @@
 
 Axiolid values small, proven boundaries over broad claims. A change is not complete when it compiles; it is complete when its capability, dependency direction, and failure behavior are evident.
 
+## Before you file anything
+
+[Where things go](../contributing/where-things-go.md) decides the surface: new
+functionality and optimizations start as **discussions**, papercuts and bugs are
+**issues**, and every decision is recorded rather than silently dropped.
+
 ## Local checks
 
 ```bash

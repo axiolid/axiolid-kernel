@@ -1,7 +1,15 @@
 name: Bug report
-description: Something in this crate behaves incorrectly or doesn't compile/build as expected.
+description: Something behaves incorrectly, or doesn't compile/build as expected.
 labels: ["bug"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Correctness problems are issues. If instead you want a *new* capability,
+        or want existing behavior to be *faster*, start a discussion:
+        [functionality](https://github.com/axiolid/kernel/discussions/new?category=features) ·
+        [optimization](https://github.com/axiolid/kernel/discussions/new?category=optimization)
+
   - type: textarea
     id: summary
     attributes:
@@ -9,6 +17,7 @@ body:
       description: One or two sentences. What's broken?
     validations:
       required: true
+
   - type: textarea
     id: evidence
     attributes:
@@ -23,6 +32,7 @@ body:
         Actual output:
     validations:
       required: true
+
   - type: textarea
     id: expected
     attributes:
@@ -30,14 +40,29 @@ body:
       description: What should have happened instead?
     validations:
       required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - exact-brep
+        - intersection
+        - nurbs
+        - mesh
+        - architecture
+        - release
+        - not sure
+    validations:
+      required: true
+
   - type: dropdown
     id: size
     attributes:
       label: Size
       description: >
-        Best guess at scope. `small` = a self-contained fix, one file/module,
-        no public API break. `big` = touches the public API, spans multiple
-        crates/files, needs a design decision, or is a breaking change.
+        `small` = self-contained fix, one file/module, no public API break.
+        `big` = touches the public API, spans crates, or needs a design decision.
       options:
         - small
         - big

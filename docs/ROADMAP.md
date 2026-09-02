@@ -1,5 +1,14 @@
 # Roadmap
 
+::: tip Where the live state lives
+This page explains the **ordering and reasoning**. The **current state** is on
+GitHub: [milestones](https://github.com/axiolid/kernel/milestones) carry the
+exit criteria, the [project board](https://github.com/orgs/axiolid/projects/1)
+carries the workflow, and [where things go](./contributing/where-things-go.md)
+explains how a request becomes tracked work. Where this page and GitHub
+disagree about status, GitHub wins.
+:::
+
 Axiolid is an early geometry kernel **striving to become a multipurpose, exact
 B-rep kernel** — for CAD construction, for rule checking over building models,
 and for the analysis those applications need. This roadmap orders work; it is

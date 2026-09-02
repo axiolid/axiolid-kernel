@@ -1,0 +1,53 @@
+name: Tracked work (maintainers)
+description: >
+  Record accepted work that already has agreement — usually converted from a
+  discussion, or split out of a milestone. Not the route for new requests.
+labels: ["capability", "decision:accepted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this only when the *decision is already made*. If scope or design is
+        still open, it belongs in a discussion first.
+
+  - type: input
+    id: source
+    attributes:
+      label: Source discussion
+      description: Link the discussion where this was accepted. Leave blank only for maintainer-planned work.
+      placeholder: https://github.com/axiolid/kernel/discussions/NN
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: What is true when this is done? Write it as an observable result, not a task list.
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: Which command, test, or gate proves it? Unverifiable work doesn't get closed.
+      placeholder: |
+        bash scripts/gate.sh
+        cargo xtask architecture closure check
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [exact-brep, intersection, nurbs, mesh, architecture, release]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: size
+    attributes:
+      label: Size
+      options: [small, big]
+    validations:
+      required: true

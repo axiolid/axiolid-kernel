@@ -1,5 +1,21 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Question / discussion
-    url: https://github.com/orgs/openbimrs/discussions
-    about: For open-ended questions that aren't a concrete bug or feature.
+  - name: Request new functionality
+    url: https://github.com/axiolid/kernel/discussions/new?category=features
+    about: >
+      Ask for a capability the kernel does not have yet. Starts as a discussion
+      so scope and design get agreed before anyone writes code. Accepted
+      requests become tracked issues.
+
+  - name: Suggest an optimization
+    url: https://github.com/axiolid/kernel/discussions/new?category=optimization
+    about: >
+      Propose making existing, working behavior faster or lighter. Needs a
+      same-harness measurement, not an intuition. Nothing here changes what the
+      kernel can do.
+
+  - name: Ask a question
+    url: https://github.com/axiolid/kernel/discussions/new?category=q-a
+    about: >
+      How do I use this? Why does it behave this way? Answers get marked so the
+      next person finds them.

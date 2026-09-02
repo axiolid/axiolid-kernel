@@ -106,6 +106,7 @@ export default defineConfig({
           { text: "Research", link: "/research/geometry-kernel-capability-comparison" },
           { text: "Licensing", link: "/guide/licensing" },
           { text: "Contributing", link: "/guide/contributing" },
+          { text: "Where things go", link: "/contributing/where-things-go" },
         ],
       },
       {
