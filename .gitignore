@@ -17,6 +17,8 @@ references/*
 *.swp
 .idea/
 .vscode/
+__pycache__/
+*.py[cod]
 
 # Agent plan/scratch — not part of the repo history
 .hermes/

@@ -91,4 +91,10 @@ External MCS/Axioval or wire packages map normalized semantic requests into type
 
 ## Verification
 
-The migration must preserve workspace, feature, conformance, mutation, documentation, and downstream IFC gates. Meaningful splits report dependency/build measurements; claims of improvement require evidence.
+The migration must preserve workspace, feature, conformance, mutation,
+documentation, package, and downstream IFC gates. `scripts/verify-packages.py`
+creates and compiles every normalized publishable archive with command-scoped
+local registry patches, because a first multi-crate release cannot resolve its
+new internal names from crates.io yet. Those patches never enter published
+manifests; version requirements remain the registry contract. Meaningful splits
+report dependency/build measurements; claims of improvement require evidence.
