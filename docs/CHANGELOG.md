@@ -40,7 +40,9 @@ All notable changes to Axiolid are documented in this file.
 
 ### Fixed
 - Hardened source-neutrality checks against dependency aliases while allowing comments, and mutation-verified both behaviors.
-- Pinned release workflow actions to immutable commits and covered transient crates.io lookup failures.
+- Pinned every documentation and release workflow action to immutable commits; repository-wide regression coverage rejects mutable refs.
+- Updated the field gate, its 10/10 mutation probe, and nested ownership documentation for the `axiolid-field` value / `axiolid-field-ops` algorithm split, including all facade feature tiers.
+- Covered transient crates.io lookup failures in the release tooling.
 - Updated package metadata, generated crate links, documentation navigation, and the GitHub Pages base to the canonical `axiolid/kernel` repository.
 - Replaced unstable `cargo publish --workspace` with guarded stable child-first publication.
 - Added staged verification for all 31 publishable archives; `xtask` remains excluded.

@@ -17,29 +17,35 @@ echo "fmt OK"
 
 echo "=== 2. field contract suites ==="
 cargo test -p axiolid-field --all-features
+cargo test -p axiolid-field-ops --all-features
 
-echo "=== 3. architecture gate ==="
+echo "=== 3. field mutation matrix ==="
+python3 scripts/probe_field_gate.py
+
+echo "=== 4. architecture gate ==="
 cargo xtask architecture check
 
-echo "=== 4. workspace tests, all features ==="
+echo "=== 5. workspace tests, all features ==="
 cargo test --workspace --all-features
 
-echo "=== 5. clippy ==="
+echo "=== 6. clippy ==="
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 echo "clippy OK"
 
-echo "=== 6. rustdoc ==="
+echo "=== 7. rustdoc ==="
 RUSTDOCFLAGS='-D warnings' cargo doc --workspace --no-deps
 echo "doc OK"
 
-echo "=== 7. feature isolation ==="
+echo "=== 8. feature isolation ==="
 cargo check -p axiolid-field --no-default-features
-cargo check -p axiolid-field --features navigation
+cargo check -p axiolid-field-ops --no-default-features
+cargo check -p axiolid-field-ops --features navigation
 cargo check -p axiolid --features field
+cargo check -p axiolid --features field-ops
 cargo check -p axiolid --features field-navigation
 echo "feature isolation OK"
 
-echo "=== 8. whitespace ==="
+echo "=== 9. whitespace ==="
 git diff --check
 echo "whitespace OK"
 

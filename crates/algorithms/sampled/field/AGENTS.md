@@ -1,16 +1,16 @@
-# axiolid-field instructions
+# axiolid-field-ops instructions
 
-Purpose: frame-neutral, deterministic sampled layered fields.
+Purpose: frame-neutral, deterministic algorithms over sampled layered fields.
 
-Allowed internal dependencies: `axiolid-core`, `axiolid-mesh`. Follow parent
+Allowed internal dependencies: `axiolid-core`, `axiolid-field`. Follow parent
 `../AGENTS.md`. Do not read `PLAN.md` unless assigned implementation or roadmap
 work.
 
 ## Module ownership
 
-`error.rs` structured failures; `config.rs` frame/bounds/cell-size/tolerance/
-budget; `cell.rs` one `(x, y)` column; `field.rs` grid plus sampling evidence;
-`sample.rs` scalar CPU triangle coverage; `morphology.rs` masks, metric
+Field values, configuration, evidence, and invariant-preserving constructors
+belong to `axiolid-field`. This crate owns `sample.rs` scalar CPU triangle
+coverage; `morphology.rs` masks, metric
 dilation/erosion, connected components; `clearance.rs` gap queries;
 `navigate.rs` geometry-only traversal behind the `navigation` feature.
 
@@ -54,8 +54,8 @@ second independent consumer needs the same neutral contract.
 ## Gates
 
 ```bash
-cargo test -p axiolid-field --all-features
-python3 ../../scripts/probe_field_gate.py
+cargo test -p axiolid-field-ops --all-features
+python3 scripts/probe_field_gate.py
 ```
 
 Mutation probes must kill every defect before the suite is trusted. Probe

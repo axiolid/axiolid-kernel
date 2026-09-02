@@ -28,12 +28,22 @@ publish = load_script("publish_workspace", "publish-workspace.py")
 
 
 class PublishWorkspaceTests(unittest.TestCase):
-    def test_release_actions_are_pinned_to_immutable_commits(self) -> None:
-        workflow = (ROOT / ".github" / "workflows" / "publish.yml").read_text()
-        action_refs = re.findall(r"uses:\s+[^@\s]+@([^#\s]+)", workflow)
+    def test_workflow_actions_are_pinned_to_immutable_commits(self) -> None:
+        workflows = sorted((ROOT / ".github" / "workflows").glob("*.y*ml"))
+        self.assertTrue(workflows)
+        action_refs = []
+        for workflow in workflows:
+            action_refs.extend(
+                (workflow, match.group(1))
+                for match in re.finditer(r"uses:\s+[^@\s]+@([^#\s]+)", workflow.read_text())
+            )
         self.assertTrue(action_refs)
-        for action_ref in action_refs:
-            self.assertRegex(action_ref, r"^[0-9a-f]{40}$")
+        for workflow, action_ref in action_refs:
+            self.assertRegex(
+                action_ref,
+                r"^[0-9a-f]{40}$",
+                f"{workflow.relative_to(ROOT)} uses mutable action ref {action_ref}",
+            )
 
     def test_plan_orders_every_internal_dependency_before_its_consumer(self) -> None:
         data = publish.metadata()
