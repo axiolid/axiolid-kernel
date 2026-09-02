@@ -52,6 +52,24 @@ def milestones_on_github() -> list[str] | None:
         return None
 
 
+def milestone_checkboxes() -> list[str]:
+    """Milestone descriptions render checkboxes disabled, so a checklist
+    there can never be ticked. Exit criteria belong in issues.
+    """
+    try:
+        out = subprocess.run(
+            ["gh", "api", "repos/axiolid/kernel/milestones", "--paginate"],
+            capture_output=True, text=True, timeout=30, check=True,
+        ).stdout
+    except Exception:
+        return []
+    bad = []
+    for m in json.loads(out):
+        if re.search(r"^\s*- \[[ xX]\]", m.get("description") or "", re.M):
+            bad.append(m["title"])
+    return bad
+
+
 def main() -> int:
     if not ROADMAP.exists():
         print(f"roadmap: {ROADMAP} not found")
@@ -88,12 +106,19 @@ def main() -> int:
     else:
         for title in titles:
             # Match on the version prefix; the prose after the dash may differ.
-            key = title.split("—")[0].strip()
+            key = re.split(r"[—:]", title)[0].strip()
             if key and key.lower() not in text.lower():
                 problems.append(
                     f"milestone {title!r} exists on GitHub but is not "
                     f"explained here"
                 )
+
+    for title in milestone_checkboxes():
+        problems.append(
+            f"milestone {title!r} has a markdown checklist; those "
+            f"checkboxes render disabled and cannot track anything. "
+            f"Reference issues instead."
+        )
 
     if problems:
         print(f"roadmap: {len(problems)} problem(s):")
