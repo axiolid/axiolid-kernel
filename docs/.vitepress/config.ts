@@ -107,6 +107,7 @@ export default defineConfig({
           { text: "Licensing", link: "/guide/licensing" },
           { text: "Contributing", link: "/guide/contributing" },
           { text: "Where things go", link: "/contributing/where-things-go" },
+          { text: "Crate migration", link: "/contributing/crate-migration" },
         ],
       },
       {
