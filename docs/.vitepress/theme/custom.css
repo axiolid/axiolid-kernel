@@ -182,7 +182,64 @@
   }
 }
 
+/* Glossary links use the canonical page definition for hover and focus help. */
+.glossary-term {
+  border-bottom: 1px dotted currentColor;
+  color: var(--vp-c-brand-1);
+  position: relative;
+  text-decoration: none;
+}
+
+.glossary-term::after {
+  background: var(--vp-c-bg-elv);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  bottom: calc(100% + 0.55rem);
+  box-shadow: var(--vp-shadow-3);
+  color: var(--vp-c-text-1);
+  content: attr(data-definition);
+  font-size: 0.8rem;
+  font-weight: 400;
+  left: 0;
+  line-height: 1.4;
+  max-width: min(22rem, calc(100vw - 2rem));
+  opacity: 0;
+  padding: 0.65rem 0.75rem;
+  pointer-events: none;
+  position: absolute;
+  text-align: left;
+  transform: translateY(0.25rem);
+  transition: opacity 120ms ease, transform 120ms ease;
+  visibility: hidden;
+  white-space: normal;
+  width: max-content;
+  z-index: 30;
+}
+
+.glossary-term:hover::after,
+.glossary-term:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.glossary-term:focus-visible {
+  border-radius: 2px;
+  outline: 3px solid var(--vp-c-brand-soft);
+  outline-offset: 2px;
+}
+
+@media (hover: none) {
+  .glossary-term::after {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .glossary-term::after {
+    transition: none;
+  }
+
   .diagram-frame * {
     scroll-behavior: auto !important;
   }

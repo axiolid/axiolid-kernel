@@ -1,6 +1,12 @@
+import { fileURLToPath } from "node:url";
+
 import { defineConfig } from "vitepress";
 
 import { diagramPlugin } from "./diagram-plugin.ts";
+import { createGlossaryPlugin, loadGlossary } from "./glossary-plugin.mjs";
+
+const docsBase = "/kernel/";
+const glossaryEntries = loadGlossary(fileURLToPath(new URL("../glossary.md", import.meta.url)));
 
 const adrs = [
   ["0001-axiolid-ifc-split-and-kernel-contract", 1, "IFC split and kernel contract"],
@@ -47,16 +53,20 @@ function adrSidebarItem([file, number, title]: (typeof adrs)[number]) {
 export default defineConfig({
   title: "Axiolid",
   description: "A pure-Rust, format-agnostic geometry kernel.",
-  base: "/kernel/",
+  base: docsBase,
   srcExclude: ["adr/_template.md"],
   markdown: {
     html: false,
     math: true,
-    config: diagramPlugin,
+    config(md) {
+      diagramPlugin(md);
+      createGlossaryPlugin(glossaryEntries)(md);
+    },
   },
   cleanUrls: true,
   lastUpdated: true,
   head: [
+    ["link", { rel: "icon", type: "image/svg+xml", href: `${docsBase}mark.svg` }],
     ["meta", { name: "theme-color", content: "#111827" }],
     ["meta", { property: "og:title", content: "Axiolid" }],
     ["meta", { property: "og:description", content: "A pure-Rust, format-agnostic geometry kernel." }],
@@ -77,11 +87,12 @@ export default defineConfig({
           { text: "Overview", link: "/" },
           { text: "Getting started", link: "/guide/getting-started" },
           { text: "Geometry concepts", link: "/guide/geometry-concepts" },
+          { text: "Glossary", link: "/glossary" },
           { text: "Capabilities", link: "/capabilities" },
           { text: "Architecture", link: "/architecture" },
           { text: "Crate map", link: "/architecture/crate-map" },
           { text: "Dependency graph", link: "/architecture/dependency-graph" },
-          { text: "MCS / Axioval contract map", link: "/architecture/mcs-axioval-contract-map" },
+          { text: "openbim.geometry boundary", link: "/architecture/openbim-geometry-boundary" },
           { text: "Public crate reference", link: "/reference/crates" },
         ],
       },

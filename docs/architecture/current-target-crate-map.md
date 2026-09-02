@@ -51,8 +51,8 @@ Facade feature migration:
 
 - Exact B-rep ownership from ADRs 0020/0024 is preserved. Mesh compilation was renamed rather than generalized falsely.
 - The existing default facade remains `mesh + cpu`; default-feature changes are outside this restructure.
-- IFC, CSET, Pkl, Protobuf, and vendor interpretation remain outside Axiolid geometry packages.
-- No MCS/Axioval source schema existed in the repository, so no transport DTOs were invented. The neutral packages remain suitable targets for external mappings.
+- Source schemas, wire formats, and vendor interpretation remain outside Axiolid geometry packages.
+- The neutral packages remain evidence targets for external `openbim.geometry` capability claims; no Pkl runtime or schema types are carried into Rust contracts.
 - Dev-only upward edges are permitted only when explicitly allowlisted for integration/conformance tests; production/build edges still obey the role DAG.
 
 ## Downstream

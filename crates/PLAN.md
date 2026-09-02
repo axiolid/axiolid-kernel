@@ -14,7 +14,7 @@ Read `AGENTS.md` for standing ownership rules. Canonical implemented structure i
 - `axiolid-dispatch` owns provider ordering/fallback; contracts never select providers.
 - `axiolid-reference` is the portable oracle; adopted implementations are providers.
 - `axiolid-field` values and `axiolid-field-ops` algorithms are separate.
-- MCS/Axioval mappings remain external and use semantic, not transport-byte, identity.
+- `openbim.geometry` claim mappings remain external; Rust contracts contain no Pkl runtime or schema types.
 
 ## Next capability waves
 

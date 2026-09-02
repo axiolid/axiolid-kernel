@@ -58,7 +58,7 @@ Narrow representation composition and lower algorithm-substrate edges are explic
 
 ## Capability boundary
 
-External MCS/Axioval or wire packages map normalized semantic requests into typed Axiolid operation requests. Axiolid contracts expose no Pkl, Protobuf, IFC, Revit, Solibri, CSET, or source-format types. Missing geometry, unsupported representations, unavailable evidence, and provider absence are typed non-success outcomes, never successful negatives.
+External `openbim.geometry` manifests describe neutral capability claims backed by Axiolid evidence. Requirement matching remains outside execution and does not map Pkl records directly into operation requests. Axiolid contracts expose no Pkl runtime/schema, wire, vendor, or source-format types. Missing geometry, unsupported representations, unavailable evidence, and provider absence are typed non-success outcomes, never successful negatives.
 
 ## Consequences
 
