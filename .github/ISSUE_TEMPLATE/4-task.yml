@@ -2,7 +2,7 @@ name: 🛠️ Tracked work (maintainers)
 description: File accepted, scoped work. Use after a discussion is accepted, or for known engineering tasks.
 title: "[task]: "
 type: Task
-labels: ["capability", "decision:accepted"]
+labels: ["capability"]
 assignees: ["GeneralPawz"]
 body:
   - type: markdown

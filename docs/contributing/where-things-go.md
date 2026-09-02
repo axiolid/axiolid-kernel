@@ -42,15 +42,42 @@ useless.
 | Mechanism | Answers | Values |
 |---|---|---|
 | **Type** | What kind of work is this? | `Bug`, `Task`, `Feature` |
-| **Label** `area:*` | Which part of the kernel? | `exact-brep`, `intersection`, `nurbs`, `mesh`, `architecture`, `release` |
-| **Label** `size:*` | How big is the change? | `small`, `big` |
-| **Label** `decision:*` | What did we decide, and why? | `accepted`, `parked`, `declined` |
+| **Field** `Area` | Which part of the kernel? | `exact-brep`, `intersection`, `nurbs`, `mesh`, `architecture`, `release` |
+| **Field** `Effort` | How much work is it? | `S`, `M`, `L`, `XL` |
 | **Milestone** | Which release gate? | `v0.2` … `v1.0`, or `Backlog` |
 | **Board status** | Where is it right now? | `Backlog` → `Ready` → `In Progress` → `In Review` → `Blocked` → `Done` |
+| **Close reason** | Why did it end? | `Completed`, `Not planned`, `Duplicate` |
+
+`Area` and `Effort` are **project fields**, not labels. Fields are sortable,
+groupable, and chartable on the board; labels are none of those. They were
+labels first, and that was the wrong call — a label is a flat tag, whereas
+"how much work" is a value you want to group and sum by.
 
 There is deliberately **no `bug` label** — that is the `Bug` *type*. Likewise no
 `enhancement` label: new capability is the `Feature` type, and it starts as a
 discussion. Duplicating a type as a label means filters silently miss things.
+
+### Accepting and rejecting
+
+There is no `decision:accepted` label either, because GitHub already says this
+natively and more precisely:
+
+| Decision | How it is recorded | Where the reasoning lives |
+|---|---|---|
+| **Accepted** | The issue exists, is on the board, and has a milestone | the thread |
+| **Declined** | Closed as **Not planned** | the closing comment |
+| **Duplicate** | Closed as **Duplicate**, linked to the original | the link |
+| **Answered** (discussions) | Comment **marked as answer** | the answer |
+| **Deferred** | `parked` label + `Blocked` on the board | the unblock condition |
+
+An accepted issue *is* an accepted issue — labelling it as such adds nothing a
+filter cannot already see. Closing as **Not planned** is stronger than a
+`decision:declined` label: it renders differently, it is filterable
+(`is:closed reason:not-planned`), and it survives label churn.
+
+`parked` is the one that stays, because it is the only state GitHub cannot
+express: in scope, agreed, deliberately not now. That is not "closed" and not
+"ready" — it needs a name.
 
 ## ☑️ Checklists vs 🧩 sub-issues
 
@@ -83,10 +110,10 @@ with sub-issues is for.
 
 1. It gets a type, an owner, and `needs-triage` — automatically, even if you
    filed through the API.
-2. A maintainer applies a `decision:` label. **Nothing is silently dropped:**
-   `decision:declined` keeps the thread and records why, so the next person
-   argues with the reasoning instead of repeating the request.
-3. Accepted work gets an `area:`, a `size:`, and a milestone, then appears on
+2. A maintainer decides. **Nothing is silently dropped:** a rejected request is
+   closed as **Not planned** with the reason in the closing comment, so the next
+   person argues with the reasoning instead of repeating the request.
+3. Accepted work gets an `Area`, an `Effort`, and a milestone, then appears on
    the [project board](https://github.com/orgs/axiolid/projects/1).
 4. Accepted discussions become issues. The discussion stays as the rationale.
 

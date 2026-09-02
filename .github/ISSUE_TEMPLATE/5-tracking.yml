@@ -2,7 +2,7 @@ name: 🧭 Tracking issue (maintainers)
 description: An umbrella for a capability that spans several PRs. Holds sub-issues, not a checklist.
 title: "[tracking]: "
 type: Feature
-labels: ["capability", "decision:accepted", "tracking"]
+labels: ["capability", "tracking"]
 assignees: ["GeneralPawz"]
 body:
   - type: markdown

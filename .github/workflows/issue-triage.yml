@@ -50,9 +50,10 @@ jobs:
             echo "assigned GeneralPawz"
           fi
 
-          # 3. Anything without a decision label is unreviewed by definition.
+          # 3. Triage state lives on the project board, not in labels. The one
+          #    thing the board cannot express is "nobody has looked at this yet",
+          #    because an untriaged issue is not on the board at all.
           case "$labels" in
-            *decision:*) echo "already triaged" ;;
             *needs-triage*) echo "already flagged" ;;
             *) gh issue edit "$NUM" --repo "$REPO" --add-label needs-triage
                echo "flagged needs-triage" ;;
