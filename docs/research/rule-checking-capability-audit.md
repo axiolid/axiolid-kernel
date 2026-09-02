@@ -76,8 +76,27 @@ v0.4, whose subject is trustworthy discrete geometry.
 | Convex hull, min-area rectangle | `axiolid-reference::convex_hull` |
 | Polygon triangulation with holes | `axiolid-construct::profile` |
 | 2D boolean overlay | `axiolid-overlay::overlay` |
-| 3D mesh boolean | `axiolid-boolmesh` provider |
+| 3D mesh boolean | `axiolid-mesh-boolean-boolmesh` provider |
 | Sampled 2.5D traversal | `axiolid-field::navigate` behind `navigation` |
+
+
+### Support verified by execution
+
+The supported rows above were confirmed by running the tests of the eight
+crates that back them, not by matching symbol names:
+
+```
+cargo test -p axiolid-mesh-boolean-boolmesh -p axiolid-construct \
+  -p axiolid-overlay -p axiolid-measure -p axiolid-reference \
+  -p axiolid-spatial -p axiolid-mesh -p axiolid-field --all-features
+
+TOTAL passed=202 failed=0
+```
+
+This check also caught one error in an earlier draft of this table: the mesh
+boolean provider was cited as `axiolid-boolmesh`, which is not a package in
+this workspace. The real name is `axiolid-mesh-boolean-boolmesh`, confirmed
+against `cargo metadata`. Name-matching alone would not have caught it.
 
 ## Not kernel-owned — deliberately refused
 
