@@ -1,9 +1,9 @@
 use axiolid_core::{Point2, Point3, Tolerance};
 use axiolid_curve::{BSplineCurve, BSplineCurve3, KnotSpec};
+use axiolid_evaluate::curve::bspline_jet2;
 use axiolid_nurbs::{
     insert_knot2, reverse2, split2, PeriodicCurve2, PeriodicCurve3, SeamContinuity,
 };
-use axiolid_reference::curve::bspline_jet2;
 
 fn tolerance() -> Tolerance {
     Tolerance::new(1.0e-12, 1.0e-12).expect("valid tolerance")

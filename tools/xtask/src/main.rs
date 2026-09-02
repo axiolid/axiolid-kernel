@@ -4,7 +4,7 @@ use std::env;
 
 fn usage() -> ! {
     eprintln!("usage: cargo xtask architecture <check|list|graph|docs>");
-    eprintln!("       cargo xtask architecture closure <check|explain <profile>>");
+    eprintln!("       cargo xtask architecture closure <check|docs|explain <profile>>");
     std::process::exit(2);
 }
 
@@ -20,6 +20,7 @@ fn main() {
         Some("docs") => architecture::docs(),
         Some("closure") => match args.next().as_deref() {
             Some("check") => architecture::closure_check(),
+            Some("docs") => architecture::closure_docs(),
             Some("explain") => match args.next() {
                 Some(profile) => architecture::closure_explain(&profile),
                 None => usage(),

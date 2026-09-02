@@ -2,7 +2,7 @@
 
 use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point3, Scalar, Tolerance, Vec3};
-use axiolid_reference::surface::jet;
+use axiolid_evaluate::surface::jet;
 use axiolid_surface::Surface;
 
 /// Coefficients `(e, f, g)` of a quadratic fundamental form.

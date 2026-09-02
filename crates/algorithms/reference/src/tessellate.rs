@@ -28,7 +28,7 @@ use axiolid_core::{Point3, Scalar};
 use axiolid_mesh::TriMesh;
 use axiolid_surface::Surface;
 
-use crate::surface::{evaluate, Patch};
+use axiolid_evaluate::surface::{evaluate, Patch};
 
 /// Sampling budget for one surface.
 ///

@@ -2,7 +2,7 @@
 
 use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point3, Scalar};
-use axiolid_reference::surface::{bspline_jet, SurfaceJet};
+use axiolid_evaluate::surface::{bspline_jet, SurfaceJet};
 use axiolid_surface::BSplineSurface;
 
 #[derive(Debug, Clone, Copy, PartialEq)]

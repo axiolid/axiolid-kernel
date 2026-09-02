@@ -1,0 +1,15 @@
+[package]
+name = "axiolid-consumer-parametric-curves"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Empty table: this fixture is its OWN workspace root, so workspace feature
+# unification cannot mask what a real downstream application resolves.
+[workspace]
+
+[dependencies]
+axiolid-core = { path = "../../../crates/foundation/core", default-features = false }
+axiolid-curve = { path = "../../../crates/representations/analytic/curve", default-features = false }
+axiolid-evaluate = { path = "../../../crates/algorithms/parametric/evaluate", default-features = false }
+axiolid-surface = { path = "../../../crates/representations/analytic/surface", default-features = false }

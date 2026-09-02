@@ -36,6 +36,11 @@ pub fn closure_check() -> Result<()> {
     closure::check(&root)
 }
 
+pub fn closure_docs() -> Result<()> {
+    let root = closure::workspace_root()?;
+    closure::docs(&root)
+}
+
 pub fn closure_explain(name: &str) -> Result<()> {
     let root = closure::workspace_root()?;
     closure::explain(&root, name)

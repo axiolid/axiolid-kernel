@@ -15,7 +15,7 @@ step "axiolid facade: core only" cargo check -q -p axiolid --no-default-features
 
 features=(
     mesh profiles curves surfaces topology primitives model
-    nurbs tessellation spatial measure overlay field field-ops field-navigation heal
+    evaluate nurbs tessellation spatial measure overlay field field-ops field-navigation heal
     contracts mesh-contracts mesh-boolean mesh-section graph-compile
     dispatch-mesh-boolean dispatch-mesh-section generate
     cpu parallel simd gpu

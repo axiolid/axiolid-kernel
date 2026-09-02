@@ -1,0 +1,15 @@
+[package]
+name = "axiolid-consumer-mesh-rule-checker"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Empty table: this fixture is its OWN workspace root, so workspace feature
+# unification cannot mask what a real downstream application resolves.
+[workspace]
+
+[dependencies]
+axiolid-measure = { path = "../../../crates/algorithms/query/measure", default-features = false }
+axiolid-core = { path = "../../../crates/foundation/core", default-features = false }
+axiolid-mesh = { path = "../../../crates/representations/discrete/mesh", default-features = false }
+axiolid-spatial = { path = "../../../crates/algorithms/query/spatial", default-features = false }

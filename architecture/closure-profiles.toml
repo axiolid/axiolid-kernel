@@ -30,6 +30,7 @@ forbidden_internal = [
     "axiolid-construct",
     "axiolid-curve",
     "axiolid-dispatch",
+    "axiolid-evaluate",
     "axiolid-field",
     "axiolid-heal",
     "axiolid-mesh",
@@ -41,4 +42,153 @@ forbidden_internal = [
     "axiolid-spatial",
     "axiolid-surface",
     "axiolid-topology",
+]
+
+[[profile]]
+name = "mesh-rule-checker"
+manifest = "tests/consumers/mesh-rule-checker/Cargo.toml"
+description = "A rule checker over discrete meshes: mesh values, spatial acceleration, measurement."
+features = []
+
+# A discrete rule checker must not acquire analytic curves/surfaces, exact
+# B-rep, NURBS, or the reference umbrella.
+expected_internal = [
+    "axiolid-core",
+    "axiolid-measure",
+    "axiolid-mesh",
+    "axiolid-spatial",
+]
+
+forbidden_internal = [
+    "axiolid",
+    "axiolid-backend-cpu",
+    "axiolid-backend-gpu",
+    "axiolid-brep",
+    "axiolid-construct",
+    "axiolid-contracts",
+    "axiolid-curve",
+    "axiolid-dispatch",
+    "axiolid-evaluate",
+    "axiolid-field",
+    "axiolid-field-ops",
+    "axiolid-guarantees",
+    "axiolid-heal",
+    "axiolid-linear",
+    "axiolid-linear-intersection",
+    "axiolid-mesh-boolean-boolmesh",
+    "axiolid-mesh-boolean-contract",
+    "axiolid-mesh-compile",
+    "axiolid-mesh-compile-contract",
+    "axiolid-mesh-contracts",
+    "axiolid-mesh-section-contract",
+    "axiolid-model",
+    "axiolid-nurbs",
+    "axiolid-overlay",
+    "axiolid-predicates",
+    "axiolid-primitive",
+    "axiolid-profile",
+    "axiolid-reference",
+    "axiolid-surface",
+    "axiolid-tessellation-contract",
+    "axiolid-topology",
+]
+
+[[profile]]
+name = "parametric-curves"
+manifest = "tests/consumers/parametric-curves/Cargo.toml"
+description = "A parametric application: curve/surface values plus scalar evaluation, without the reference umbrella."
+features = []
+
+# Evaluation must come from `axiolid-evaluate`, not `axiolid-reference`:
+# the umbrella would drag mesh, spatial, and measure into a curve app.
+expected_internal = [
+    "axiolid-contracts",
+    "axiolid-core",
+    "axiolid-curve",
+    "axiolid-evaluate",
+    "axiolid-guarantees",
+    "axiolid-linear",
+    "axiolid-surface",
+]
+
+forbidden_internal = [
+    "axiolid",
+    "axiolid-backend-cpu",
+    "axiolid-backend-gpu",
+    "axiolid-brep",
+    "axiolid-construct",
+    "axiolid-dispatch",
+    "axiolid-field",
+    "axiolid-field-ops",
+    "axiolid-heal",
+    "axiolid-linear-intersection",
+    "axiolid-measure",
+    "axiolid-mesh",
+    "axiolid-mesh-boolean-boolmesh",
+    "axiolid-mesh-boolean-contract",
+    "axiolid-mesh-compile",
+    "axiolid-mesh-compile-contract",
+    "axiolid-mesh-contracts",
+    "axiolid-mesh-section-contract",
+    "axiolid-model",
+    "axiolid-nurbs",
+    "axiolid-overlay",
+    "axiolid-predicates",
+    "axiolid-primitive",
+    "axiolid-profile",
+    "axiolid-reference",
+    "axiolid-spatial",
+    "axiolid-tessellation-contract",
+    "axiolid-topology",
+]
+
+[[profile]]
+name = "cad-exact"
+manifest = "tests/consumers/cad-exact/Cargo.toml"
+description = "A CAD application: analytic curves/surfaces, topology, exact B-rep results, and NURBS."
+features = []
+
+# Before ADR 0036 phase 2 this closure was 18 packages: `axiolid-nurbs`
+# depended on the `axiolid-reference` umbrella, so every CAD build compiled
+# mesh, spatial, measure, and primitive. Rewiring NURBS to `axiolid-evaluate`
+# removed that entire branch. Reintroducing it must be a reviewed decision.
+expected_internal = [
+    "axiolid-brep",
+    "axiolid-contracts",
+    "axiolid-core",
+    "axiolid-curve",
+    "axiolid-evaluate",
+    "axiolid-guarantees",
+    "axiolid-linear",
+    "axiolid-nurbs",
+    "axiolid-predicates",
+    "axiolid-surface",
+    "axiolid-topology",
+]
+
+forbidden_internal = [
+    "axiolid",
+    "axiolid-backend-cpu",
+    "axiolid-backend-gpu",
+    "axiolid-construct",
+    "axiolid-dispatch",
+    "axiolid-field",
+    "axiolid-field-ops",
+    "axiolid-heal",
+    "axiolid-linear-intersection",
+    "axiolid-measure",
+    "axiolid-mesh",
+    "axiolid-mesh-boolean-boolmesh",
+    "axiolid-mesh-boolean-contract",
+    "axiolid-mesh-compile",
+    "axiolid-mesh-compile-contract",
+    "axiolid-mesh-contracts",
+    "axiolid-mesh-section-contract",
+    "axiolid-model",
+    "axiolid-overlay",
+    "axiolid-primitive",
+    "axiolid-profile",
+    "axiolid-reference",
+    "axiolid-spatial",
+    "axiolid-tessellation-contract",
 ]

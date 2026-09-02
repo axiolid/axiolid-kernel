@@ -7,7 +7,7 @@ use crate::{
 use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point2, Point3, Scalar, Tolerance, Vec2, Vec3};
 use axiolid_curve::{BSplineCurve2, BSplineCurve3};
-use axiolid_reference::curve::{bspline_jet2, bspline_jet3, CurveJet};
+use axiolid_evaluate::curve::{bspline_jet2, bspline_jet3, CurveJet};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[non_exhaustive]

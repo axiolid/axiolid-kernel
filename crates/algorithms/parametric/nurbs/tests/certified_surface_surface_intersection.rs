@@ -1,10 +1,10 @@
 use axiolid_core::Point3;
 use axiolid_curve::KnotSpec;
+use axiolid_evaluate::surface::bspline_jet;
 use axiolid_nurbs::{
     intersect_surface_surface_certified, CertifiedSurfaceSurfaceIntersection3,
     CertifiedSurfaceSurfaceIntersectionOptions,
 };
-use axiolid_reference::surface::bspline_jet;
 use axiolid_surface::BSplineSurface;
 
 fn xy_plane() -> BSplineSurface {

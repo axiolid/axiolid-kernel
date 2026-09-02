@@ -1,0 +1,25 @@
+[package]
+name = "axiolid-evaluate"
+description = "Analytic and spline curve/surface evaluation, jets, and inversion"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-contracts.workspace = true
+axiolid-curve.workspace = true
+axiolid-surface.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "algorithms"
+role = "algorithm.parametric"
+domain = "evaluate"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core", "axiolid-contracts", "axiolid-curve", "axiolid-surface"]

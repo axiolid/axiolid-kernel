@@ -20,6 +20,7 @@ dependencies = [
  "axiolid-core",
  "axiolid-curve",
  "axiolid-dispatch",
+ "axiolid-evaluate",
  "axiolid-field",
  "axiolid-field-ops",
  "axiolid-heal",
@@ -127,6 +128,16 @@ dependencies = [
  "axiolid-mesh-boolean-contract",
  "axiolid-mesh-contracts",
  "axiolid-mesh-section-contract",
+]
+
+[[package]]
+name = "axiolid-evaluate"
+version = "0.1.0"
+dependencies = [
+ "axiolid-contracts",
+ "axiolid-core",
+ "axiolid-curve",
+ "axiolid-surface",
 ]
 
 [[package]]
@@ -288,8 +299,9 @@ dependencies = [
  "axiolid-contracts",
  "axiolid-core",
  "axiolid-curve",
+ "axiolid-evaluate",
  "axiolid-guarantees",
- "axiolid-reference",
+ "axiolid-predicates",
  "axiolid-surface",
 ]
 
@@ -332,6 +344,7 @@ dependencies = [
  "axiolid-core",
  "axiolid-curve",
  "axiolid-dispatch",
+ "axiolid-evaluate",
  "axiolid-guarantees",
  "axiolid-measure",
  "axiolid-mesh",

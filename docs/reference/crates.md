@@ -8,7 +8,7 @@ The facade is convenient; leaf packages are the enforceable boundaries. Select t
 | Representations | `axiolid-linear`, `axiolid-curve`, `axiolid-surface`, `axiolid-primitive`, `axiolid-profile`, `axiolid-topology`, `axiolid-brep`, `axiolid-mesh`, `axiolid-field`, `axiolid-model` | Portable geometry values and authored graph |
 | Guarantees/common contracts | `axiolid-guarantees`, `axiolid-contracts`, `axiolid-mesh-contracts` | Proof/refusal vocabulary, execution diagnostics, shared mesh admissibility |
 | Operation contracts | `axiolid-tessellation-contract`, `axiolid-mesh-boolean-contract`, `axiolid-mesh-section-contract`, `axiolid-mesh-compile-contract` | Typed provider-neutral request/result/evidence seams |
-| Algorithms | `axiolid-predicates`, `axiolid-linear-intersection`, `axiolid-reference`, `axiolid-nurbs`, `axiolid-construct`, `axiolid-spatial`, `axiolid-measure`, `axiolid-overlay`, `axiolid-field-ops`, `axiolid-heal` | Format-neutral implementations over values/contracts |
+| Algorithms | `axiolid-predicates`, `axiolid-linear-intersection`, `axiolid-evaluate`, `axiolid-reference`, `axiolid-nurbs`, `axiolid-construct`, `axiolid-spatial`, `axiolid-measure`, `axiolid-overlay`, `axiolid-field-ops`, `axiolid-heal` | Format-neutral implementations over values/contracts |
 | Providers | `axiolid-mesh-boolean-boolmesh` | Concrete optional operation provider |
 | Execution | `axiolid-dispatch`, `axiolid-mesh-compile`, `axiolid-backend-cpu`, `axiolid-backend-gpu` | Registration, fallback/device policy, graph execution, contexts/adapters |
 | Facade | `axiolid` | Additive capability features and re-exports |

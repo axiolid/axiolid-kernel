@@ -92,6 +92,7 @@ export default defineConfig({
           { text: "Capabilities", link: "/capabilities" },
           { text: "Architecture", link: "/architecture" },
           { text: "Crate map", link: "/architecture/crate-map" },
+          { text: "Closure profiles", link: "/architecture/closure-profiles" },
           { text: "Dependency graph", link: "/architecture/dependency-graph" },
           { text: "openbim.geometry boundary", link: "/architecture/openbim-geometry-boundary" },
           { text: "Public crate reference", link: "/reference/crates" },

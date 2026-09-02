@@ -29,3 +29,15 @@ a constant epsilon is a bug.
 Tests must include a differential gate against an oracle that shares no code
 with the implementation, and must assert that the exact path was actually
 reached -- a test suite that never escalates proves nothing about exactness.
+
+## Extracted packages (ADR 0036)
+
+Certified predicates live in `axiolid-predicates`; analytic and spline
+curve/surface evaluation lives in `axiolid-evaluate`. Both are re-exported here
+unchanged, so `axiolid_reference::orient2d` and `axiolid_reference::curve::*`
+keep working.
+
+Do not re-inline either cluster. Their whole value is that a narrow consumer
+(predicates, NURBS, CAD) can depend on the substrate without acquiring this
+umbrella's mesh, spatial, and measure graph. Adding a dependency here is cheap;
+adding one to an extracted package is an architectural decision.

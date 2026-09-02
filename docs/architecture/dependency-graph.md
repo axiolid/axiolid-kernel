@@ -17,6 +17,7 @@ graph TD
     axiolid_core["axiolid-core\nfoundation.values"]
     axiolid_curve["axiolid-curve\nrepresentation.atomic"]
     axiolid_dispatch["axiolid-dispatch\nexecution.dispatch"]
+    axiolid_evaluate["axiolid-evaluate\nalgorithm.parametric"]
     axiolid_field["axiolid-field\nrepresentation.sampled"]
     axiolid_field_ops["axiolid-field-ops\nalgorithm.sampled"]
     axiolid_guarantees["axiolid-guarantees\ncontract.guarantees"]
@@ -51,6 +52,7 @@ graph TD
     axiolid --> axiolid_core
     axiolid --> axiolid_curve
     axiolid --> axiolid_dispatch
+    axiolid --> axiolid_evaluate
     axiolid --> axiolid_field
     axiolid --> axiolid_field_ops
     axiolid --> axiolid_heal
@@ -106,6 +108,10 @@ graph TD
     axiolid_dispatch --> axiolid_mesh_boolean_contract
     axiolid_dispatch --> axiolid_mesh_contracts
     axiolid_dispatch --> axiolid_mesh_section_contract
+    axiolid_evaluate --> axiolid_contracts
+    axiolid_evaluate --> axiolid_core
+    axiolid_evaluate --> axiolid_curve
+    axiolid_evaluate --> axiolid_surface
     axiolid_field --> axiolid_core
     axiolid_field_ops --> axiolid_core
     axiolid_field_ops --> axiolid_field
@@ -169,8 +175,9 @@ graph TD
     axiolid_nurbs --> axiolid_contracts
     axiolid_nurbs --> axiolid_core
     axiolid_nurbs --> axiolid_curve
+    axiolid_nurbs --> axiolid_evaluate
     axiolid_nurbs --> axiolid_guarantees
-    axiolid_nurbs --> axiolid_reference
+    axiolid_nurbs --> axiolid_predicates
     axiolid_nurbs --> axiolid_surface
     axiolid_overlay --> axiolid_core
     axiolid_predicates --> axiolid_core
@@ -182,6 +189,7 @@ graph TD
     axiolid_reference --> axiolid_core
     axiolid_reference --> axiolid_curve
     axiolid_reference --> axiolid_dispatch
+    axiolid_reference --> axiolid_evaluate
     axiolid_reference --> axiolid_guarantees
     axiolid_reference --> axiolid_measure
     axiolid_reference --> axiolid_mesh

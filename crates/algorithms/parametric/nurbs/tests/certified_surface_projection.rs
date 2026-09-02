@@ -1,12 +1,12 @@
 use axiolid_contracts::GeomError;
 use axiolid_core::{Point3, Tolerance};
 use axiolid_curve::KnotSpec;
+use axiolid_evaluate::surface::bspline_jet;
 use axiolid_nurbs::{
     project_surface_certified, CertifiedSurfaceProjection3, CertifiedSurfaceProjectionOptions,
     SurfaceProjectionCertificate3, SurfaceProjectionUnresolvedReason,
     MAX_CERTIFIED_SURFACE_PROJECTION_DEPTH, MAX_CERTIFIED_SURFACE_PROJECTION_WORK,
 };
-use axiolid_reference::surface::bspline_jet;
 use axiolid_surface::BSplineSurface;
 
 fn plane() -> BSplineSurface {

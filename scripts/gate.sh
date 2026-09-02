@@ -11,6 +11,7 @@ step "fmt --check" cargo fmt --all -- --check
 step "architecture" cargo xtask architecture check
 step "architecture mutation probe" scripts/probe_layering_gate.sh
 step "closure check" cargo xtask architecture closure check
+step "closure mutation probe" scripts/probe_closure_gate.sh
 step "build --workspace" cargo build --workspace
 step "test --workspace" cargo test --workspace
 step "test --all-features" cargo test --workspace --all-features
@@ -26,7 +27,7 @@ for c in \
   axiolid-mesh-section-contract axiolid-mesh-compile-contract \
   axiolid-spatial axiolid-measure axiolid-overlay axiolid-field-ops axiolid-heal \
   axiolid-reference axiolid-nurbs axiolid-construct \
-  axiolid-linear axiolid-predicates axiolid-linear-intersection \
+  axiolid-linear axiolid-predicates axiolid-linear-intersection axiolid-evaluate \
   axiolid-mesh-boolean-boolmesh axiolid-mesh-compile axiolid-dispatch \
   axiolid-backend-cpu axiolid-backend-gpu axiolid; do
   step "isolated build -p $c" cargo build -p "$c"

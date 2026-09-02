@@ -6,7 +6,8 @@ use crate::certified_refinement::{piecewise_bezier_cells, RefinementBudget};
 use axiolid_contracts::{GeomError, GeomResult, Sign};
 use axiolid_core::{Point2, Scalar};
 use axiolid_curve::BSplineCurve2;
-use axiolid_reference::{curve::bspline_jet2, orient2d};
+use axiolid_evaluate::curve::bspline_jet2;
+use axiolid_predicates::orient2d;
 
 const MAX_CERTIFIED_CURVE_INTERSECTION_NODES: u32 = 100_000;
 const MAX_CERTIFIED_CURVE_INTERSECTION_DEPTH: u16 = 64;

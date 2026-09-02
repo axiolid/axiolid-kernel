@@ -1,7 +1,7 @@
 use axiolid_core::{Point2, Point3};
 use axiolid_curve::{BSplineCurve, Curve2, Curve3, KnotSpec};
+use axiolid_evaluate::{evaluate2, evaluate3};
 use axiolid_nurbs::{insert_knot2, insert_knot3, reverse2, reverse3};
-use axiolid_reference::{evaluate2, evaluate3};
 
 fn quarter_circle2() -> BSplineCurve<Point2> {
     BSplineCurve {

@@ -55,6 +55,12 @@ pub mod surface {
 }
 
 /// General NURBS analysis, inverse-query, and exact transformation algorithms.
+/// Scalar evaluation for parametric curves and surfaces.
+#[cfg(feature = "evaluate")]
+pub mod evaluate {
+    pub use axiolid_evaluate::*;
+}
+
 #[cfg(feature = "nurbs")]
 pub mod nurbs {
     pub use axiolid_nurbs::*;

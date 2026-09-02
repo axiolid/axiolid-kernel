@@ -15,29 +15,33 @@
 pub mod boolean;
 pub mod clash;
 pub mod convex_hull;
-pub mod curve;
-mod nurbs;
 pub mod polygon;
 pub mod primitive;
 pub mod section;
 pub mod segment_triangle;
-pub mod surface;
 pub mod tessellate;
 pub mod triangle_triangle;
+
+/// Analytic and spline evaluation moved to the focused `axiolid-evaluate`
+/// package (ADR 0036). Re-exported unchanged so existing
+/// `axiolid_reference::curve::*` and `::surface::*` callers are unaffected.
+pub use axiolid_evaluate::{curve, surface};
 
 pub use axiolid_predicates::{
     arithmetic, expansion, orient3, orientation, scene, sphere, static_filter,
 };
 
+pub use axiolid_evaluate::{
+    derivative2, derivative3, evaluate2, evaluate3, flatten2, partials, Patch, ScalarCurve,
+    ScalarSurface,
+};
 pub use axiolid_predicates::{
     incircle, incircle_filter, insphere, insphere_filter, orient2d, orient2d_filter, orient3d,
     orient3d_filter, two_diff, two_product, two_sum, StaticFilter,
 };
 pub use boolean::ScalarBoolean;
 pub use convex_hull::{minimum_area_rectangle, strict_convex_hull, OrientedRectangle2};
-pub use curve::{derivative2, derivative3, evaluate2, evaluate3, flatten2, ScalarCurve};
 pub use polygon::{ring_orientation, signed_area2, triangulate_simple};
 pub use section::ScalarSection;
 pub use segment_triangle::{segment_triangle_relation, SegmentTriangleRelation};
-pub use surface::{partials, Patch, ScalarSurface};
 pub use triangle_triangle::{triangle_triangle_relation, TriangleTriangleRelation};

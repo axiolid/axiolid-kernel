@@ -349,7 +349,7 @@ mod tests {
     use super::*;
     use axiolid_core::Point2;
     use axiolid_curve::KnotSpec;
-    use axiolid_reference::curve::bspline_jet2;
+    use axiolid_evaluate::curve::bspline_jet2;
 
     #[test]
     fn refinement_budget_rejects_amplification_before_control_conversion() {

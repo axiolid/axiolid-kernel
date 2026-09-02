@@ -21,6 +21,7 @@ members = [
     "crates/contracts/operations/tessellate",
     "crates/algorithms/predicates",
     "crates/algorithms/reference",
+    "crates/algorithms/parametric/evaluate",
     "crates/algorithms/parametric/nurbs",
     "crates/algorithms/construction/construct",
     "crates/algorithms/planar/overlay",
@@ -56,6 +57,7 @@ axiolid-mesh = { path = "crates/representations/discrete/mesh", version = "0.1.0
 axiolid-model = { path = "crates/representations/modeling/graph", version = "0.1.0" }
 axiolid-primitive = { path = "crates/representations/analytic/primitive", version = "0.1.0" }
 axiolid-heal = { path = "crates/algorithms/repair/heal", version = "0.1.0" }
+axiolid-evaluate = { path = "crates/algorithms/parametric/evaluate", version = "0.1.0" }
 axiolid-nurbs = { path = "crates/algorithms/parametric/nurbs", version = "0.1.0" }
 axiolid-construct = { path = "crates/algorithms/construction/construct", version = "0.1.0" }
 axiolid-profile = { path = "crates/representations/region/profile", version = "0.1.0" }

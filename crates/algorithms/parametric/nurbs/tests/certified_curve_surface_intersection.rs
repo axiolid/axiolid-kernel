@@ -1,10 +1,10 @@
 use axiolid_core::Point3;
 use axiolid_curve::{BSplineCurve3, KnotSpec};
+use axiolid_evaluate::{curve::bspline_jet3, surface::bspline_jet};
 use axiolid_nurbs::{
     intersect_curve_surface_certified, CertifiedCurveSurfaceIntersection3,
     CertifiedCurveSurfaceIntersectionOptions,
 };
-use axiolid_reference::{curve::bspline_jet3, surface::bspline_jet};
 use axiolid_surface::BSplineSurface;
 
 fn line_through_plane() -> BSplineCurve3 {

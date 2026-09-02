@@ -137,3 +137,62 @@ operation contracts.
   linked size measures the harness, not the geometry.
 - `axiolid-linear-intersection` covers 2D line/line and segment/segment only.
   3D linear intersection and curve/surface intersection remain future work.
+
+---
+
+## Phase 2 amendment: archetype profiles and the evaluation split
+
+Phase 1 proved one closure. A single verified profile does not show that the
+architecture generalises, and the design document names four application
+archetypes.
+
+### The umbrella leak
+
+`axiolid-nurbs` depended on `axiolid-reference` only for curve/surface
+evaluation, but the umbrella also carries mesh, spatial, measure, primitive,
+and the mesh contracts. Measured consequence: a CAD application resolving
+curves, surfaces, topology, B-rep, and NURBS compiled **18** internal packages,
+of which seven were discrete-geometry packages it never called.
+
+### Decision
+
+Extract the self-contained `curve` / `surface` / `nurbs` evaluation cluster from
+`axiolid-reference` into `axiolid-evaluate` (L2, `algorithm.parametric`), and
+depend on it from `axiolid-nurbs`. `axiolid-reference` re-exports `curve` and
+`surface` unchanged, so `axiolid_reference::curve::evaluate3` and friends keep
+resolving to the same items.
+
+`axiolid-reference` remains the convenience oracle umbrella; it did not lose
+capability, only exclusivity.
+
+### Measured result
+
+| Profile | Internal packages | Note |
+| --- | --- | --- |
+| `linear-intersection-minimal` | 5 | unchanged |
+| `mesh-rule-checker` | 4 | discrete stack only |
+| `parametric-curves` | 7 | evaluation without the umbrella |
+| `cad-exact` | 11 | was 18 before this amendment |
+
+The CAD closure no longer contains `axiolid-mesh`, `axiolid-spatial`,
+`axiolid-measure`, `axiolid-primitive`, `axiolid-reference`, or the mesh
+contract packages.
+
+### Governance
+
+All four profiles are verified by `cargo xtask architecture closure check`,
+which resolves each fixture, compiles it, and additionally fails when
+`docs/architecture/closure-profiles.md` drifts from the declarations.
+`scripts/probe_closure_gate.sh` injects a forbidden dependency into every
+fixture and requires the checker to reject each one, so the gate is proven
+capable of failing rather than assumed to be.
+
+### Not claimed
+
+- No claim that four archetypes cover every construction-industry application.
+  They are the archetypes the design document names; more can be added.
+- No claim that `axiolid-evaluate` is a complete parametric kernel. It is the
+  scalar evaluation oracle; certified NURBS inversion and general intersection
+  remain future work.
+- Package count is not runtime performance. It bounds what a consumer compiles,
+  not how fast the resulting code runs.

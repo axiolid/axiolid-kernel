@@ -7,7 +7,7 @@
 //! update a hand-written constant.
 
 use axiolid_core::{Frame3, Point3, Tolerance, Vec3};
-use axiolid_reference::surface::{evaluate, invert};
+use axiolid_evaluate::surface::{evaluate, invert};
 use axiolid_surface::{Cone, Cylinder, Plane, Sphere, Surface, Torus};
 
 fn frame() -> Frame3 {

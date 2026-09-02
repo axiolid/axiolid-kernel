@@ -6,7 +6,7 @@
 
 use axiolid_core::{Frame3, Point3, Scalar, Vec3};
 use axiolid_curve::KnotSpec;
-use axiolid_reference::surface::{evaluate, normal, partials, Patch};
+use axiolid_evaluate::surface::{evaluate, normal, partials, Patch};
 use axiolid_surface::{BSplineSurface, Cone, Cylinder, Plane, Sphere, Surface, Torus};
 
 const TAU: Scalar = core::f64::consts::TAU;
