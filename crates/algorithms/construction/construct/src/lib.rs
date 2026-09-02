@@ -22,10 +22,11 @@
 //!
 //! # What this crate does not do
 //!
-//! Broad sweep/profile families still produce meshes, not exact B-reps. The
-//! certified affine surface-pair arrangement is the first focused analytic
-//! constructor; it does not imply exact sweeps, booleans, or solids. Per ADR
-//! 0020, those broader exact results remain the intended end state.
+//! Broad sweep/profile families still produce meshes by default. Exact generation is
+//! intentionally narrow: sharp rectangular (including through-hole) and axial circular
+//! extrusions populate all supports, pcurves, and spans, while unsupported families
+//! refuse. Certified affine surface-pair arrangement remains the other focused analytic
+//! constructor. Neither slice implies exact booleans or general sweeps.
 
 use axiolid_contracts::BackendId;
 
@@ -40,6 +41,7 @@ pub const BACKEND_ID: BackendId = BackendId::new("scalar-generate");
 
 pub mod center_line;
 pub mod extrude;
+mod extrude_exact;
 pub mod half_space;
 pub mod loft;
 pub mod profile;

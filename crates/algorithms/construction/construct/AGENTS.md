@@ -2,13 +2,15 @@
 
 Scalar geometry-construction algorithms over neutral representations. This is **L2**:
 it accepts exact profiles, curves, primitives, certified NURBS traces, and explicit
-policy; it creates the current `TriMesh` reference result plus focused analytic B-rep
-arrangements; it owns no DAG, cache, execution context, or operation-provider dispatch.
+policy; it creates the broad `TriMesh` reference path plus focused exact extrusion and
+analytic B-rep arrangements; it owns no DAG, cache, execution context, or operation-provider dispatch.
 
 ## Entry points
 
 - `profile`: lower profile values to sampled rings and triangulate caps.
-- `extrude`, `revolve`, `sweep`, `loft`: place/stitch station rings into solids.
+- `extrude`: mesh extrusion plus exact sharp rectangle/hollow rectangle and axial
+  filled-circle families. Exact output owns every 3D support, pcurve, and native span.
+- `revolve`, `sweep`, `loft`: place/stitch station rings into discrete solids.
 - `center_line`: turn constant-width centre-line profiles into rings.
 - `half_space`: construct a finite clipping proxy for an unbounded half-space.
 - `trimmed_intersection`: promote one certified affine trace into two closed trimmed
@@ -30,10 +32,12 @@ not report `scalar-compile` after this split.
   any L3 crate. `cargo xtask architecture check` enforces the declared internal
   dependency allowlist and production role-DAG edge; `scripts/probe_layering_gate.sh`
   mutation-verifies that enforcement.
-- Discrete sweeps remain the broad reference path. Exact output is currently limited
-  to the certified affine trimmed-intersection arrangement. Do not generalize that
-  slice to exact sweeps, booleans, dual-boundary ownership, corners, or curved traces;
-  see ADR 0020, ADR 0023, ADR 0024, and ADR 0029.
+- Discrete sweeps remain the broad reference path. Exact solid output is limited to
+  sharp filled/hollow rectangle extrusion and axial filled-circle extrusion; the
+  certified affine trimmed-intersection arrangement is a separate exact surface slice.
+  Unsupported rounded, annular, elliptical, oblique-circle, reverse-axis, revolution,
+  sweep, loft, and Boolean families must refuse rather than tessellate; see ADR 0020,
+  ADR 0023, ADR 0024, and ADR 0029.
 
 ## Tests
 

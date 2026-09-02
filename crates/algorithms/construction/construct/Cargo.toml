@@ -32,6 +32,7 @@ earcut = "0.4"
 # watertightness and volume in one call instead of trusting a hand-rolled
 # divergence sum that would happily integrate a broken mesh.
 axiolid-measure.workspace = true
+axiolid-evaluate.workspace = true
 
 [package.metadata.axiolid]
 architecture-version = 1
@@ -40,4 +41,4 @@ role = "algorithm.construction"
 domain = "construction"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-contracts", "axiolid-guarantees", "axiolid-mesh-boolean-contract", "axiolid-mesh-contracts", "axiolid-measure", "axiolid-mesh", "axiolid-nurbs", "axiolid-primitive", "axiolid-profile", "axiolid-reference", "axiolid-surface", "axiolid-tessellation-contract", "axiolid-topology"]
+allowed-internal-dependencies = ["axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-contracts", "axiolid-evaluate", "axiolid-guarantees", "axiolid-mesh-boolean-contract", "axiolid-mesh-contracts", "axiolid-measure", "axiolid-mesh", "axiolid-nurbs", "axiolid-primitive", "axiolid-profile", "axiolid-reference", "axiolid-surface", "axiolid-tessellation-contract", "axiolid-topology"]

@@ -80,6 +80,7 @@ dependencies = [
  "axiolid-contracts",
  "axiolid-core",
  "axiolid-curve",
+ "axiolid-evaluate",
  "axiolid-guarantees",
  "axiolid-measure",
  "axiolid-mesh",

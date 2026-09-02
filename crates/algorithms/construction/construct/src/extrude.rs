@@ -13,6 +13,8 @@ use axiolid_reference::arithmetic::{
 };
 use axiolid_reference::expansion::two_product;
 
+pub use crate::extrude_exact::extrude_profile_exact;
+
 /// Extrude a triangulated 2D profile along `direction` by `depth`.
 ///
 /// The profile lies in the local z = 0 plane. Caps use the triangulation;

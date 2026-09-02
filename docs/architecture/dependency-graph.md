@@ -88,6 +88,7 @@ graph TD
     axiolid_construct --> axiolid_contracts
     axiolid_construct --> axiolid_core
     axiolid_construct --> axiolid_curve
+    axiolid_construct --> axiolid_evaluate
     axiolid_construct --> axiolid_guarantees
     axiolid_construct --> axiolid_measure
     axiolid_construct --> axiolid_mesh
