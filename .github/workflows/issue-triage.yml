@@ -208,7 +208,14 @@ jobs:
             *) echo "no usable Area answer (got: ${area:-empty}); leaving blank"; exit 0 ;;
           esac
 
-          jq -n --argjson f 46407131 --arg v "$area" \
-            '{issue_field_values:[{field_id:$f, value:$v}]}' > /tmp/area.json
+          # PATCH REPLACES the whole issue_field_values array -- sending Area
+          # alone silently wipes Effort and Priority. Carry the existing values
+          # through with it.
+          echo "$issue" | jq --argjson f 46407131 --arg v "$area" '
+            {issue_field_values:
+              ([.issue_field_values[]?
+                 | select(.issue_field_name != "Area")
+                 | {field_id: .issue_field_id, value: .single_select_option.name}]
+               + [{field_id: $f, value: $v}])}' > /tmp/area.json
           gh api "repos/$REPO/issues/$NUM" -X PATCH --input /tmp/area.json \
             --jq '[.issue_field_values[]|"\(.issue_field_name)=\(.single_select_option.name)"]|join(" ")'
