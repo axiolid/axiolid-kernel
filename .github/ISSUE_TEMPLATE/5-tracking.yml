@@ -1,0 +1,70 @@
+name: 🧭 Tracking issue (maintainers)
+description: An umbrella for a capability that spans several PRs. Holds sub-issues, not a checklist.
+title: "[tracking]: "
+type: Feature
+labels: ["capability", "decision:accepted", "tracking"]
+assignees: ["GeneralPawz"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🧭 Tracking issue
+
+        Use this when a capability is **too big for one PR** and needs several
+        independently landable pieces. This issue is the parent; each piece
+        becomes a **sub-issue** so the board shows real progress.
+
+        If the work fits in one PR, use
+        [🛠️ Tracked work](https://github.com/axiolid/kernel/issues/new?template=4-task.yml) instead.
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: The capability, and what becomes possible once it exists.
+    validations:
+      required: true
+
+  - type: textarea
+    id: shape
+    attributes:
+      label: Planned decomposition
+      description: >
+        List the intended pieces. Convert each into a sub-issue as it becomes
+        concrete — leave it as prose until then, so the list does not rot.
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of done for the whole capability
+      description: What must be true before this tracking issue closes?
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ### 🧩 Sub-issues, not checkboxes
+
+        A tracking issue tracks **work items**, so its children are sub-issues.
+        GitHub then shows a progress bar and each child carries its own type,
+        assignee, and board status.
+
+        Keep checkboxes here only for non-work conditions — "ADR merged",
+        "upstream released".
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - exact-brep
+        - intersection
+        - nurbs
+        - mesh
+        - architecture
+        - release
+    validations:
+      required: true

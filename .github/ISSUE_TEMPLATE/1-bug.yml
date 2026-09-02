@@ -1,0 +1,87 @@
+name: 🐛 Bug report
+description: Something behaves incorrectly, or does not build as documented.
+title: "[bug]: "
+type: Bug
+labels: ["needs-triage"]
+assignees: ["GeneralPawz"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🐛 Reporting a bug
+
+        A bug means **documented or obvious behavior is wrong**. If the kernel
+        simply cannot do something yet, that is not a bug — it is a
+        [feature request](https://github.com/axiolid/kernel/discussions/new?category=features).
+
+        Claims without evidence get bounced back, so please pin the commit.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One or two sentences. What is broken?
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: >
+        Minimal repro and the exact commit you tested against. Paste real
+        output — not a description of it.
+      render: shell
+      placeholder: |
+        Repo @ commit <sha>
+        $ cargo test -p axiolid-...
+        actual output:
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+      description: What should have happened instead, and why do you believe that?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the kernel? Routes the issue to the right board column.
+      options:
+        - exact-brep
+        - intersection
+        - nurbs
+        - mesh
+        - architecture
+        - release
+        - "not sure"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: size
+    attributes:
+      label: Size
+      description: >
+        `small` = self-contained fix, no public API break. `big` = public API,
+        cross-crate, or needs a design decision.
+      options:
+        - small
+        - big
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I tested against the current `main`, not a release.
+          required: true
+        - label: I searched existing issues and discussions for a duplicate.
+          required: true

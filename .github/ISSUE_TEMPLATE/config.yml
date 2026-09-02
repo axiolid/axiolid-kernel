@@ -1,21 +1,27 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Request new functionality
+  - name: 🚀 Request new functionality
     url: https://github.com/axiolid/kernel/discussions/new?category=features
     about: >
-      Ask for a capability the kernel does not have yet. Starts as a discussion
-      so scope and design get agreed before anyone writes code. Accepted
-      requests become tracked issues.
+      Ask for a capability the kernel does not have yet. Starts as a discussion so
+      scope and design get agreed before code. Accepted requests become issues.
 
-  - name: Suggest an optimization
+  - name: ⚡ Suggest an optimization
     url: https://github.com/axiolid/kernel/discussions/new?category=optimization
     about: >
-      Propose making existing, working behavior faster or lighter. Needs a
-      same-harness measurement, not an intuition. Nothing here changes what the
-      kernel can do.
+      Make existing, working behavior faster or lighter. Needs a same-harness
+      measurement, not an intuition. Does not change what the kernel can do.
 
-  - name: Ask a question
+  - name: 💬 Ask a question
     url: https://github.com/axiolid/kernel/discussions/new?category=q-a
     about: >
       How do I use this? Why does it behave this way? Answers get marked so the
       next person finds them.
+
+  - name: 📖 Documentation
+    url: https://axiolid.github.io/kernel/
+    about: Capabilities, architecture, ADRs, and the crate reference.
+
+  - name: 🗺️ Roadmap and current state
+    url: https://github.com/orgs/axiolid/projects/1
+    about: Milestones carry the exit criteria; the board carries the workflow.

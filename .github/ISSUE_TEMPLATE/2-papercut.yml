@@ -1,0 +1,71 @@
+name: 🩹 Papercut / ergonomics
+description: Existing behavior is correct but awkward to use — naming, visibility, a missing helper.
+title: "[papercut]: "
+type: Bug
+labels: ["papercut", "needs-triage"]
+assignees: ["GeneralPawz"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🩹 Papercut, not an optimization
+
+        A papercut costs you **keystrokes**. An optimization costs you
+        **milliseconds**.
+
+        - A rename, a missing `From` impl, a private-but-should-be-public type → 🩹 here.
+        - A slow function, an extra allocation, a cache that would help →
+          [⚡ Optimization discussion](https://github.com/axiolid/kernel/discussions/new?category=optimization).
+        - Something the kernel genuinely cannot do →
+          [🚀 Feature discussion](https://github.com/axiolid/kernel/discussions/new?category=features).
+
+        Papercuts are issues because the fix is usually obvious and small. If the
+        fix needs a design argument, open a discussion instead.
+
+  - type: textarea
+    id: friction
+    attributes:
+      label: What is awkward
+      description: What did you have to work around, and how? Real code, if you have it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: fix
+    attributes:
+      label: Suggested fix
+      description: Concrete rename, helper, or visibility change, if you have one in mind.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - exact-brep
+        - intersection
+        - nurbs
+        - mesh
+        - architecture
+        - release
+        - "not sure"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: size
+    attributes:
+      label: Size
+      description: Papercuts are almost always `small`. Flag `big` only if the fix cascades into a public API change.
+      options:
+        - small
+        - big
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: This is about ergonomics, not speed — speed belongs in an Optimization discussion.
+          required: true

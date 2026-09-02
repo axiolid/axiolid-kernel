@@ -1,0 +1,52 @@
+name: 📖 Documentation problem
+description: Docs are missing, wrong, or claim something the code does not do.
+title: "[docs]: "
+type: Task
+labels: ["documentation", "needs-triage"]
+assignees: ["GeneralPawz"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 📖 Documentation
+
+        Axiolid separates **ambition** from **status**. A doc bug that claims a
+        capability the code does not have is treated as seriously as a code bug —
+        please flag those.
+
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: Page URL or file path.
+      placeholder: docs/capabilities.md, or https://axiolid.github.io/kernel/...
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong
+      description: Quote the passage and explain what is missing, unclear, or false.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - "Missing — something undocumented"
+        - "Wrong — contradicts the code"
+        - "Overclaims — asserts a capability that does not exist"
+        - "Unclear — correct but hard to follow"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked the current docs site, not a cached or older build.
+          required: true

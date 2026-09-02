@@ -1,0 +1,86 @@
+name: 🛠️ Tracked work (maintainers)
+description: File accepted, scoped work. Use after a discussion is accepted, or for known engineering tasks.
+title: "[task]: "
+type: Task
+labels: ["capability", "decision:accepted"]
+assignees: ["GeneralPawz"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🛠️ Tracked work
+
+        This template files work that is **already agreed**. If scope is still
+        open, start a [🚀 feature](https://github.com/axiolid/kernel/discussions/new?category=features)
+        or [⚡ optimization](https://github.com/axiolid/kernel/discussions/new?category=optimization)
+        discussion instead.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What
+      description: The work, in one paragraph.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why now
+      description: What does this unblock? Link the discussion or issue that motivated it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of done
+      description: >
+        Checkable exit criteria. Prefer commands and observable outcomes over
+        adjectives — "`cargo xtask architecture closure check` passes with a
+        profile for X", not "closures are better".
+      placeholder: |
+        - [ ] ...
+        - [ ] Gate proves it can fail
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ### ☑️ Checklist or 🧩 sub-issue?
+
+        Use the **checklist above** when the steps are one person, one sitting,
+        one PR. They are acceptance criteria, not tracked work.
+
+        Open **sub-issues** when a step is independently assignable, lands in its
+        own PR, or is worth a status of its own on the board. Sub-issues get
+        their own type, assignee, and progress bar on this issue.
+
+        Rule of thumb: *if someone else could pick it up in parallel, it is a
+        sub-issue; if it only makes sense as part of this change, it is a
+        checkbox.*
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - exact-brep
+        - intersection
+        - nurbs
+        - mesh
+        - architecture
+        - release
+    validations:
+      required: true
+
+  - type: dropdown
+    id: size
+    attributes:
+      label: Size
+      options:
+        - small
+        - big
+    validations:
+      required: true

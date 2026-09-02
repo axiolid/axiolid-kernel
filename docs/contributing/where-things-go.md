@@ -1,71 +1,101 @@
 # Where things go
 
 Axiolid tracks its state on GitHub, not in prose. This page says which surface
-owns what, so a contribution lands somewhere it can actually be acted on.
+to use, so a request lands where it can actually be acted on.
 
-## The one distinction that matters
+## The one rule
 
-Two different things get confused constantly, so we split them deliberately:
+**Discussions are for deciding. Issues are for doing.**
 
-| You want | Cost to you today | Where | Why there |
-| --- | --- | --- | --- |
-| Something the kernel **cannot do** | You are blocked | [Features discussion](https://github.com/axiolid/kernel/discussions/categories/features) | Scope and design must be agreed before code |
-| Existing behavior to be **faster or lighter** | Milliseconds | [Optimization discussion](https://github.com/axiolid/kernel/discussions/categories/optimization) | Needs a measurement, and competes against capability work |
-| Existing behavior is **awkward to use** | Keystrokes | [Papercut issue](https://github.com/axiolid/kernel/issues/new?template=papercut.yml) | Small, obvious, no design debate |
-| Something is **wrong** | Correctness | [Bug issue](https://github.com/axiolid/kernel/issues/new?template=bug_report.yml) | Reproducible defect |
-| To understand something | Confusion | [Q&A discussion](https://github.com/axiolid/kernel/discussions/categories/q-a) | Answers get marked and reused |
+If the answer to "should we do this at all?" is not yet obvious, it is a
+discussion. Once it is agreed, it becomes an issue with an owner.
 
-**Optimization vs papercut** is the pair people get wrong most:
+## Choosing a surface
 
-- *Optimization* changes **how fast** something runs. It is a discussion because
-  it needs a same-harness measurement, and because spending effort on speed is a
-  trade-off against building capability
-  ([ADR 0013](../adr/0013-deferred-performance-techniques.md) parks broad
-  performance work deliberately).
-- *Papercut* changes **how it feels** to call. It is an issue because the fix is
-  small and uncontroversial.
+| You want to… | Surface | Why |
+|---|---|---|
+| 🚀 Ask for a capability the kernel lacks | [Features discussion](https://github.com/axiolid/kernel/discussions/new?category=features) | Scope needs agreeing before code |
+| ⚡ Make existing behavior faster or lighter | [Optimization discussion](https://github.com/axiolid/kernel/discussions/new?category=optimization) | Needs a measurement, not an intuition |
+| 💬 Ask how something works | [Question discussion](https://github.com/axiolid/kernel/discussions/new?category=q-a) | Answers get marked and found again |
+| 🐛 Report wrong behavior | [Bug issue](https://github.com/axiolid/kernel/issues/new?template=1-bug.yml) | Concrete, reproducible, actionable |
+| 🩹 Report awkward-but-correct API | [Papercut issue](https://github.com/axiolid/kernel/issues/new?template=2-papercut.yml) | Small fix, no design argument needed |
+| 📖 Report wrong or missing docs | [Docs issue](https://github.com/axiolid/kernel/issues/new?template=3-docs.yml) | Especially overclaims |
 
-A rename is a papercut. A cache is an optimization. Neither is a feature.
+### ⚡ Optimization vs 🩹 papercut
 
-## Why requests start as discussions
+The distinction people get wrong most often:
 
-An issue is a commitment to do work. A discussion is a place to decide whether
-work should happen. Filing "please add X" as an issue skips that decision and
-leaves a tracker full of things nobody agreed to.
+- An **optimization** costs you **milliseconds**. It changes how fast existing,
+  correct behavior runs. It is a *discussion*, because it needs a same-harness
+  measurement before it is worth doing.
+- A **papercut** costs you **keystrokes**. It changes how pleasant correct
+  behavior is to call. It is an *issue*, because the fix is usually obvious.
 
-So the flow is:
+A rename is a papercut. A cache is an optimization. Neither adds capability —
+that is a feature request.
 
-```
-discussion ──accepted──▶ issue ──▶ milestone ──▶ PR ──▶ closed with evidence
-     │
-     └──declined──▶ closed, with the reasoning written down
-```
+## Types, labels, and milestones
 
-Nothing is silently dropped. A declined request keeps its thread and gets
-`decision:declined` with the reason, so the next person who wants it can read
-why it did not happen and argue against the actual argument.
+These answer different questions. Using them for the same thing makes both
+useless.
 
-## Decision labels
+| Mechanism | Answers | Values |
+|---|---|---|
+| **Type** | What kind of work is this? | `Bug`, `Task`, `Feature` |
+| **Label** `area:*` | Which part of the kernel? | `exact-brep`, `intersection`, `nurbs`, `mesh`, `architecture`, `release` |
+| **Label** `size:*` | How big is the change? | `small`, `big` |
+| **Label** `decision:*` | What did we decide, and why? | `accepted`, `parked`, `declined` |
+| **Milestone** | Which release gate? | `v0.2` … `v1.0`, or `Backlog` |
+| **Board status** | Where is it right now? | `Backlog` → `Ready` → `In Progress` → `In Review` → `Blocked` → `Done` |
 
-| Label | Meaning |
-| --- | --- |
-| `decision:accepted` | In scope. Becomes an issue and is planned. |
-| `decision:parked` | In scope but deliberately deferred. The unblock condition is recorded. |
-| `decision:declined` | Not doing it. The reasoning is on the thread. |
-| `needs-evidence` | The claim needs a repro or a same-harness measurement before it moves. |
+There is deliberately **no `bug` label** — that is the `Bug` *type*. Likewise no
+`enhancement` label: new capability is the `Feature` type, and it starts as a
+discussion. Duplicating a type as a label means filters silently miss things.
 
-## Milestones and the board
+## ☑️ Checklists vs 🧩 sub-issues
 
-Milestones are **capability gates, not dates**. Each has exit criteria you can
-check. Minor milestones can be inserted between them at any time.
+Both express "this has parts". They are not interchangeable.
 
-The [project board](https://github.com/orgs/axiolid/projects/1) carries the
-workflow: `Backlog → Ready → In Progress → In Review → Blocked → Done`. The
-`Backlog — accepted, unscheduled` milestone holds work that is wanted but not
-committed to a release; planning pulls from there.
+Use a **checklist** (`- [ ]`) when the parts are:
 
-## What still lives in docs
+- one person, one sitting, one pull request;
+- acceptance criteria rather than separately schedulable work;
+- meaningless outside this issue ("update the changelog", "add a test").
 
-Docs explain **how the kernel works and why it is shaped that way** —
-architecture, ADRs, capability status. GitHub tracks **what is being done and
-what was decided**. When they disagree about state, GitHub wins.
+Open **sub-issues** when a part is:
+
+- independently assignable — someone else could take it in parallel;
+- landing in its own pull request;
+- worth its own status on the board;
+- worth its own type (a `Feature` whose child is a `Task`).
+
+> **Rule of thumb:** if someone else could pick it up *right now, in parallel*,
+> it is a sub-issue. If it only makes sense as a step inside this change, it is
+> a checkbox.
+
+Sub-issues give a progress bar on the parent and keep the board honest, because
+each child carries real status. A checklist inside a six-month umbrella issue
+tells you nothing — that is what a
+[🧭 tracking issue](https://github.com/axiolid/kernel/issues/new?template=5-tracking.yml)
+with sub-issues is for.
+
+## What happens after you file
+
+1. It gets a type, an owner, and `needs-triage` — automatically, even if you
+   filed through the API.
+2. A maintainer applies a `decision:` label. **Nothing is silently dropped:**
+   `decision:declined` keeps the thread and records why, so the next person
+   argues with the reasoning instead of repeating the request.
+3. Accepted work gets an `area:`, a `size:`, and a milestone, then appears on
+   the [project board](https://github.com/orgs/axiolid/projects/1).
+4. Accepted discussions become issues. The discussion stays as the rationale.
+
+## Evidence
+
+Two claims need evidence before they can be accepted:
+
+- **A bug** needs a reproduction and the commit you tested against.
+- **An optimization** needs a measurement from the same harness, before and
+  after. "Should be faster" is not a measurement.
+
+Requests missing these get `needs-evidence` rather than being closed.

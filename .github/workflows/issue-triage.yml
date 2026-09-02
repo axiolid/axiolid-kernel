@@ -1,0 +1,80 @@
+name: Issue triage
+
+# Templates set type, assignee, and labels for issues opened through them.
+# This backstops the cases templates cannot reach: issues opened via API, via
+# `gh issue create`, transferred from another repo, or converted from a
+# discussion. It never overrides an explicit maintainer choice.
+
+on:
+  issues:
+    types: [opened, reopened]
+
+permissions:
+  issues: write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure type, assignee, and triage label
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NUM: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          issue=$(gh api "repos/$REPO/issues/$NUM")
+          type=$(echo "$issue" | jq -r '.type.name // empty')
+          assignees=$(echo "$issue" | jq -r '.assignees | length')
+          labels=$(echo "$issue" | jq -r '[.labels[].name] | join(" ")')
+
+          # 1. Every issue carries a type. Infer a conservative default only
+          #    when one is absent -- never reclassify a deliberate choice.
+          if [ -z "$type" ]; then
+            case "$labels" in
+              *papercut*)      inferred=Bug ;;
+              *documentation*) inferred=Task ;;
+              *capability*)    inferred=Feature ;;
+              *)               inferred=Task ;;
+            esac
+            gh api -X PATCH "repos/$REPO/issues/$NUM" -f "type=$inferred" >/dev/null
+            echo "set type=$inferred (was empty)"
+          else
+            echo "type already set: $type"
+          fi
+
+          # 2. Every issue has an owner, so nothing sits unowned.
+          if [ "$assignees" = "0" ]; then
+            gh issue edit "$NUM" --repo "$REPO" --add-assignee GeneralPawz
+            echo "assigned GeneralPawz"
+          fi
+
+          # 3. Anything without a decision label is unreviewed by definition.
+          case "$labels" in
+            *decision:*) echo "already triaged" ;;
+            *needs-triage*) echo "already flagged" ;;
+            *) gh issue edit "$NUM" --repo "$REPO" --add-label needs-triage
+               echo "flagged needs-triage" ;;
+          esac
+
+      - name: Warn when type and labels disagree
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NUM: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          issue=$(gh api "repos/$REPO/issues/$NUM")
+          type=$(echo "$issue" | jq -r '.type.name // empty')
+          labels=$(echo "$issue" | jq -r '[.labels[].name] | join(" ")')
+
+          # A papercut is a defect in ergonomics, so it must be typed Bug.
+          # Catching this early keeps the type field trustworthy for filtering.
+          case "$labels:$type" in
+            *papercut*:Feature)
+              gh issue comment "$NUM" --repo "$REPO" --body \
+                "🤖 This is labelled \`papercut\` but typed **Feature**. A papercut is friction in behavior that already exists, so it should be typed **Bug**. If the kernel genuinely cannot do this yet, it belongs in [🚀 Features](https://github.com/axiolid/kernel/discussions/new?category=features) instead."
+              ;;
+            *) echo "type/label consistent" ;;
+          esac
