@@ -32,11 +32,12 @@ fn exact_request_refuses_rather_than_tessellating() {
     assert!(
         matches!(
             error,
-            GeomError::Unsupported {
+            GeomError::UnsupportedInput {
                 operation: Operation::GraphCompilation,
+                input: "open profile",
                 ..
             }
         ),
-        "exact compilation must refuse with a typed Unsupported, got {error:?}"
+        "exact compilation must refuse with a typed input-family diagnostic, got {error:?}"
     );
 }

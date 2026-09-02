@@ -22,6 +22,16 @@ pub enum GeomError {
         /// Missing capability.
         operation: Operation,
     },
+    /// Backend supports the operation but not this input family.
+    #[error("backend `{backend}` cannot apply {operation:?} to `{input}`")]
+    UnsupportedInput {
+        /// Backend.
+        backend: BackendId,
+        /// Requested operation.
+        operation: Operation,
+        /// Stable, human-readable input family.
+        input: &'static str,
+    },
     /// Backend exists but its hardware/runtime is unavailable.
     #[error("backend `{backend}` is unavailable: {reason}")]
     Unavailable {
