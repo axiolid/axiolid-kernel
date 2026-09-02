@@ -7,10 +7,10 @@ Axiolid is a workspace, not a mandatory all-in-one dependency. Prefer a leaf cra
 ```toml
 [dependencies]
 # Core scalar values, transforms, bounds, and tolerance policy.
-axiolid-core = { git = "https://github.com/axiolid/axiolid-kernel.git" }
+axiolid-core = { git = "https://github.com/axiolid/kernel.git" }
 
 # Or: a small facade with core values, meshes, and the portable CPU shell.
-axiolid = { git = "https://github.com/axiolid/axiolid-kernel.git" }
+axiolid = { git = "https://github.com/axiolid/kernel.git" }
 ```
 
 The repository is currently consumed directly from Git while crates.io publication is not yet established. Pin a `rev` in reproducible applications.
@@ -32,13 +32,13 @@ assert_eq!(source, world);
 ```toml
 # Mesh-oriented construction, triangulation, spatial operations, and the
 # optional mesh-Boolean provider.
-axiolid = { git = "https://github.com/axiolid/axiolid-kernel.git", features = ["discrete"] }
+axiolid = { git = "https://github.com/axiolid/kernel.git", features = ["discrete"] }
 
 # Representation vocabulary plus general NURBS reference algorithms.
-axiolid = { git = "https://github.com/axiolid/axiolid-kernel.git", features = ["parametric"] }
+axiolid = { git = "https://github.com/axiolid/kernel.git", features = ["parametric"] }
 
 # Or select only curve/surface values and the general NURBS algorithms.
-axiolid = { git = "https://github.com/axiolid/axiolid-kernel.git", default-features = false, features = ["nurbs"] }
+axiolid = { git = "https://github.com/axiolid/kernel.git", default-features = false, features = ["nurbs"] }
 ```
 
 | Bundle | Includes | Does not imply |

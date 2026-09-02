@@ -63,7 +63,7 @@ pub fn crate_map_document(architecture: &Architecture) -> String {
         let visibility = if package.public { "public" } else { "internal" };
         writeln!(
             output,
-            "| `{}` | [`{}`](https://github.com/axiolid/axiolid-kernel/tree/main/{}) | `{}` | `{}` | `{}` | {} | {} |",
+            "| `{}` | [`{}`](https://github.com/axiolid/kernel/tree/main/{}) | `{}` | `{}` | `{}` | {} | {} |",
             package.name,
             package.path,
             package.path,

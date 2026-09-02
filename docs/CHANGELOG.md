@@ -39,8 +39,9 @@ All notable changes to Axiolid are documented in this file.
 - Extracted scalar solid generation — profiles, lofts, sweeps, revolutions, extrusion, and bounded half-space clipping — from the L3 DAG compiler into the new L2 `axiolid-construct` crate. `axiolid-mesh-compile` now owns graph traversal, caching, model-driven directrices, and B-rep tessellation only; see [ADR 0023](./adr/0023-solid-generation-is-an-l2-crate.md).
 
 ### Fixed
-- Replaced unstable `cargo publish --workspace` with guarded stable child-first publication across all internal dependency kinds, including checksum-bound idempotent reruns and rate/index-propagation retries.
-- Replaced the crates.io-dependent workspace packaging check with deterministic staged verification of all 31 publishable normalized archives; `xtask` remains excluded.
+- Updated package metadata, generated crate links, documentation navigation, and the GitHub Pages base to the canonical `axiolid/kernel` repository.
+- Replaced unstable `cargo publish --workspace` with guarded stable child-first publication.
+- Added staged verification for all 31 publishable archives; `xtask` remains excluded.
 - Corrected the README MSRV badge from Rust 1.85 to the workspace-required Rust 1.88.
 - Solid admission and boolmesh result validation now reject finite-coordinate meshes when signed-volume accumulation overflows or otherwise becomes non-finite, instead of accepting non-finite volume as outward orientation.
 - `orient3d` exact escalation now preserves error-free coordinate-difference tails before evaluating cofactors and uses a bounded exact dyadic fallback when finite inputs would overflow or underflow expansion intermediates. Previously it could certify false signs for exactly coplanar inputs and false zero for extreme finite coordinates.

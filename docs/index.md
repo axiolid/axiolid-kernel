@@ -14,7 +14,7 @@ hero:
       link: /capabilities
     - theme: alt
       text: View on GitHub
-      link: https://github.com/axiolid/axiolid-kernel
+      link: https://github.com/axiolid/kernel
 
 features:
   - title: Neutral by construction

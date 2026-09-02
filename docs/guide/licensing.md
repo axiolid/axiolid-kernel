@@ -1,6 +1,6 @@
 # Licensing Axiolid
 
-Axiolid is licensed under the [Mozilla Public License 2.0](https://www.mozilla.org/MPL/2.0/) (**MPL-2.0**). The canonical text is included in [LICENSE](https://github.com/axiolid/axiolid-kernel/blob/main/LICENSE).
+Axiolid is licensed under the [Mozilla Public License 2.0](https://www.mozilla.org/MPL/2.0/) (**MPL-2.0**). The canonical text is included in [LICENSE](https://github.com/axiolid/kernel/blob/main/LICENSE).
 
 ## The intended boundary
 

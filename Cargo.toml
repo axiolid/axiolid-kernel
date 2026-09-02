@@ -41,8 +41,8 @@ edition = "2021"
 rust-version = "1.88"
 license = "MPL-2.0"
 authors = ["point-grey"]
-repository = "https://github.com/axiolid/axiolid-kernel"
-homepage = "https://axiolid.github.io/axiolid-kernel/"
+repository = "https://github.com/axiolid/kernel"
+homepage = "https://axiolid.github.io/kernel/"
 readme = "README.md"
 
 [workspace.dependencies]

@@ -45,7 +45,7 @@ function adrSidebarItem([file, number, title]: (typeof adrs)[number]) {
 export default defineConfig({
   title: "Axiolid",
   description: "A pure-Rust, format-agnostic geometry kernel.",
-  base: "/axiolid-kernel/",
+  base: "/kernel/",
   srcExclude: ["adr/_template.md"],
   markdown: { html: false },
   cleanUrls: true,
@@ -62,7 +62,7 @@ export default defineConfig({
       { text: "Architecture", link: "/architecture" },
       { text: "Capabilities", link: "/capabilities" },
       { text: "API", link: "https://docs.rs/axiolid" },
-      { text: "GitHub", link: "https://github.com/axiolid/axiolid-kernel" },
+      { text: "GitHub", link: "https://github.com/axiolid/kernel" },
     ],
     sidebar: [
       {
@@ -93,7 +93,7 @@ export default defineConfig({
         items: adrs.map(adrSidebarItem),
       },
     ],
-    socialLinks: [{ icon: "github", link: "https://github.com/axiolid/axiolid-kernel" }],
+    socialLinks: [{ icon: "github", link: "https://github.com/axiolid/kernel" }],
     footer: {
       message: "Released under the Mozilla Public License 2.0.",
       copyright: "Copyright © 2026 Axiolid contributors",
