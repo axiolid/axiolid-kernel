@@ -96,5 +96,10 @@ documentation, package, and downstream IFC gates. `scripts/verify-packages.py`
 creates and compiles every normalized publishable archive with command-scoped
 local registry patches, because a first multi-crate release cannot resolve its
 new internal names from crates.io yet. Those patches never enter published
-manifests; version requirements remain the registry contract. Meaningful splits
-report dependency/build measurements; claims of improvement require evidence.
+manifests; version requirements remain the registry contract.
+`scripts/publish-workspace.py` then derives an acyclic order across normal,
+build, and dev dependencies and publishes one crate at a time on stable Cargo.
+A rerun skips an immutable registry version only when its crates.io checksum
+matches the exact locally verified archive; collisions fail closed. Meaningful
+splits report dependency/build measurements; claims of improvement require
+evidence.
