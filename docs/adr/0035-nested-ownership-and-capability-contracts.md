@@ -99,7 +99,7 @@ new internal names from crates.io yet. Those patches never enter published
 manifests; version requirements remain the registry contract.
 `scripts/publish-workspace.py` then derives an acyclic order across normal,
 build, and dev dependencies and publishes one crate at a time on stable Cargo.
-A rerun skips an immutable registry version only when its crates.io checksum
-matches the exact locally verified archive; collisions fail closed. Meaningful
-splits report dependency/build measurements; claims of improvement require
-evidence.
+A rerun packages that crate without patches and skips its immutable registry
+version only when the crates.io checksum matches those exact upload bytes;
+collisions fail closed. Meaningful splits report dependency/build measurements;
+claims of improvement require evidence.

@@ -15,7 +15,6 @@ import argparse
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import tempfile
 
@@ -39,11 +38,6 @@ def main() -> None:
         "--allow-dirty",
         action="store_true",
         help="forward --allow-dirty for local pre-commit verification",
-    )
-    parser.add_argument(
-        "--output-dir",
-        type=Path,
-        help="copy the exact verified .crate archives into this directory",
     )
     args = parser.parse_args()
 
@@ -87,11 +81,6 @@ def main() -> None:
             raise SystemExit(
                 f"package archive mismatch: missing={missing}, unexpected={unexpected}"
             )
-
-        if args.output_dir:
-            args.output_dir.mkdir(parents=True, exist_ok=True)
-            for archive_name in sorted(expected):
-                shutil.copy2(target / "package" / archive_name, args.output_dir / archive_name)
 
     print(
         f"PACKAGE_WORKSPACE=PASS archives={len(publishable)} "

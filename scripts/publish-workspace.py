@@ -3,8 +3,9 @@
 
 `cargo publish --workspace` is unstable in Cargo 1.88. This script derives an
 acyclic order from every internal normal, build, and dev dependency, then
-publishes one package at a time. Existing immutable versions are skipped, so a
-workflow interrupted by crates.io propagation or rate limits can be rerun.
+publishes one package at a time. Existing immutable versions are skipped only
+when their crates.io checksum matches the exact unpatched local package, so a
+workflow interrupted by registry propagation or rate limits can be rerun.
 
 The default mode is a side-effect-free plan. Actual publication requires both
 `--execute` and Cargo's `CARGO_REGISTRY_TOKEN` environment variable.
@@ -17,7 +18,6 @@ import hashlib
 import json
 import os
 import subprocess
-import sys
 import tempfile
 import time
 import urllib.error
@@ -145,12 +145,66 @@ def wait_for_matching_checksum(
     )
 
 
-def publish(package: dict, archive_dir: Path, args: argparse.Namespace) -> None:
+def retry_delay(output: str, args: argparse.Namespace) -> tuple[int, str] | None:
+    lowered = output.lower()
+    if "too many requests" in lowered or "429" in lowered:
+        return args.rate_limit_wait, "crates.io rate limit"
+    if "no matching package named" in lowered or "failed to select a version" in lowered:
+        return args.dependency_wait, "registry dependency propagation"
+    return None
+
+
+def prepare_archive(
+    package: dict,
+    target: Path,
+    environment: dict[str, str],
+    args: argparse.Namespace,
+) -> Path:
     name = package["name"]
     version = package["version"]
-    archive = archive_dir / f"{name}-{version}.crate"
-    if not archive.is_file():
-        raise SystemExit(f"verified archive is missing: {archive}")
+    archive = target / "package" / f"{name}-{version}.crate"
+    for attempt in range(1, args.max_attempts + 1):
+        archive.unlink(missing_ok=True)
+        result = subprocess.run(
+            [CARGO, "package", "-p", name, "--locked", "--quiet"],
+            cwd=ROOT,
+            env=environment,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        if result.stdout:
+            print(result.stdout, end="", flush=True)
+        if result.returncode == 0:
+            if not archive.is_file():
+                raise SystemExit(f"cargo package produced no archive for {name} {version}")
+            return archive
+
+        retry = retry_delay(result.stdout, args)
+        if retry is None:
+            raise SystemExit(f"cargo package failed permanently for {name} {version}")
+        if attempt == args.max_attempts:
+            raise SystemExit(
+                f"cargo package exhausted {args.max_attempts} attempts for {name} {version}"
+            )
+        wait, reason = retry
+        print(
+            f"RETRY_PACKAGE {name} attempt={attempt + 1} wait={wait}s reason={reason}",
+            flush=True,
+        )
+        time.sleep(wait)
+    raise AssertionError("unreachable package retry loop")
+
+
+def publish(
+    package: dict,
+    target: Path,
+    environment: dict[str, str],
+    args: argparse.Namespace,
+) -> None:
+    name = package["name"]
+    version = package["version"]
+    archive = prepare_archive(package, target, environment, args)
     local_checksum = archive_checksum(archive)
     if require_matching_checksum(name, version, local_checksum):
         print(f"SKIP {name} {version}: published checksum matches {local_checksum}", flush=True)
@@ -160,6 +214,7 @@ def publish(package: dict, archive_dir: Path, args: argparse.Namespace) -> None:
         result = subprocess.run(
             [CARGO, "publish", "-p", name, "--locked"],
             cwd=ROOT,
+            env=environment,
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -176,21 +231,21 @@ def publish(package: dict, archive_dir: Path, args: argparse.Namespace) -> None:
             wait_for_matching_checksum(name, version, local_checksum, args)
             print(f"SKIP {name} {version}: published checksum matches", flush=True)
             return
-        if "too many requests" in output or "429" in output:
-            wait = args.rate_limit_wait
-            reason = "crates.io rate limit"
-        elif "no matching package named" in output or "failed to select a version" in output:
-            wait = args.dependency_wait
-            reason = "registry dependency propagation"
-        else:
-            raise SystemExit(f"cargo publish failed permanently for {name} {version}")
 
+        retry = retry_delay(result.stdout, args)
+        if retry is None:
+            raise SystemExit(f"cargo publish failed permanently for {name} {version}")
         if attempt == args.max_attempts:
             raise SystemExit(
                 f"cargo publish exhausted {args.max_attempts} attempts for {name} {version}"
             )
-        print(f"RETRY {name} attempt={attempt + 1} wait={wait}s reason={reason}", flush=True)
+        wait, reason = retry
+        print(
+            f"RETRY_PUBLISH {name} attempt={attempt + 1} wait={wait}s reason={reason}",
+            flush=True,
+        )
         time.sleep(wait)
+    raise AssertionError("unreachable publish retry loop")
 
 
 def main() -> None:
@@ -214,20 +269,12 @@ def main() -> None:
     if not os.environ.get("CARGO_REGISTRY_TOKEN"):
         raise SystemExit("CARGO_REGISTRY_TOKEN is required with --execute")
 
-    with tempfile.TemporaryDirectory(prefix="axiolid-publish-archives-") as temporary:
-        archive_dir = Path(temporary)
-        subprocess.run(
-            [
-                sys.executable,
-                str(ROOT / "scripts" / "verify-packages.py"),
-                "--output-dir",
-                str(archive_dir),
-            ],
-            cwd=ROOT,
-            check=True,
-        )
+    with tempfile.TemporaryDirectory(prefix="axiolid-publish-") as temporary:
+        target = Path(temporary) / "target"
+        environment = os.environ.copy()
+        environment["CARGO_TARGET_DIR"] = str(target)
         for package in plan:
-            publish(package, archive_dir, args)
+            publish(package, target, environment, args)
     print(f"PUBLISH_WORKSPACE=PASS crates={len(plan)}")
 
 

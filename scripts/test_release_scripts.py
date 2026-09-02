@@ -7,6 +7,7 @@ import hashlib
 import importlib.util
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 
@@ -66,6 +67,39 @@ class PublishWorkspaceTests(unittest.TestCase):
             archive = Path(temporary) / "crate-1.0.0.crate"
             archive.write_bytes(payload)
             self.assertEqual(publish.archive_checksum(archive), hashlib.sha256(payload).hexdigest())
+
+    def test_prepare_archive_uses_unpatched_locked_package(self) -> None:
+        package = {"name": "leaf", "version": "0.1.0"}
+        args = SimpleNamespace(max_attempts=1, dependency_wait=0, rate_limit_wait=0)
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "target"
+
+            def fake_run(command, **kwargs):
+                self.assertEqual(
+                    command,
+                    [publish.CARGO, "package", "-p", "leaf", "--locked", "--quiet"],
+                )
+                self.assertNotIn("--config", command)
+                self.assertEqual(kwargs["env"]["CARGO_TARGET_DIR"], str(target))
+                archive = target / "package" / "leaf-0.1.0.crate"
+                archive.parent.mkdir(parents=True)
+                archive.write_bytes(b"crate")
+                return SimpleNamespace(returncode=0, stdout="")
+
+            environment = {"CARGO_TARGET_DIR": str(target)}
+            with mock.patch.object(publish.subprocess, "run", side_effect=fake_run):
+                archive = publish.prepare_archive(package, target, environment, args)
+            self.assertEqual(archive.read_bytes(), b"crate")
+
+    def test_prepare_archive_fails_closed_on_permanent_error(self) -> None:
+        package = {"name": "leaf", "version": "0.1.0"}
+        args = SimpleNamespace(max_attempts=1, dependency_wait=0, rate_limit_wait=0)
+        result = SimpleNamespace(returncode=101, stdout="")
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "target"
+            with mock.patch.object(publish.subprocess, "run", return_value=result):
+                with self.assertRaisesRegex(SystemExit, "failed permanently"):
+                    publish.prepare_archive(package, target, {}, args)
 
 
 if __name__ == "__main__":
