@@ -303,15 +303,18 @@ Current OpenUSD source is distributed under the Tomorrow Open Source Technology
 License 1.0, an Apache-2.0-derived license with a different trademark section;
 it should not be described simply as Apache-2.0.[USD license]
 
-### Axiolid: what is implemented now
+### Axiolid: historical implementation snapshot
 
 The following classification was checked against production source and tests at
-`be3ddce7f465`.
+`be3ddce7f465`. It is retained as point-in-time research evidence; package names
+and capability status below are historical. For current ownership and status,
+see the [implemented crate map](/architecture/current-target-crate-map) and
+[capability matrix](/capabilities).
 
 #### Implemented and exercised
 
 - Format-neutral scalar/vector/frame/transform/bounds values and explicit
-  tolerance/capability contracts (`axiolid-core`, `axiolid-kernel`).
+  tolerance/capability contracts (`axiolid-core` and the then-current aggregate `axiolid-kernel`).
 - Immutable typed geometry DAG with instances, collections, validation, profile,
   primitive, curve/surface, B-rep, mesh, and construction-intent node families
   (`axiolid-model`). Representation breadth here is not algorithm breadth.

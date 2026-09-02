@@ -32,7 +32,7 @@ Key rules:
 - Each operation contract owns typed inputs, results, evidence, refusals, and conformance behavior. It does not select providers.
 - `axiolid-dispatch` owns provider registration, ordering, device matching, fallback, and budget admission.
 - Execution plans are internal runtime policy, never portable capability schemas.
-- Source-format interpretation remains in external adapters such as openbim/IFC.
+- Source-format interpretation remains in external adapters such as `openbimrs/ifc`'s `ifc-geometry` crate.
 
 See the generated [crate map](/architecture/crate-map), [dependency graph](/architecture/dependency-graph), and [ADR 0035](/adr/0035-nested-ownership-and-capability-contracts).
 

@@ -23,7 +23,9 @@ All notable changes to Axiolid are documented in this file.
 - Added a format-neutral authored `OpenProfile` graph declaration for conservative bounded-open exact 2D curve paths, with finite/structurally valid curve, 2D-offset, instance, and trim-selector validation, shared-DAG-linear traversal, exact same-endpoint refusal, explicit no-area/no-width semantics, solid-operation exclusion, and curve-evaluation classification; see [ADR 0034](./adr/0034-authored-open-profile-contract.md).
 
 ### Changed
-- Refreshed root agent instructions for the nested ownership tree and added amendment markers to accepted ADRs whose semantics remain active after ADR 0035 moved their package ownership.
+- Refreshed root and package agent instructions, research snapshots, downstream
+  repository identity, and ADR amendment markers for the nested ownership tree,
+  current package names, maintained test pointers, and architecture gates.
 - Format-neutral production-source checks now reject both Protobuf vocabulary and `prost` imports, with independent mutation probes; tests remain free to name transports when verifying rejection.
 - Documentation now builds with VitePress 2/Vite 8 and an advisory-free locked dependency graph.
 - Replaced the mixed `axiolid-kernel` package with `axiolid-guarantees`, `axiolid-contracts`, `axiolid-mesh-contracts`, operation-specific contract packages, and execution-owned `axiolid-dispatch`.

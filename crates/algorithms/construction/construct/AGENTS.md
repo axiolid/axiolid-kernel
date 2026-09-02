@@ -27,8 +27,9 @@ not report `scalar-compile` after this split.
 - Shared loft/stitching logic owns winding and cap pairing. Do not duplicate it
   in individual sweep families.
 - This crate must not depend on `axiolid-model`, an execution/backend crate, or
-  any L3 crate. The executable layering test is
-  `axiolid-core/tests/layering.rs`.
+  any L3 crate. `cargo xtask architecture check` enforces the declared internal
+  dependency allowlist and production role-DAG edge; `scripts/probe_layering_gate.sh`
+  mutation-verifies that enforcement.
 - Discrete sweeps remain the broad reference path. Exact output is currently limited
   to the certified affine trimmed-intersection arrangement. Do not generalize that
   slice to exact sweeps, booleans, dual-boundary ownership, corners, or curved traces;

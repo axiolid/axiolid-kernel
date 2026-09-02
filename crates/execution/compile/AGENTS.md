@@ -1,8 +1,9 @@
 # axiolid-mesh-compile instructions
 
-Purpose: the scalar reference `MeshCompiler`. Turns `GeometryGraph` nodes
-into `TriMesh`: profile flattening, triangulation, linear extrusion, transform
-composition, and boolean dispatch.
+Purpose: the reference `MeshCompiler`. It orchestrates `GeometryGraph` to
+`TriMesh`: graph traversal, memoization, transform composition, construction,
+B-rep tessellation, and operation dispatch. Construction algorithms and their
+local invariants remain owned by `axiolid-construct`.
 
 ## Invariants
 
@@ -10,8 +11,9 @@ Extrusion output must be **closed, edge-manifold, and outward-oriented**,
 because that is exactly `axiolid-mesh-boolean-boolmesh`'s input precondition. Volume alone does
 NOT verify this: a cap lying in the z = 0 plane contributes nothing to the
 divergence integral, so a flipped bottom cap is invisible to a volume check.
-Use the directed-edge parity gate in `tests/extrusion.rs` — every directed edge
-exactly once, every edge with exactly one opposing half-edge.
+Use the directed-edge parity gate in
+`crates/algorithms/construction/construct/tests/extrusion.rs` — every directed
+edge exactly once, every edge with exactly one opposing half-edge.
 
 Unsupported profile and solid families return `GeomError::Unsupported`, never a
 silent approximation. A missing wall is cheap; a wrong wall corrupts every
@@ -27,12 +29,12 @@ which subdivides adaptively on measured sagitta. The old private
 closed-form segment count, it only models circles and cannot express an
 ellipse or a rational spline.
 
-`tests/extrusion_volume.rs` pins the identity `volume == area * depth` for
-every supported profile family, and asserts the chord budget actually bounds
-the volume error (measured: error is O(chord), constant under 5). Volume and
-area come from `axiolid-measure`, never a local divergence sum: that crate
-audits closed-two-manifold first, so a hand-rolled integral would silently
-measure a torn shell.
+`crates/algorithms/construction/construct/tests/extrusion_volume.rs` pins the
+identity `volume == area * depth` for every supported profile family and asserts
+the chord budget actually bounds the volume error (measured: error is O(chord),
+constant under 5). Volume and area come from `axiolid-measure`, never a local
+divergence sum: that crate audits closed-two-manifold first, so a hand-rolled
+integral would silently measure a torn shell.
 
 **Tolerance must scale with the chord budget.** `audit_mesh` calls a triangle
 degenerate when `2A <= tolerance.linear()^2`. A cylinder flattened at chord
@@ -44,10 +46,13 @@ flattening. This is not a test artefact -- it is a real API contract.
 
 ## Adopted dependencies
 
-`earcut` (ADR 0015) is named in `src/profile.rs` and nowhere else, and is not
-re-exported. `axiolid_reference::triangulate_simple` audits it differentially on
-hole-free polygons (`tests/oracle.rs`) — the adopted crate is verified, not
-trusted.
+`earcut` (ADR 0015) is owned by
+`crates/algorithms/construction/construct/src/profile.rs` and is not re-exported.
+`axiolid_reference::triangulate_simple` audits it differentially on hole-free
+polygons in `crates/algorithms/construction/construct/tests/oracle.rs` — the
+adopted crate is verified, not trusted. This crate's graph-level integration
+coverage lives in `tests/pipeline.rs`, `tests/generation_boolean.rs`,
+`tests/brep_tessellation.rs`, and the other current `tests/*.rs` targets.
 
 ## Layer
 

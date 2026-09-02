@@ -54,8 +54,9 @@ feature-gated behind the C++ dependency).
 
 The fast, dependency-free path handles the common real case (flat paving on
 terrain); the heavy path is opt-in and behind the same trait. That is
-precisely the structure we want for `axiolid-kernel`, and it is validated here
-by three independent implementations rather than one plus an aspiration.
+precisely the structure we want for Axiolid's operation-specific contracts and
+replaceable providers, and it is validated here by three independent
+implementations rather than one plus an aspiration.
 
 ### 4. Validation by invariant, not by golden output
 
@@ -223,9 +224,9 @@ capability claims in the doc.
 
 ## What axiolid should take
 
-1. **Adopt the subtractor pattern for `axiolid-kernel`.** One trait, a cheap
-   dependency-free default, heavy backends feature-gated. Validated here by
-   three implementations.
+1. **Adopt the subtractor pattern at an operation-specific contract/provider
+   boundary.** One trait, a cheap dependency-free default, heavy providers
+   feature-gated. Validated here by three implementations.
 2. **Adopt oracle testing against IfcOpenShell** via Python scripts. No
    linked dependency, strongest available correctness evidence.
 3. **Adopt cross-process determinism tests** wherever a `HashMap` orders

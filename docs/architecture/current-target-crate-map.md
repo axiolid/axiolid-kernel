@@ -57,7 +57,7 @@ Facade feature migration:
 
 ## Downstream
 
-`openbim/ifc-geometry` must pin the landed Axiolid commit, retain source-format lowering outside Axiolid, and use the format-neutral authored `OpenProfile` graph declaration. A facade-only model consumer must continue to work with:
+`openbimrs/ifc`'s `ifc-geometry` crate must pin the landed Axiolid commit, retain source-format lowering outside Axiolid, and use the format-neutral authored `OpenProfile` graph declaration. A facade-only model consumer must continue to work with:
 
 ```toml
 axiolid = { default-features = false, features = ["model"] }
