@@ -281,6 +281,19 @@ fn finite_nonzero_extreme_direction_magnitudes_normalize_safely() {
 }
 
 #[test]
+fn mixed_extreme_direction_refuses_nonzero_component_loss() {
+    let error = extrude_profile_exact(
+        &rectangle(None),
+        Vec3::new(f64::MIN_POSITIVE, 0.0, f64::MAX),
+        1.0,
+        Tolerance::METRE,
+    )
+    .expect_err("normalization must not silently erase a nonzero direction component");
+
+    assert!(matches!(error, GeomError::Degenerate(_)));
+}
+
+#[test]
 fn invalid_exact_extrusion_inputs_are_not_reclassified_as_unsupported() {
     let error = extrude_profile_exact(
         &rectangle(None),

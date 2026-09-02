@@ -64,19 +64,31 @@ fn normalize_direction(direction: Vec3) -> Option<Vec3> {
     Some(scaled / scaled.length())
 }
 
+fn loses_nonzero_component(input: Vec3, output: Vec3) -> bool {
+    (input.x != 0.0 && output.x == 0.0)
+        || (input.y != 0.0 && output.y == 0.0)
+        || (input.z != 0.0 && output.z == 0.0)
+}
+
 fn extrusion_offset(direction: Vec3, depth: Scalar, tolerance: Tolerance) -> GeomResult<Vec3> {
     if !depth.is_finite() || depth <= 0.0 {
         return Err(GeomError::InvalidInput(format!(
             "exact extrusion depth must be positive and finite, got {depth}"
         )));
     }
-    let direction = normalize_direction(direction).ok_or_else(|| {
+    let normalized = normalize_direction(direction).ok_or_else(|| {
         GeomError::InvalidInput("exact extrusion direction must be finite and non-zero".to_owned())
     })?;
-    let offset = direction * depth;
-    if !offset.is_finite() {
+    if loses_nonzero_component(direction, normalized) {
         return Err(GeomError::Degenerate(
-            "exact extrusion direction could not be normalized".to_owned(),
+            "exact extrusion direction cannot be normalized without losing a nonzero component"
+                .to_owned(),
+        ));
+    }
+    let offset = normalized * depth;
+    if !offset.is_finite() || loses_nonzero_component(normalized, offset) {
+        return Err(GeomError::Degenerate(
+            "exact extrusion direction could not be scaled without range loss".to_owned(),
         ));
     }
     if offset.z <= tolerance.linear() {
