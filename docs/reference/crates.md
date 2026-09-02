@@ -5,10 +5,10 @@ The facade is convenient; leaf packages are the enforceable boundaries. Select t
 | Layer | Packages | Responsibility |
 | --- | --- | --- |
 | Foundation | `axiolid-core` | Numeric policy, identity, errors, bounds, tolerance |
-| Representations | `axiolid-curve`, `axiolid-surface`, `axiolid-primitive`, `axiolid-profile`, `axiolid-topology`, `axiolid-brep`, `axiolid-mesh`, `axiolid-field`, `axiolid-model` | Portable geometry values and authored graph |
+| Representations | `axiolid-linear`, `axiolid-curve`, `axiolid-surface`, `axiolid-primitive`, `axiolid-profile`, `axiolid-topology`, `axiolid-brep`, `axiolid-mesh`, `axiolid-field`, `axiolid-model` | Portable geometry values and authored graph |
 | Guarantees/common contracts | `axiolid-guarantees`, `axiolid-contracts`, `axiolid-mesh-contracts` | Proof/refusal vocabulary, execution diagnostics, shared mesh admissibility |
 | Operation contracts | `axiolid-tessellation-contract`, `axiolid-mesh-boolean-contract`, `axiolid-mesh-section-contract`, `axiolid-mesh-compile-contract` | Typed provider-neutral request/result/evidence seams |
-| Algorithms | `axiolid-reference`, `axiolid-nurbs`, `axiolid-construct`, `axiolid-spatial`, `axiolid-measure`, `axiolid-overlay`, `axiolid-field-ops`, `axiolid-heal` | Format-neutral implementations over values/contracts |
+| Algorithms | `axiolid-predicates`, `axiolid-linear-intersection`, `axiolid-reference`, `axiolid-nurbs`, `axiolid-construct`, `axiolid-spatial`, `axiolid-measure`, `axiolid-overlay`, `axiolid-field-ops`, `axiolid-heal` | Format-neutral implementations over values/contracts |
 | Providers | `axiolid-mesh-boolean-boolmesh` | Concrete optional operation provider |
 | Execution | `axiolid-dispatch`, `axiolid-mesh-compile`, `axiolid-backend-cpu`, `axiolid-backend-gpu` | Registration, fallback/device policy, graph execution, contexts/adapters |
 | Facade | `axiolid` | Additive capability features and re-exports |
@@ -18,7 +18,9 @@ The facade is convenient; leaf packages are the enforceable boundaries. Select t
 - Core scalar/vector/transform/tolerance values: `axiolid-core`.
 - Mesh or sampled-field values without algorithms: `axiolid-mesh` or `axiolid-field`.
 - Sampling/morphology/navigation over fields: `axiolid-field-ops`.
-- Conservative numerical predicates/reference behavior: `axiolid-reference`.
+- Certified exact-arithmetic predicates: `axiolid-predicates` (the focused substrate).
+- Broad reference oracles: `axiolid-reference` (a convenience umbrella; do not depend on it from a narrow package).
+- Linear values without the curve aggregate: `axiolid-linear`.
 - NURBS analysis and exact shape-preserving transformations: `axiolid-nurbs`.
 - Neutral authored graph storage: `axiolid-model`.
 - Exact analytic B-rep results: `axiolid-brep`; this is not a tessellator.

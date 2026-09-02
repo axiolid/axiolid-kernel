@@ -4,8 +4,8 @@
 //! independent exact oracle rather than against each other. The oracle is
 //! rational arithmetic over i128, exact for the bounded magnitudes used here.
 
-use axiolid_contracts::Sign;
-use axiolid_reference::arithmetic::{
+use axiolid_guarantees::Sign;
+use axiolid_predicates::arithmetic::{
     expansion_sign, expansion_sum, grow_expansion, negate_expansion, scale_expansion,
 };
 

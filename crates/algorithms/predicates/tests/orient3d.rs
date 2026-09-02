@@ -4,9 +4,9 @@
 //! independent of the expansion arithmetic under test. Integer inputs make the
 //! coordinate differences exact, so any disagreement is a real predicate bug.
 
-use axiolid_contracts::Sign;
 use axiolid_core::Point3;
-use axiolid_reference::{orient3d, orient3d_filter, two_sum};
+use axiolid_guarantees::Sign;
+use axiolid_predicates::{orient3d, orient3d_filter, two_sum};
 
 fn p(x: i64, y: i64, z: i64) -> Point3 {
     Point3::new(x as f64, y as f64, z as f64)

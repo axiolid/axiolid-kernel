@@ -1,0 +1,14 @@
+# Isolated downstream consumer. The empty [workspace] table makes this its own
+# workspace root, so `cargo metadata` here resolves a real application closure
+# rather than the Axiolid workspace's unified feature set.
+[workspace]
+
+[package]
+name = "axiolid-consumer-linear-intersection-minimal"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+axiolid-linear = { path = "../../../crates/representations/analytic/linear", default-features = false }
+axiolid-linear-intersection = { path = "../../../crates/algorithms/query/intersection/linear", default-features = false }

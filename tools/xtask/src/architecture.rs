@@ -1,4 +1,5 @@
 mod checks;
+mod closure;
 mod model;
 mod render;
 mod source_checks;
@@ -28,6 +29,16 @@ pub fn graph() -> Result<()> {
     checks::validate(&architecture)?;
     print!("{}", render::graph(&architecture));
     Ok(())
+}
+
+pub fn closure_check() -> Result<()> {
+    let root = closure::workspace_root()?;
+    closure::check(&root)
+}
+
+pub fn closure_explain(name: &str) -> Result<()> {
+    let root = closure::workspace_root()?;
+    closure::explain(&root, name)
 }
 
 pub fn docs() -> Result<()> {

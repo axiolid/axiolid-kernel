@@ -14,8 +14,14 @@ default = ["mesh", "cpu"]
 
 # Representation capabilities. These features are additive.
 mesh = ["dep:axiolid-mesh"]
+# Linear values and their certified queries. A line-only application should
+# depend on the leaf packages directly; these features exist for convenience,
+# not as a required route (ADR 0036).
+linear = ["dep:axiolid-linear"]
+predicates = ["dep:axiolid-predicates"]
+linear-intersection = ["linear", "predicates", "dep:axiolid-linear-intersection"]
 profiles = ["dep:axiolid-profile"]
-curves = ["dep:axiolid-curve"]
+curves = ["linear", "dep:axiolid-curve"]
 surfaces = ["curves", "dep:axiolid-surface"]
 topology = ["curves", "surfaces", "dep:axiolid-topology"]
 brep = ["topology", "dep:axiolid-brep"]
@@ -77,6 +83,9 @@ full = ["advanced", "parallel", "simd", "gpu"]
 [dependencies]
 axiolid-core.workspace = true
 axiolid-mesh = { workspace = true, optional = true }
+axiolid-linear = { workspace = true, optional = true }
+axiolid-predicates = { workspace = true, optional = true }
+axiolid-linear-intersection = { workspace = true, optional = true }
 axiolid-profile = { workspace = true, optional = true }
 axiolid-curve = { workspace = true, optional = true }
 axiolid-surface = { workspace = true, optional = true }
@@ -109,4 +118,4 @@ role = "facade"
 domain = "public"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-backend-cpu", "axiolid-backend-gpu", "axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-field", "axiolid-field-ops", "axiolid-construct", "axiolid-heal", "axiolid-contracts", "axiolid-dispatch", "axiolid-mesh-boolean-contract", "axiolid-mesh-compile-contract", "axiolid-mesh-contracts", "axiolid-mesh-section-contract", "axiolid-measure", "axiolid-mesh", "axiolid-model", "axiolid-nurbs", "axiolid-overlay", "axiolid-primitive", "axiolid-profile", "axiolid-spatial", "axiolid-surface", "axiolid-tessellation-contract", "axiolid-topology"]
+allowed-internal-dependencies = ["axiolid-backend-cpu", "axiolid-backend-gpu", "axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-linear", "axiolid-linear-intersection", "axiolid-predicates", "axiolid-field", "axiolid-field-ops", "axiolid-construct", "axiolid-heal", "axiolid-contracts", "axiolid-dispatch", "axiolid-mesh-boolean-contract", "axiolid-mesh-compile-contract", "axiolid-mesh-contracts", "axiolid-mesh-section-contract", "axiolid-measure", "axiolid-mesh", "axiolid-model", "axiolid-nurbs", "axiolid-overlay", "axiolid-primitive", "axiolid-profile", "axiolid-spatial", "axiolid-surface", "axiolid-tessellation-contract", "axiolid-topology"]

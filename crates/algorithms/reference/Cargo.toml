@@ -11,6 +11,7 @@ readme.workspace = true
 
 [dependencies]
 axiolid-core.workspace = true
+axiolid-predicates.workspace = true
 axiolid-contracts.workspace = true
 axiolid-guarantees.workspace = true
 axiolid-mesh-contracts.workspace = true
@@ -27,12 +28,6 @@ axiolid-spatial.workspace = true
 name = "clash"
 harness = false
 
-[[bench]]
-name = "predicates"
-# No criterion: the harness reports throughput and escalation together,
-# which is the pairing that makes either number interpretable.
-harness = false
-
 [dev-dependencies]
 axiolid-dispatch = { workspace = true, features = ["mesh-section"] }
 
@@ -43,4 +38,4 @@ role = "algorithm.reference"
 domain = "reference"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-core", "axiolid-curve", "axiolid-contracts", "axiolid-dispatch", "axiolid-guarantees", "axiolid-mesh-boolean-contract", "axiolid-mesh-contracts", "axiolid-mesh-section-contract", "axiolid-measure", "axiolid-mesh", "axiolid-primitive", "axiolid-spatial", "axiolid-surface"]
+allowed-internal-dependencies = ["axiolid-core", "axiolid-curve", "axiolid-predicates", "axiolid-contracts", "axiolid-dispatch", "axiolid-guarantees", "axiolid-mesh-boolean-contract", "axiolid-mesh-contracts", "axiolid-mesh-section-contract", "axiolid-measure", "axiolid-mesh", "axiolid-primitive", "axiolid-spatial", "axiolid-surface"]

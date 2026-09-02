@@ -21,6 +21,8 @@ graph TD
     axiolid_field_ops["axiolid-field-ops\nalgorithm.sampled"]
     axiolid_guarantees["axiolid-guarantees\ncontract.guarantees"]
     axiolid_heal["axiolid-heal\nalgorithm.repair"]
+    axiolid_linear["axiolid-linear\nrepresentation.atomic"]
+    axiolid_linear_intersection["axiolid-linear-intersection\nalgorithm.query"]
     axiolid_measure["axiolid-measure\nalgorithm.query"]
     axiolid_mesh["axiolid-mesh\nrepresentation.discrete"]
     axiolid_mesh_boolean_boolmesh["axiolid-mesh-boolean-boolmesh\nprovider.mesh"]
@@ -32,6 +34,7 @@ graph TD
     axiolid_model["axiolid-model\nrepresentation.graph"]
     axiolid_nurbs["axiolid-nurbs\nalgorithm.parametric"]
     axiolid_overlay["axiolid-overlay\nalgorithm.planar"]
+    axiolid_predicates["axiolid-predicates\nalgorithm.reference"]
     axiolid_primitive["axiolid-primitive\nrepresentation.atomic"]
     axiolid_profile["axiolid-profile\nrepresentation.region"]
     axiolid_reference["axiolid-reference\nalgorithm.reference"]
@@ -51,6 +54,8 @@ graph TD
     axiolid --> axiolid_field
     axiolid --> axiolid_field_ops
     axiolid --> axiolid_heal
+    axiolid --> axiolid_linear
+    axiolid --> axiolid_linear_intersection
     axiolid --> axiolid_measure
     axiolid --> axiolid_mesh
     axiolid --> axiolid_mesh_boolean_contract
@@ -60,6 +65,7 @@ graph TD
     axiolid --> axiolid_model
     axiolid --> axiolid_nurbs
     axiolid --> axiolid_overlay
+    axiolid --> axiolid_predicates
     axiolid --> axiolid_primitive
     axiolid --> axiolid_profile
     axiolid --> axiolid_spatial
@@ -93,6 +99,7 @@ graph TD
     axiolid_contracts --> axiolid_core
     axiolid_contracts --> axiolid_guarantees
     axiolid_curve --> axiolid_core
+    axiolid_curve --> axiolid_linear
     axiolid_dispatch --> axiolid_contracts
     axiolid_dispatch --> axiolid_core
     axiolid_dispatch --> axiolid_mesh
@@ -104,6 +111,11 @@ graph TD
     axiolid_field_ops --> axiolid_field
     axiolid_heal --> axiolid_core
     axiolid_heal --> axiolid_mesh
+    axiolid_linear --> axiolid_core
+    axiolid_linear_intersection --> axiolid_core
+    axiolid_linear_intersection --> axiolid_guarantees
+    axiolid_linear_intersection --> axiolid_linear
+    axiolid_linear_intersection --> axiolid_predicates
     axiolid_measure --> axiolid_core
     axiolid_measure --> axiolid_mesh
     axiolid_mesh --> axiolid_core
@@ -161,6 +173,8 @@ graph TD
     axiolid_nurbs --> axiolid_reference
     axiolid_nurbs --> axiolid_surface
     axiolid_overlay --> axiolid_core
+    axiolid_predicates --> axiolid_core
+    axiolid_predicates --> axiolid_guarantees
     axiolid_primitive --> axiolid_core
     axiolid_profile --> axiolid_core
     axiolid_profile --> axiolid_curve
@@ -174,6 +188,7 @@ graph TD
     axiolid_reference --> axiolid_mesh_boolean_contract
     axiolid_reference --> axiolid_mesh_contracts
     axiolid_reference --> axiolid_mesh_section_contract
+    axiolid_reference --> axiolid_predicates
     axiolid_reference --> axiolid_primitive
     axiolid_reference --> axiolid_spatial
     axiolid_reference --> axiolid_surface

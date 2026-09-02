@@ -15,6 +15,13 @@ pub use evaluate::CurveEvaluator;
 pub use linear::{Line, Line2, Line3, Polyline, Polyline2, Polyline3};
 pub use spline::{BSplineCurve, BSplineCurve2, BSplineCurve3, KnotSpec};
 
+/// The focused linear vocabulary, re-exported for consumers that want to name
+/// its origin explicitly. A line-only consumer should depend on
+/// `axiolid-linear` directly instead of paying for this aggregate.
+pub mod linear_vocabulary {
+    pub use axiolid_linear::*;
+}
+
 /// Atomic two-dimensional curve values.
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq)]

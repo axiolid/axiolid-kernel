@@ -38,7 +38,7 @@ any exactness claim as applying to *evaluation*, not to *operation results*.
 | --- | --- | --- |
 | Scalar values, frames, transforms, bounds, intervals, tolerance | Implemented | `axiolid-core` |
 | Mesh values, polygon/triangle utilities and views | Implemented | `axiolid-mesh` |
-| Robust-orientation and in-circle / in-sphere predicate reference paths | Implemented | `axiolid-reference` with degeneracy and filter tests |
+| Robust-orientation and in-circle / in-sphere predicate reference paths | Implemented | `axiolid-predicates` with degeneracy and filter tests; re-exported by `axiolid-reference`. Depends only on `axiolid-core` and `axiolid-guarantees`, so a consumer gets certified signs without curves, surfaces, or meshes ([ADR 0036](/adr/0036-use-case-specific-compilation-closures)) |
 | Scalar geometry generation | Implemented broad discrete path plus focused analytic arrangement | `axiolid-construct`; profile/path families remain mesh results. A one-owner certified affine surface trace becomes two closed trimmed faces plus an explicit embedded pcurve on the containing face; see [ADR 0029](/adr/0029-certified-trace-topology-integration) |
 | Scalar graph compilation | Implemented reference path | `axiolid-mesh-compile`; DAG traversal, caching, model-driven directrices, and B-rep face tessellation. Consumes `axiolid-construct` rather than owning sweeps. Produces meshes today; see [ADR 0020](/adr/0020-exact-brep-kernel-model) |
 | Polygon triangulation | Implemented provider | `axiolid-tessellation-contract` adopts Earcut under the contract in [ADR 0015](/adr/0015-adopt-earcut-polygon-triangulation) |
@@ -53,6 +53,7 @@ any exactness claim as applying to *evaluation*, not to *operation results*.
 | Profiles / contours | Represented with validation | `axiolid-profile` |
 | Curves and surfaces | Represented | `axiolid-curve`, `axiolid-surface`; representation alone is not an evaluator claim |
 | Polynomial/rational B-spline evaluation | Implemented scalar oracle | `axiolid-reference`; validates compact knot/control/weight data and exposes homogeneous point, first-, and second-derivative curve/surface jets |
+| Linear intersection: line/line and segment/segment in 2D | Implemented | `axiolid-linear-intersection`; certified parallel/coincident/crossing classification, exact endpoint-contact parameters, collinear overlap spans, and typed refusals naming the operand at fault. 3D linear and curve/surface intersection are not implemented |
 | Analytic curve evaluation and adaptive flattening | Implemented | `axiolid-reference`; native-parameter evaluation with a chord-error budget, fail-closed on depth exhaustion and unbisectable intervals |
 | Point→parameter inversion, elementary surfaces | Implemented | `axiolid-reference`; plane/cylinder/cone/sphere/torus with residual validation, refusing degenerate axis/apex/pole points |
 | General NURBS differential analysis | Implemented reference path | `axiolid-nurbs`; curve tangents/curvature and surface fundamental forms, normals, Gaussian/mean/principal curvature; see [ADR 0022](/adr/0022-general-nurbs-kernel-capability) |

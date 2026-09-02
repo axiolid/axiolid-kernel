@@ -1,0 +1,28 @@
+[package]
+name = "axiolid-linear-intersection"
+description = "Portable, deterministic intersections for linear geometry"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[features]
+default = []
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-linear.workspace = true
+axiolid-guarantees.workspace = true
+axiolid-predicates.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "algorithms"
+role = "algorithm.query"
+domain = "query.intersection.linear"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core", "axiolid-guarantees", "axiolid-linear", "axiolid-predicates"]

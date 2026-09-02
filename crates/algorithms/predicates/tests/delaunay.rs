@@ -5,9 +5,9 @@
 //! chosen so the lifted determinants cannot overflow i128: `incircle` is
 //! degree 4 and `insphere` degree 6 in the coordinates, so the bounds differ.
 
-use axiolid_contracts::Sign;
 use axiolid_core::{Point2, Point3};
-use axiolid_reference::{incircle, incircle_filter, insphere, insphere_filter};
+use axiolid_guarantees::Sign;
+use axiolid_predicates::{incircle, incircle_filter, insphere, insphere_filter};
 
 fn sign_of(v: i128) -> Sign {
     match v.signum() {

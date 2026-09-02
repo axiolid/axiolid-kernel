@@ -16,8 +16,8 @@
 //! Same filtered cascade as `orient2d`: cheap f64 with an error bound, then
 //! exact expansion arithmetic when the bound cannot exclude zero.
 
-use axiolid_contracts::{Certified, Precision, Sign};
 use axiolid_core::Point3;
+use axiolid_guarantees::{Certified, Precision, Sign};
 
 use crate::arithmetic::{
     expansion_product, expansion_sign, expansion_sum, grow_expansion, negate_expansion,

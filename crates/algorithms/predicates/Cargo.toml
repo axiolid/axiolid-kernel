@@ -1,5 +1,6 @@
 [package]
-name = "axiolid-curve"
+name = "axiolid-predicates"
+description = "Certified exact-arithmetic geometric predicates"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -7,18 +8,19 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 readme.workspace = true
-authors.workspace = true
-description = "Curve evaluation: lines, conics, composite curves, NURBS, trimming."
+
+[features]
+default = []
 
 [dependencies]
 axiolid-core.workspace = true
-axiolid-linear.workspace = true
+axiolid-guarantees.workspace = true
 
 [package.metadata.axiolid]
 architecture-version = 1
-layer = "representations"
-role = "representation.atomic"
-domain = "analytic.curve"
+layer = "algorithms"
+role = "algorithm.reference"
+domain = "reference.predicates"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-core", "axiolid-linear"]
+allowed-internal-dependencies = ["axiolid-core", "axiolid-guarantees"]

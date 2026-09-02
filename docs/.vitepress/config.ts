@@ -39,6 +39,7 @@ const adrs = [
   ["0033-mesh-plane-section-contract", 33, "Mesh plane sections"],
   ["0034-authored-open-profile-contract", 34, "Authored open profiles"],
   ["0035-nested-ownership-and-capability-contracts", 35, "Nested ownership layout"],
+  ["0036-use-case-specific-compilation-closures", 36, "Use-case compilation closures"],
 ] as const;
 
 const adrIcon = `<svg class="adr-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg>`;

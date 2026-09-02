@@ -6,8 +6,8 @@
 //! the bound or the exact path shows up as a failing test rather than a slow
 //! program.
 
-use axiolid_reference::scene::{orient2_scene, orient3_scene, DegeneracyRate};
-use axiolid_reference::{orient2d, orient2d_filter, orient3d, orient3d_filter};
+use axiolid_predicates::scene::{orient2_scene, orient3_scene, DegeneracyRate};
+use axiolid_predicates::{orient2d, orient2d_filter, orient3d, orient3d_filter};
 
 const SAMPLES: usize = 100_000;
 
@@ -100,7 +100,7 @@ fn three_dimensional_escalation_also_tracks_degeneracy() {
 /// expected sign is known without an oracle: it must be exactly zero.
 #[test]
 fn degenerate_cases_are_answered_exactly_at_every_tier() {
-    use axiolid_contracts::Sign;
+    use axiolid_guarantees::Sign;
 
     for rate in DegeneracyRate::ALL {
         let scene = orient2_scene(20_000, rate, 0xC0FF_EE01);
@@ -155,8 +155,8 @@ fn degenerate_cases_are_answered_exactly_at_every_tier() {
 /// ULP off the plane force the filter to defer AND require a definite sign.
 #[test]
 fn near_degenerate_cases_recover_a_definite_sign() {
-    use axiolid_contracts::Sign;
-    use axiolid_reference::scene::near_coplanar_scene;
+    use axiolid_guarantees::Sign;
+    use axiolid_predicates::scene::near_coplanar_scene;
 
     let scene = near_coplanar_scene(20_000, 0xBEEF_0001);
     let mut deferred = 0usize;
@@ -197,7 +197,7 @@ fn near_degenerate_cases_recover_a_definite_sign() {
 /// corruption. Near-degenerate inputs are where the two differ.
 #[test]
 fn a_certified_filter_answer_always_matches_the_exact_answer() {
-    use axiolid_reference::scene::near_coplanar_scene;
+    use axiolid_predicates::scene::near_coplanar_scene;
 
     let mut certified = 0usize;
     for case in &near_coplanar_scene(50_000, 0x5EED_0F11) {

@@ -5,6 +5,9 @@ All notable changes to Axiolid are documented in this file.
 ## [Unreleased]
 
 ### Added
+- Extracted `axiolid-linear` (line/segment/ray/polyline values), `axiolid-predicates` (certified exact-arithmetic predicates), and `axiolid-linear-intersection` (certified line/line and segment/segment classification) so a line-query application compiles five internal packages instead of the kernel. Existing paths such as `axiolid_curve::Line2` and `axiolid_reference::orient2d` are preserved by re-export; see [ADR 0036](./adr/0036-use-case-specific-compilation-closures.md).
+- Added `cargo xtask architecture closure check|explain`, declared closure profiles in `architecture/closure-profiles.toml`, and an isolated consumer fixture under `tests/consumers/`, making a minimal dependency closure a machine-checked compatibility promise rather than a claim.
+- Added facade features `linear`, `predicates`, and `linear-intersection` as convenience routes; direct leaf dependencies remain the smallest closure.
 - Added a source-backed geometry concepts guide with accessible Mermaid architecture diagrams, native ASCII STL models that render interactively on GitHub and Pages, contract equations, dark/mobile support, and a mutation-proven diagram-source gate.
 - Stable, typed capability IDs for tessellation, mesh Boolean, mesh section, and graph-to-mesh contracts, plus an application- and vendor-neutral `openbim.geometry` claim/evidence boundary.
 - Added the Axiolid favicon and a canonical glossary with automatic first-use links and hover/focus definitions.

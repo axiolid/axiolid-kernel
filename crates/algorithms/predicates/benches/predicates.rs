@@ -10,8 +10,8 @@
 use std::hint::black_box;
 use std::time::Instant;
 
-use axiolid_reference::scene::{orient2_scene, orient3_scene, DegeneracyRate};
-use axiolid_reference::{orient2d, orient2d_filter, orient3d, orient3d_filter, StaticFilter};
+use axiolid_predicates::scene::{orient2_scene, orient3_scene, DegeneracyRate};
+use axiolid_predicates::{orient2d, orient2d_filter, orient3d, orient3d_filter, StaticFilter};
 
 const SAMPLES: usize = 200_000;
 

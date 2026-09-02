@@ -19,6 +19,26 @@ pub mod mesh {
     pub use axiolid_mesh::*;
 }
 
+#[cfg(feature = "linear")]
+pub mod linear {
+    pub use axiolid_linear::*;
+}
+
+#[cfg(feature = "predicates")]
+pub mod predicates {
+    pub use axiolid_predicates::*;
+}
+
+/// Certified linear intersection queries.
+///
+/// The facade adds one compilation unit by design. An application that wants
+/// the smallest possible closure should depend on `axiolid-linear` and
+/// `axiolid-linear-intersection` directly (ADR 0036).
+#[cfg(feature = "linear-intersection")]
+pub mod linear_intersection {
+    pub use axiolid_linear_intersection::*;
+}
+
 #[cfg(feature = "profiles")]
 pub mod profile {
     pub use axiolid_profile::*;

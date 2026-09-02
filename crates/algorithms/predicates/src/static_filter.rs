@@ -12,8 +12,8 @@
 //! bound. A caller that exceeds the declared range gets `None` rather than a
 //! silently invalid answer.
 
-use axiolid_contracts::Sign;
 use axiolid_core::{Point2, Point3};
+use axiolid_guarantees::Sign;
 
 /// Machine epsilon for binary64.
 const EPSILON: f64 = f64::EPSILON / 2.0;

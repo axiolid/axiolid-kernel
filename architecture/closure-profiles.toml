@@ -1,0 +1,44 @@
+# Declared minimal dependency closures.
+#
+# Each profile is a COMPATIBILITY PROMISE verified by
+# `cargo xtask architecture closure check`. Changing `expected_internal` is an
+# API-level decision and must be reviewed as one, not accepted as an incidental
+# manifest edit.
+
+[[profile]]
+name = "linear-intersection-minimal"
+manifest = "tests/consumers/linear-intersection-minimal/Cargo.toml"
+description = "A line-query application: linear values plus certified linear intersection."
+features = []
+
+# `axiolid-predicates` is present deliberately (ADR 0036 Option B): duplicating
+# certified exact arithmetic inside the intersection package would be worse than
+# one focused shared predicate package.
+expected_internal = [
+    "axiolid-core",
+    "axiolid-guarantees",
+    "axiolid-linear",
+    "axiolid-linear-intersection",
+    "axiolid-predicates",
+]
+
+forbidden_internal = [
+    "axiolid",
+    "axiolid-backend-cpu",
+    "axiolid-backend-gpu",
+    "axiolid-brep",
+    "axiolid-construct",
+    "axiolid-curve",
+    "axiolid-dispatch",
+    "axiolid-field",
+    "axiolid-heal",
+    "axiolid-mesh",
+    "axiolid-mesh-compile",
+    "axiolid-model",
+    "axiolid-nurbs",
+    "axiolid-overlay",
+    "axiolid-reference",
+    "axiolid-spatial",
+    "axiolid-surface",
+    "axiolid-topology",
+]

@@ -23,6 +23,8 @@ dependencies = [
  "axiolid-field",
  "axiolid-field-ops",
  "axiolid-heal",
+ "axiolid-linear",
+ "axiolid-linear-intersection",
  "axiolid-measure",
  "axiolid-mesh",
  "axiolid-mesh-boolean-contract",
@@ -32,6 +34,7 @@ dependencies = [
  "axiolid-model",
  "axiolid-nurbs",
  "axiolid-overlay",
+ "axiolid-predicates",
  "axiolid-primitive",
  "axiolid-profile",
  "axiolid-spatial",
@@ -111,6 +114,7 @@ name = "axiolid-curve"
 version = "0.1.0"
 dependencies = [
  "axiolid-core",
+ "axiolid-linear",
 ]
 
 [[package]]
@@ -151,6 +155,23 @@ dependencies = [
  "axiolid-core",
  "axiolid-mesh",
  "thiserror",
+]
+
+[[package]]
+name = "axiolid-linear"
+version = "0.1.0"
+dependencies = [
+ "axiolid-core",
+]
+
+[[package]]
+name = "axiolid-linear-intersection"
+version = "0.1.0"
+dependencies = [
+ "axiolid-core",
+ "axiolid-guarantees",
+ "axiolid-linear",
+ "axiolid-predicates",
 ]
 
 [[package]]
@@ -281,6 +302,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "axiolid-predicates"
+version = "0.1.0"
+dependencies = [
+ "axiolid-core",
+ "axiolid-guarantees",
+]
+
+[[package]]
 name = "axiolid-primitive"
 version = "0.1.0"
 dependencies = [
@@ -309,6 +338,7 @@ dependencies = [
  "axiolid-mesh-boolean-contract",
  "axiolid-mesh-contracts",
  "axiolid-mesh-section-contract",
+ "axiolid-predicates",
  "axiolid-primitive",
  "axiolid-spatial",
  "axiolid-surface",
