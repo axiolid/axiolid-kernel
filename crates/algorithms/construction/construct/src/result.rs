@@ -9,6 +9,7 @@
 use axiolid_brep::ExactBRep;
 use axiolid_core::Tolerance;
 use axiolid_mesh::TriMesh;
+use axiolid_tessellation_contract::TessellatedMesh;
 
 /// Requested result model for a generation operation.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -47,6 +48,12 @@ impl TessellationRequest {
     pub const fn tolerance(self) -> Tolerance {
         self.tolerance
     }
+
+    /// Bind a generated mesh to this request's tolerance.
+    #[must_use]
+    pub const fn bind(self, mesh: TriMesh) -> TessellatedMesh {
+        TessellatedMesh::new(mesh, self.tolerance)
+    }
 }
 
 /// Geometry produced by a generation operation.
@@ -63,8 +70,8 @@ impl TessellationRequest {
 pub enum GeneratedGeometry {
     /// Analytic boundary representation with explicit topology and trims.
     ExactBRep(ExactBRep),
-    /// Explicitly requested triangle tessellation.
-    Tessellation(TriMesh),
+    /// Explicitly requested triangle tessellation with tolerance provenance.
+    Tessellation(TessellatedMesh),
 }
 
 /// Coarse output-model classification for capabilities and diagnostics.

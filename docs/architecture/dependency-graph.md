@@ -98,6 +98,7 @@ graph TD
     axiolid_construct --> axiolid_profile
     axiolid_construct --> axiolid_reference
     axiolid_construct --> axiolid_surface
+    axiolid_construct --> axiolid_tessellation_contract
     axiolid_construct --> axiolid_topology
     axiolid_contracts --> axiolid_core
     axiolid_contracts --> axiolid_guarantees

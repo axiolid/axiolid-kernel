@@ -226,6 +226,8 @@ with a mesh.
   `ExactBRep` and perform a separate tolerance-bearing tessellation request;
   it must not collapse exact nodes to `TriMesh`.
 - The current mesh construction path remains supported and clearly discrete.
+  Every generated tessellation is a `TessellatedMesh` that retains the caller's
+  tolerance; raw `TriMesh` values cannot cross the tessellation result seam.
 - New exact construction must populate 3D supports, pcurves, and native spans as
   it constructs topology. It must refuse when it cannot do so exactly.
 - No ISO/source-format terminology, schema types, or adapter dependency enters

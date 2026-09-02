@@ -90,6 +90,7 @@ dependencies = [
  "axiolid-profile",
  "axiolid-reference",
  "axiolid-surface",
+ "axiolid-tessellation-contract",
  "axiolid-topology",
  "earcut",
 ]

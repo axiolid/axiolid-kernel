@@ -6,9 +6,11 @@
 //! faces; per-face independent tessellation is not watertight.
 
 pub mod options;
+mod output;
 pub mod tessellator;
 
 pub use options::{InvalidTessellationOptions, TessellationOptions};
+pub use output::TessellatedMesh;
 
 pub const CAPABILITY_ID: axiolid_contracts::CapabilityId =
     axiolid_contracts::capability_ids::TESSELLATE;

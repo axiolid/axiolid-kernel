@@ -1,9 +1,8 @@
 //! Graph tessellation capability.
 
-use axiolid_mesh::TriMesh;
 use axiolid_model::{GeometryGraph, NodeId};
 
-use crate::TessellationOptions;
+use crate::{TessellatedMesh, TessellationOptions};
 
 /// Convert exact graph nodes to watertight triangle meshes.
 pub trait Tessellator: core::fmt::Debug + Send + Sync {
@@ -16,7 +15,7 @@ pub trait Tessellator: core::fmt::Debug + Send + Sync {
         graph: &GeometryGraph,
         root: NodeId,
         options: &TessellationOptions,
-    ) -> Result<TriMesh, Self::Error>;
+    ) -> Result<TessellatedMesh, Self::Error>;
 
     /// Tessellate many roots. Implementations should override for parallel/GPU
     /// batching and must preserve input order.
@@ -25,7 +24,7 @@ pub trait Tessellator: core::fmt::Debug + Send + Sync {
         graph: &GeometryGraph,
         roots: &[NodeId],
         options: &TessellationOptions,
-    ) -> Result<Vec<TriMesh>, Self::Error> {
+    ) -> Result<Vec<TessellatedMesh>, Self::Error> {
         roots
             .iter()
             .map(|&root| self.tessellate(graph, root, options))

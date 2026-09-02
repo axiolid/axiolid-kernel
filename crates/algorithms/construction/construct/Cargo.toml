@@ -24,6 +24,7 @@ axiolid-profile.workspace = true
 axiolid-reference.workspace = true
 axiolid-surface.workspace = true
 axiolid-topology.workspace = true
+axiolid-tessellation-contract.workspace = true
 earcut = "0.4"
 [dev-dependencies]
 # The measurement oracle. `volume_properties` audits closed-two-manifoldness
@@ -39,4 +40,4 @@ role = "algorithm.construction"
 domain = "construction"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-contracts", "axiolid-guarantees", "axiolid-mesh-boolean-contract", "axiolid-mesh-contracts", "axiolid-measure", "axiolid-mesh", "axiolid-nurbs", "axiolid-primitive", "axiolid-profile", "axiolid-reference", "axiolid-surface", "axiolid-topology"]
+allowed-internal-dependencies = ["axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-contracts", "axiolid-guarantees", "axiolid-mesh-boolean-contract", "axiolid-mesh-contracts", "axiolid-measure", "axiolid-mesh", "axiolid-nurbs", "axiolid-primitive", "axiolid-profile", "axiolid-reference", "axiolid-surface", "axiolid-tessellation-contract", "axiolid-topology"]
