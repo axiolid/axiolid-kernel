@@ -1,9 +1,10 @@
 # axiolid-mesh-compile instructions
 
-Purpose: the reference `MeshCompiler`. It orchestrates `GeometryGraph` to
-`TriMesh`: graph traversal, memoization, transform composition, construction,
-B-rep tessellation, and operation dispatch. Construction algorithms and their
-local invariants remain owned by `axiolid-construct`.
+Purpose: the reference mesh and exact compilers. `ReferenceMeshCompiler` orchestrates
+`GeometryGraph` to `TriMesh`; `ReferenceExactCompiler` owns a separate per-batch
+`NodeId -> ExactBRep` cache and never accepts discrete values. Graph traversal,
+transform composition, and operation dispatch live here; construction algorithms
+and their local invariants remain owned by `axiolid-construct`.
 
 ## Invariants
 
@@ -15,9 +16,9 @@ Use the directed-edge parity gate in
 `crates/algorithms/construction/construct/tests/extrusion.rs` — every directed
 edge exactly once, every edge with exactly one opposing half-edge.
 
-Unsupported profile and solid families return `GeomError::Unsupported`, never a
-silent approximation. A missing wall is cheap; a wrong wall corrupts every
-downstream quantity.
+Unsupported profile and solid families return `GeomError::UnsupportedInput` naming
+the family, never a silent approximation. Exact compilation currently accepts only
+supported extrusion roots and must never delegate to mesh compilation.
 
 No default tolerance or chord budget. The caller supplies both, because
 acceptable error depends on source units and downstream use.

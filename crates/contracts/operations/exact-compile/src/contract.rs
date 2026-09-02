@@ -4,14 +4,13 @@ use axiolid_brep::ExactBRep;
 use axiolid_contracts::{Backend, ExecutionOptions, GeomResult, OutputBound, ScratchRequirement};
 use axiolid_model::{GeometryGraph, NodeId};
 
-/// Backend able to lower a graph root to an exact B-rep, or refuse.
+/// Backend able to lower graph roots to exact B-reps, or refuse.
 ///
 /// The contract is deliberately narrow. An implementation returns
-/// [`axiolid_contracts::GeomError::Unsupported`] naming this capability when it
-/// cannot preserve exactness for a node. It must never substitute a
+/// [`axiolid_contracts::GeomError::UnsupportedInput`] naming the unsupported
+/// node family when it cannot preserve exactness. It must never substitute a
 /// tessellation: callers wanting triangles ask
-/// `axiolid_mesh_compile_contract::MeshCompiler` instead, and that request
-/// carries its own explicit tolerance.
+/// `axiolid_mesh_compile_contract::MeshCompiler` instead.
 pub trait ExactCompiler: Backend {
     /// Scratch needed beyond the graph and the produced results.
     ///
@@ -33,4 +32,34 @@ pub trait ExactCompiler: Backend {
         root: NodeId,
         options: &ExecutionOptions,
     ) -> GeomResult<ExactBRep>;
+
+    /// Compile roots into a caller-provided buffer.
+    ///
+    /// Results append in root order. Implementations override this seam to
+    /// share a per-request exact-result cache across roots.
+    fn compile_exact_batch_into(
+        &self,
+        graph: &GeometryGraph,
+        roots: &[NodeId],
+        options: &ExecutionOptions,
+        destination: &mut Vec<ExactBRep>,
+    ) -> GeomResult<()> {
+        destination.reserve(roots.len());
+        for &root in roots {
+            destination.push(self.compile_exact(graph, root, options)?);
+        }
+        Ok(())
+    }
+
+    /// Compile roots as an ordered exact-result batch.
+    fn compile_exact_batch(
+        &self,
+        graph: &GeometryGraph,
+        roots: &[NodeId],
+        options: &ExecutionOptions,
+    ) -> GeomResult<Vec<ExactBRep>> {
+        let mut destination = Vec::with_capacity(roots.len());
+        self.compile_exact_batch_into(graph, roots, options, &mut destination)?;
+        Ok(destination)
+    }
 }

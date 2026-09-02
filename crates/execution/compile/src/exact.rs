@@ -1,11 +1,12 @@
 //! Reference graph-to-exact-B-rep compiler.
 //!
-//! This is the exact counterpart to [`crate::ReferenceMeshCompiler`]. It
-//! advertises `GRAPH_TO_EXACT_BREP` and refuses unsupported node families with
-//! an input-specific diagnostic. It never delegates to the mesh compiler and
-//! never returns an approximation for an exact request.
+//! Exact and mesh compilation are separate result domains. One exact batch owns
+//! a `NodeId -> ExactBRep` memo table; a discrete value cannot enter that cache.
+
+use std::collections::{HashMap, HashSet};
 
 use axiolid_brep::ExactBRep;
+use axiolid_construct::extrude::extrude_profile_exact;
 use axiolid_contracts::{
     Backend, BackendDescriptor, BackendId, ExecutionOptions, ExecutionTarget, GeomError,
     GeomResult, Operation,
@@ -38,16 +39,98 @@ impl ExactCompiler for ReferenceExactCompiler {
         &self,
         graph: &GeometryGraph,
         root: NodeId,
-        _options: &ExecutionOptions,
+        options: &ExecutionOptions,
     ) -> GeomResult<ExactBRep> {
-        let node = graph.get(root).ok_or_else(|| {
+        ExactCompilation::new(graph, options).compile(root)
+    }
+
+    fn compile_exact_batch_into(
+        &self,
+        graph: &GeometryGraph,
+        roots: &[NodeId],
+        options: &ExecutionOptions,
+        destination: &mut Vec<ExactBRep>,
+    ) -> GeomResult<()> {
+        destination.reserve(roots.len());
+        let mut compilation = ExactCompilation::new(graph, options);
+        for &root in roots {
+            destination.push(compilation.compile(root)?);
+        }
+        Ok(())
+    }
+}
+
+struct ExactCompilation<'a> {
+    graph: &'a GeometryGraph,
+    options: &'a ExecutionOptions,
+    cache: HashMap<NodeId, ExactBRep>,
+    active: HashSet<NodeId>,
+    cache_hits: usize,
+    evaluated_nodes: usize,
+}
+
+impl<'a> ExactCompilation<'a> {
+    fn new(graph: &'a GeometryGraph, options: &'a ExecutionOptions) -> Self {
+        Self {
+            graph,
+            options,
+            cache: HashMap::new(),
+            active: HashSet::new(),
+            cache_hits: 0,
+            evaluated_nodes: 0,
+        }
+    }
+
+    fn compile(&mut self, root: NodeId) -> GeomResult<ExactBRep> {
+        if let Some(cached) = self.cache.get(&root) {
+            self.cache_hits += 1;
+            return Ok(cached.clone());
+        }
+        if !self.active.insert(root) {
+            return Err(GeomError::InvalidInput(format!(
+                "exact compilation cycle reached at node {root:?}"
+            )));
+        }
+
+        self.evaluated_nodes += 1;
+        let result = self.compile_uncached(root);
+        self.active.remove(&root);
+        let exact = result?;
+        self.cache.insert(root, exact.clone());
+        Ok(exact)
+    }
+
+    fn compile_uncached(&self, root: NodeId) -> GeomResult<ExactBRep> {
+        let node = self.graph.get(root).ok_or_else(|| {
             GeomError::InvalidInput(format!("node {root:?} does not belong to this graph"))
         })?;
-        Err(GeomError::UnsupportedInput {
-            backend: Self::ID,
-            operation: Operation::GraphCompilation,
-            input: exact_input_family(node),
-        })
+
+        match node {
+            GeometryNode::SolidOperation(SolidOperation::Extrusion {
+                profile,
+                direction,
+                depth,
+            }) => {
+                let profile_node = self.graph.get(*profile).ok_or_else(|| {
+                    GeomError::InvalidInput(format!(
+                        "extrusion profile {profile:?} does not belong to this graph"
+                    ))
+                })?;
+                let GeometryNode::Profile(profile) = profile_node else {
+                    return Err(unsupported("extrusion profile reference"));
+                };
+                extrude_profile_exact(profile, *direction, *depth, self.options.tolerance())
+            }
+            _ => Err(unsupported(exact_input_family(node))),
+        }
+    }
+}
+
+fn unsupported(input: &'static str) -> GeomError {
+    GeomError::UnsupportedInput {
+        backend: ReferenceExactCompiler::ID,
+        operation: Operation::GraphCompilation,
+        input,
     }
 }
 
@@ -97,5 +180,48 @@ fn solid_operation_family(operation: &SolidOperation) -> &'static str {
         SolidOperation::Boolean { .. } => "boolean",
         SolidOperation::BoundedHalfSpace { .. } => "bounded half-space",
         _ => "unknown solid operation",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use axiolid_core::{Tolerance, Vec3};
+    use axiolid_model::GeometryGraphBuilder;
+    use axiolid_profile::{Profile, RectangleProfile};
+
+    use super::*;
+
+    #[test]
+    fn duplicate_roots_hit_the_exact_result_cache() {
+        let mut builder = GeometryGraphBuilder::new();
+        let profile = builder
+            .push(GeometryNode::Profile(Profile::Rectangle(
+                RectangleProfile {
+                    x: 2.0,
+                    y: 1.0,
+                    thickness: None,
+                    outer_radius: None,
+                    inner_radius: None,
+                },
+            )))
+            .unwrap();
+        let root = builder
+            .push(GeometryNode::SolidOperation(SolidOperation::Extrusion {
+                profile,
+                direction: Vec3::Z,
+                depth: 1.0,
+            }))
+            .unwrap();
+        let graph = builder.finish(vec![root]).unwrap();
+        let options = ExecutionOptions::new(Tolerance::METRE);
+        let mut compilation = ExactCompilation::new(&graph, &options);
+
+        let first = compilation.compile(root).unwrap();
+        let second = compilation.compile(root).unwrap();
+
+        assert_eq!(first, second);
+        assert_eq!(compilation.evaluated_nodes, 1);
+        assert_eq!(compilation.cache_hits, 1);
+        assert_eq!(compilation.cache.len(), 1);
     }
 }
