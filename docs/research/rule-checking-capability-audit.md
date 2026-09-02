@@ -26,6 +26,21 @@ Declaration scans were used only for navigation. Classification came from
 reading bodies, because module names are unreliable: 24 files in the consumer
 layer are doc-only stubs whose names promise algorithms they do not contain.
 
+### Coverage check
+
+To confirm this audit covers the whole demand surface rather than one crate,
+every geometry symbol referenced by all nine sibling crates was extracted and
+compared against the audited inventory.
+
+Result: 38 distinct symbols consumed, of which 33 were already inventoried.
+The 5 remainder resolve to a different module of the same name in the format
+layer, which decodes a proprietary binary model cache into meshes and colours.
+Its seven public items are decode, indexing and colour helpers; none is a
+neutral geometry algorithm, so none is a kernel gap.
+
+No consumed symbol anywhere in the workspace falls outside the classification
+above.
+
 ## Gaps — kernel-owned, now tracked
 
 | Capability | Evidence of need | Kernel status | Owner | Issue | Milestone |
