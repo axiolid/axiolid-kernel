@@ -13,7 +13,7 @@ contact_links:
       measurement, not an intuition. Does not change what the kernel can do.
 
   - name: 💬 Ask a question
-    url: https://github.com/axiolid/kernel/discussions/new?category=q-a
+    url: https://github.com/axiolid/kernel/discussions/new?category=questions
     about: >
       How do I use this? Why does it behave this way? Answers get marked so the
       next person finds them.

@@ -42,8 +42,9 @@ useless.
 | Mechanism | Answers | Values |
 |---|---|---|
 | **Type** | What kind of work is this? | `Bug`, `Task`, `Feature` |
-| **Field** `Area` | Which part of the kernel? | `exact-brep`, `intersection`, `nurbs`, `mesh`, `architecture`, `release` |
+| **Field** `Area` | Which part of the kernel? | `exact-brep`, `intersection`, `nurbs`, `mesh`, `architecture`, `release`, `docs` |
 | **Field** `Effort` | How much work is it? | `S`, `M`, `L`, `XL` |
+| **Field** `Priority` | How urgent is it? | `P0` … `P3`, derived from the milestone |
 | **Milestone** | Which release gate? | `v0.2` … `v1.0`, or `Backlog` |
 | **Board status** | Where is it right now? | `Backlog` → `Ready` → `In Progress` → `In Review` → `Blocked` → `Done` |
 | **Close reason** | Why did it end? | `Completed`, `Not planned`, `Duplicate` |
@@ -78,6 +79,26 @@ filter cannot already see. Closing as **Not planned** is stronger than a
 `parked` is the one that stays, because it is the only state GitHub cannot
 express: in scope, agreed, deliberately not now. That is not "closed" and not
 "ready" — it needs a name.
+
+## From discussion to issue
+
+An accepted discussion becomes an issue via **Create issue from discussion** in
+the discussion sidebar. This copies the body, links both directions, and leaves
+the discussion in place as the rationale.
+
+That path does **not** go through an issue template, so nothing is pre-filled.
+Automation classifies it from the discussion's category instead:
+
+| Category | Becomes | Why |
+|---|---|---|
+| 🚀 Features | type `Feature` | behavior that does not exist yet |
+| ⚡ Optimization | type `Optimization` | same behavior, cheaper |
+| ❓ Questions | type `Task` | usually a docs or ergonomics follow-up |
+
+Features and Optimization are deliberately different types, not one bucket:
+"make it do X" and "make X cost less" are scheduled, measured, and accepted on
+different evidence. An optimization needs a measurement; a feature needs a use
+case.
 
 ## ☑️ Checklists vs 🧩 sub-issues
 

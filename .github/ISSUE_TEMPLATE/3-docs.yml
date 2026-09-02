@@ -2,7 +2,7 @@ name: 📖 Documentation problem
 description: Docs are missing, wrong, or claim something the code does not do.
 title: "[docs]: "
 type: Task
-labels: ["documentation", "needs-triage"]
+labels: ["needs-triage"]
 assignees: ["GeneralPawz"]
 body:
   - type: markdown
