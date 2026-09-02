@@ -64,10 +64,13 @@ fn normalize_direction(direction: Vec3) -> Option<Vec3> {
     Some(scaled / scaled.length())
 }
 
+// Compare IEEE-754 magnitudes so underflow cannot be optimized as real arithmetic.
+const MAGNITUDE_BITS: u64 = 0x7fff_ffff_ffff_ffff;
+
 fn loses_nonzero_component(input: Vec3, output: Vec3) -> bool {
-    (input.x != 0.0 && output.x == 0.0)
-        || (input.y != 0.0 && output.y == 0.0)
-        || (input.z != 0.0 && output.z == 0.0)
+    (input.x.to_bits() & MAGNITUDE_BITS != 0 && output.x.to_bits() & MAGNITUDE_BITS == 0)
+        || (input.y.to_bits() & MAGNITUDE_BITS != 0 && output.y.to_bits() & MAGNITUDE_BITS == 0)
+        || (input.z.to_bits() & MAGNITUDE_BITS != 0 && output.z.to_bits() & MAGNITUDE_BITS == 0)
 }
 
 fn extrusion_offset(direction: Vec3, depth: Scalar, tolerance: Tolerance) -> GeomResult<Vec3> {
