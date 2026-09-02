@@ -120,9 +120,17 @@ impl<'a> ExactCompilation<'a> {
                     return Err(unsupported("extrusion profile reference"));
                 };
                 extrude_profile_exact(profile, *direction, *depth, self.options.tolerance())
+                    .map_err(remap_construction_error)
             }
             _ => Err(unsupported(exact_input_family(node))),
         }
+    }
+}
+
+fn remap_construction_error(error: GeomError) -> GeomError {
+    match error {
+        GeomError::UnsupportedInput { input, .. } => unsupported(input),
+        error => error,
     }
 }
 

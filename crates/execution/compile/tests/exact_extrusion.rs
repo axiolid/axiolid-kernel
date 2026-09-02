@@ -106,6 +106,31 @@ fn exact_batch_preserves_order_and_duplicate_results() {
 }
 
 #[test]
+fn constructor_refusal_is_owned_by_graph_compilation() {
+    let (graph, root) = extrusion_graph(
+        Profile::Circle(CircleProfile {
+            radius: 1.0,
+            thickness: Some(0.2),
+        }),
+        Vec3::Z,
+        1.0,
+    );
+
+    let error = ReferenceExactCompiler::new()
+        .compile_exact(&graph, root, &options())
+        .expect_err("annular exact extrusion is not implemented");
+
+    assert!(matches!(
+        error,
+        GeomError::UnsupportedInput {
+            backend,
+            operation: Operation::GraphCompilation,
+            input: "annular circle extrusion",
+        } if backend == ReferenceExactCompiler::ID
+    ));
+}
+
+#[test]
 fn unsupported_exact_operation_names_its_family() {
     let mut builder = GeometryGraphBuilder::new();
     let profile = builder

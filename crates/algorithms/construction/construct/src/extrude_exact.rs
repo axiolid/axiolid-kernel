@@ -38,7 +38,7 @@ pub fn extrude_profile_exact(
     let offset = extrusion_offset(direction, depth, tolerance)?;
     match profile {
         Profile::Rectangle(rectangle) => extrude_rectangle(rectangle, offset, tolerance),
-        Profile::Circle(circle) => extrude_circle(circle, offset, tolerance),
+        Profile::Circle(circle) => extrude_circle(circle, offset),
         Profile::Ellipse(_) => Err(unsupported("ellipse extrusion")),
         Profile::Section(_) => Err(unsupported("section-profile extrusion")),
         Profile::Contour(_) => Err(unsupported("contour extrusion")),
@@ -55,7 +55,7 @@ fn extrusion_offset(direction: Vec3, depth: Scalar, tolerance: Tolerance) -> Geo
             "exact extrusion depth must be positive and finite, got {depth}"
         )));
     }
-    if !direction.is_finite() || direction.length() <= tolerance.linear() {
+    if !direction.is_finite() || direction.length() == 0.0 {
         return Err(GeomError::InvalidInput(
             "exact extrusion direction must be finite and non-zero".to_owned(),
         ));
@@ -350,11 +350,7 @@ fn add_planar_side(
     }))
 }
 
-fn extrude_circle(
-    circle: &CircleProfile,
-    offset: Vec3,
-    tolerance: Tolerance,
-) -> GeomResult<ExactBRep> {
+fn extrude_circle(circle: &CircleProfile, offset: Vec3) -> GeomResult<ExactBRep> {
     if circle.thickness.is_some() {
         return Err(unsupported("annular circle extrusion"));
     }
@@ -364,7 +360,7 @@ fn extrude_circle(
             circle.radius
         )));
     }
-    if offset.x.abs() > tolerance.linear() || offset.y.abs() > tolerance.linear() {
+    if offset.x != 0.0 || offset.y != 0.0 {
         return Err(unsupported("oblique circle extrusion"));
     }
 

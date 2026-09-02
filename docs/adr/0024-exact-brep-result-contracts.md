@@ -220,11 +220,14 @@ with a mesh.
 
 ## Consequences
 
-- `axiolid-construct` has a stable output contract for future exact extrusion,
-  revolution, sweep, loft, profile, centre-line, and half-space construction.
-- `axiolid-mesh-compile` remains L3 DAG/cache orchestration. Its cache can later store
-  `ExactBRep` and perform a separate tolerance-bearing tessellation request;
-  it must not collapse exact nodes to `TriMesh`.
+- `axiolid-construct` has a stable output contract and focused exact generators
+  for sharp filled/hollow rectangle and positive-axis filled-circle extrusions.
+  Revolution, general sweep, loft, profile, centre-line, and half-space exact
+  construction remain future work.
+- `axiolid-mesh-compile` remains L3 DAG/cache orchestration. Its
+  `ReferenceExactCompiler` owns a per-batch `NodeId -> ExactBRep` cache for the
+  supported extrusion roots; `ReferenceMeshCompiler` retains the separate
+  tolerance-driven `TriMesh` path. Neither cache can silently cross result domains.
 - The current mesh construction path remains supported and clearly discrete.
   Every generated tessellation is a `TessellatedMesh` that retains the caller's
   tolerance; raw `TriMesh` values cannot cross the tessellation result seam.

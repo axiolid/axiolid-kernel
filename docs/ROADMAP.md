@@ -40,7 +40,7 @@ next cannot be honestly attempted without it.
 
 | Milestone | Why it comes when it does |
 |---|---|
-| [v0.2 — Exact B-rep survives operations](https://github.com/axiolid/kernel/milestone/1) | The kernel evaluates exactly but caches every graph node as triangles, so exactness dies at the first edge ([ADR 0020](./adr/0020-exact-brep-kernel-model.md)). Nothing exact is trustworthy until a cylinder survives an operation as a cylinder. |
+| [v0.2 — Exact B-rep survives operations](https://github.com/axiolid/kernel/milestone/1) | The first exact graph path must preserve analytic identity instead of routing through the discrete cache: a cylinder that enters a supported extrusion operation leaves as a cylinder. The focused exact compiler/cache establishes that invariant; later milestones expand the supported operation families ([ADR 0020](./adr/0020-exact-brep-kernel-model.md)). |
 | [v0.3 — Intersection and inversion](https://github.com/axiolid/kernel/milestone/2) | Exact booleans, section curves, offsets, and fillets all reduce to intersection and inversion. Attempting them before the exact representation holds would build on sand. |
 | [v0.4 — Trustworthy discrete geometry](https://github.com/axiolid/kernel/milestone/3) | The mesh path stays supported for callers who explicitly want discrete results — and it is the differential oracle for the exact path, so it must be trustworthy *after* there is an exact path to check against. |
 | [v0.5 — Compiled geometry and plans](https://github.com/axiolid/kernel/milestone/4) | Reproducible operation plans need stable exact semantics underneath. Freezing a plan format over shifting geometry would bake in the wrong contract. |

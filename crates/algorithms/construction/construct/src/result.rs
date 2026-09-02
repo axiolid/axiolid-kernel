@@ -1,7 +1,7 @@
 //! Explicit output-model contracts for solid generation.
 //!
 //! Analytic B-rep and mesh tessellation are deliberately different requests and
-//! result variants. A future exact generator may return `ExactBRep` only for an
+//! result variants. An exact generator may return `ExactBRep` only for an
 //! [`GenerationRequest::ExactBRep`] request; it must return `Unsupported` rather
 //! than discretising that request. Tessellation is an explicit request carrying
 //! the caller's tolerance.

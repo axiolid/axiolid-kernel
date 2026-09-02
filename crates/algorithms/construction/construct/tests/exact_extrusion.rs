@@ -222,6 +222,44 @@ fn oblique_circle_extrusion_refuses_instead_of_mislabeling_a_cylinder() {
 }
 
 #[test]
+fn sub_tolerance_oblique_circle_refuses_instead_of_snapping_geometry() {
+    let profile = Profile::Circle(CircleProfile {
+        radius: 1.0,
+        thickness: None,
+    });
+    let direction = Vec3::new(Tolerance::METRE.linear() * 0.5, 0.0, 1.0);
+    let error = extrude_profile_exact(&profile, direction, 1.0, Tolerance::METRE)
+        .expect_err("an exact constructor must not tolerance-snap an oblique direction");
+
+    assert!(matches!(
+        error,
+        GeomError::UnsupportedInput {
+            operation: Operation::Sweep,
+            input: "oblique circle extrusion",
+            ..
+        }
+    ));
+}
+
+#[test]
+fn nonzero_direction_magnitude_is_not_a_model_length() {
+    let direction = Vec3::Z * (Tolerance::METRE.linear() * 0.5);
+    let value = extrude_profile_exact(
+        &Profile::Circle(CircleProfile {
+            radius: 1.0,
+            thickness: None,
+        }),
+        direction,
+        1.0,
+        Tolerance::METRE,
+    )
+    .expect("direction magnitude is unitless and normalization preserves the axis");
+
+    assert_complete_and_closed(&value);
+    assert_pcurve_surface_agreement(&value);
+}
+
+#[test]
 fn invalid_exact_extrusion_inputs_are_not_reclassified_as_unsupported() {
     let error = extrude_profile_exact(
         &rectangle(None),

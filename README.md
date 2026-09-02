@@ -91,7 +91,8 @@ The central invariant is a downward-only dependency graph: representation does n
 | Exact curve/surface/topology vocabulary | Represented behind opt-in features |
 | General NURBS analysis and exact transformations | Implemented scalar reference algorithms behind `nurbs`; bounded projection is not a global-optimum certificate |
 | Immutable geometry DAG | Implemented structural model |
-| Scalar predicates and compilation reference paths | Implemented reference/oracle work |
+| Scalar predicates and explicit mesh compilation | Implemented reference/oracle work |
+| Focused exact B-rep extrusion compilation | Sharp filled/hollow rectangles and positive-axis filled circles retain analytic supports; unsupported exact families fail closed |
 | Mesh Boolean provider | Optional provider; bounded to its declared mesh contract |
 | CPU execution | Portable execution shell; SIMD/parallel capabilities are opt-in |
 | GPU execution | Contract and adapter seam, not a bundled production GPU algorithm suite |
