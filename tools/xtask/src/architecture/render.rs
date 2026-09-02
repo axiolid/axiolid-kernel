@@ -20,7 +20,9 @@ pub fn list(architecture: &Architecture) -> String {
 }
 
 pub fn graph(architecture: &Architecture) -> String {
-    let mut output = String::from("graph TD\n");
+    let mut output = String::from(
+        "graph TD\n    accTitle: Axiolid internal package dependency graph\n    accDescr: Each arrow points from a package to another internal package it depends on.\n",
+    );
     for package in architecture.packages.values() {
         writeln!(
             output,

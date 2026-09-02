@@ -31,9 +31,13 @@ features:
 
 Axiolid is the neutral middle layer for applications that import, construct, query, compile, or render geometry. It is designed so source-format semantics stay in adapters and execution choices stay in providers.
 
-```text
-source adapters ──► neutral values / graph ──► operation contracts ──► providers
-     IFC, STEP             Axiolid model          Axiolid kernel      scalar / CPU / GPU
+```mermaid
+flowchart LR
+  accTitle: Axiolid boundary from source adapters to providers
+  accDescr: Source adapters translate into neutral values and a geometry graph. Typed operation contracts carry requests to explicitly selected providers.
+  Sources["Source adapters<br/>IFC, STEP, applications"] --> Neutral["Neutral values / graph<br/>Axiolid model"]
+  Neutral --> Contracts["Operation contracts<br/>typed results and budgets"]
+  Contracts --> Providers["Providers<br/>reference / CPU / GPU seams"]
 ```
 
 That separation keeps a mesh-only user from paying for topology or GPU APIs, lets a future adapter reuse the same representation, and makes backend claims inspectable rather than implicit.
@@ -45,5 +49,7 @@ Axiolid is early software. The project deliberately distinguishes storage, contr
 - [Getting started](/guide/getting-started) for dependency and feature selection.
 - [Capabilities](/capabilities) for what is implemented, represented, or intentionally deferred.
 - [Architecture](/architecture) for dependency direction and execution seams.
+- [Geometry concepts](/guide/geometry-concepts) for interactive STL examples,
+  equations, tolerance, orientation, and open-profile semantics.
 - [Architecture decisions](/adr/0009-layered-geometry-dag) for the non-negotiable design choices.
 - [Roadmap](/ROADMAP) and [changelog](/CHANGELOG) for current direction and user-visible history.

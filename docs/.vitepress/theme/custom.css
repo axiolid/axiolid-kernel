@@ -33,3 +33,157 @@
 .VPSidebarItem .link:hover .adr-sidebar-number {
   color: var(--vp-c-brand-1);
 }
+
+/* Source-controlled diagrams keep their source available as a text fallback. */
+.diagram-frame {
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  margin: 1.5rem 0;
+  overflow: hidden;
+}
+
+.diagram-canvas,
+.stl-canvas {
+  min-height: 260px;
+  width: 100%;
+}
+
+.diagram-canvas {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+.diagram-canvas svg {
+  height: auto;
+  max-width: 100%;
+}
+
+.diagram-canvas .nodeLabel p,
+.diagram-canvas .edgeLabel p {
+  line-height: 1.35;
+  margin: 0;
+}
+
+.diagram-error {
+  color: var(--vp-c-danger-1);
+  padding: 0 1rem;
+}
+
+.diagram-source {
+  border-top: 1px solid var(--vp-c-divider);
+  padding: 0.6rem 1rem 0.9rem;
+}
+
+.diagram-source summary {
+  color: var(--vp-c-text-2);
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.diagram-source pre {
+  margin-bottom: 0;
+  max-height: 18rem;
+  overflow: auto;
+}
+
+.stl-canvas {
+  display: block;
+  height: min(58vh, 430px);
+  touch-action: none;
+}
+
+.stl-canvas canvas {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.stl-toolbar {
+  align-items: center;
+  border-top: 1px solid var(--vp-c-divider);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: space-between;
+  padding: 0.65rem 0.8rem;
+}
+
+.stl-toolbar button {
+  background: var(--vp-c-brand-1);
+  border: 0;
+  border-radius: 7px;
+  color: var(--vp-c-white);
+  cursor: pointer;
+  font: inherit;
+  padding: 0.35rem 0.75rem;
+}
+
+.stl-toolbar button:focus-visible,
+.stl-canvas:focus-visible {
+  outline: 3px solid var(--vp-c-brand-soft);
+  outline-offset: 2px;
+}
+
+.stl-actions {
+  display: inline-flex;
+  gap: 0.5rem;
+}
+
+.stl-stats {
+  color: var(--vp-c-text-2);
+  font-size: 0.82rem;
+}
+
+.stl-hint {
+  color: var(--vp-c-text-2);
+  font-size: 0.82rem;
+  margin: 0;
+  padding: 0 0.8rem 0.65rem;
+}
+
+.diagram-pan-hint {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .diagram-canvas,
+  .stl-canvas {
+    min-height: 220px;
+  }
+
+  .diagram-frame--wide .diagram-canvas {
+    justify-content: flex-start;
+  }
+
+  .diagram-frame--wide .diagram-canvas svg {
+    max-width: none;
+    min-width: 640px;
+  }
+
+  .diagram-frame--wide .diagram-pan-hint {
+    color: var(--vp-c-text-2);
+    display: block;
+    font-size: 0.78rem;
+    margin: 0;
+    padding: 0 1rem 0.65rem;
+  }
+
+  .stl-canvas {
+    height: 48vh;
+  }
+
+  .stl-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .diagram-frame * {
+    scroll-behavior: auto !important;
+  }
+}

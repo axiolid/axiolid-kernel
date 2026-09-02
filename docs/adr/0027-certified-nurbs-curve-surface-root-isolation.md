@@ -8,9 +8,9 @@
 
 ADR 0026 established a bounded planar curve/curve certificate path, but exact B-rep construction also needs roots of
 
-```text
-C(t) - S(u, v) = 0
-```
+$$
+\mathbf C(t)-\mathbf S(u,v)=\mathbf 0.
+$$
 
 in three spatial coordinates. A tolerance-only Newton solve is not enough: it can miss roots, merge nearby roots, accept a singular contact, or silently stop at a work limit. Surface/surface tracing and topology must not be built on such an ambiguous result.
 

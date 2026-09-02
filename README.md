@@ -68,18 +68,16 @@ See [Getting started](https://axiolid.github.io/kernel/guide/getting-started) be
 
 ## Architecture at a glance
 
-```text
-format adapters / applications
-              │ neutral values and operation requests
-              ▼
-      axiolid facade ─────────────── leaf representation crates
-              │
-      portable operation contracts
-              │
-       algorithms / providers
-              │
-              ▼
-    dispatch and execution contexts
+```mermaid
+flowchart TB
+  accTitle: Axiolid architecture at a glance
+  accDescr: Format adapters and applications submit neutral values and operation requests through the facade or leaf representation crates. Portable contracts separate those values from algorithms and providers, while dispatch and execution policy stay at the outer layer.
+  Apps["Format adapters / applications"] -->|"neutral values and operation requests"| Facade["axiolid facade"]
+  Apps --> Repr["Leaf representation crates"]
+  Facade --> Repr
+  Repr --> Contracts["Portable operation contracts"]
+  Contracts --> Providers["Algorithms / providers"]
+  Providers --> Execution["Dispatch and execution contexts"]
 ```
 
 The central invariant is a downward-only dependency graph: representation does not know source formats or execution APIs; adapters do not depend on concrete backends. See [Architecture](https://axiolid.github.io/kernel/architecture).
@@ -116,6 +114,7 @@ The workspace also carries feature-isolation and mutation probes. See [Contribut
 
 - [Documentation](https://axiolid.github.io/kernel/)
 - [Architecture decisions](https://axiolid.github.io/kernel/adr/0009-layered-geometry-dag)
+- [Geometry concepts and interactive models](https://axiolid.github.io/kernel/guide/geometry-concepts)
 - [Capability status](https://axiolid.github.io/kernel/capabilities)
 - [Roadmap](docs/ROADMAP.md)
 - [Changelog](docs/CHANGELOG.md)

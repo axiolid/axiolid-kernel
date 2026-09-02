@@ -48,12 +48,14 @@ A source triangle wholly contained in the plane is a two-dimensional overlap, no
 
 The current executable path is:
 
-```text
-neutral body DAG
-  -> application-selected graph compiler
-  -> oriented triangle mesh
-  -> MeshPlaneSection provider
-  -> closed plane-local drawing contours
+```mermaid
+flowchart LR
+  accTitle: Executable mesh plane-section path
+  accDescr: A neutral body graph is evaluated by an application-selected mesh compiler. The resulting oriented triangle mesh enters a mesh plane-section provider and yields closed plane-local contours.
+  Body["Neutral body DAG"] --> Compiler["Application-selected<br/>mesh compiler"]
+  Compiler --> Mesh["Oriented triangle mesh"]
+  Mesh --> Section["MeshPlaneSection provider"]
+  Section --> Contours["Closed plane-local<br/>drawing contours"]
 ```
 
 This unblocks mesh-derived manufactured plan linework while preserving provenance. Downstream code must keep the mesh approximation visible and may not relabel it as an exact analytic section.

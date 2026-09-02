@@ -5,6 +5,7 @@ All notable changes to Axiolid are documented in this file.
 ## [Unreleased]
 
 ### Added
+- Added a source-backed geometry concepts guide with accessible Mermaid architecture diagrams, native ASCII STL models that render interactively on GitHub and Pages, contract equations, dark/mobile support, and a mutation-proven diagram-source gate.
 - Stable, typed capability IDs for tessellation, mesh Boolean, mesh section, and graph-to-mesh contracts, plus the MCS/Axioval semantic mapping and transport-independent package identity rule.
 - Added L1 `axiolid-brep`: strict owned exact B-rep results with separately typed 3D curve, 2D pcurve, and surface catalogs plus explicit native trim intervals. The facade exposes it through the new `brep` feature; see [ADR 0024](./adr/0024-exact-brep-result-contracts.md).
 - Adaptive analytic `Curve3` directrix sampling and validated `parameter_range` trimming for sweeps, with dimension-generic chord subdivision shared by the 2D and 3D flatteners.

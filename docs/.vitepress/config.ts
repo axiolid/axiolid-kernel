@@ -1,5 +1,7 @@
 import { defineConfig } from "vitepress";
 
+import { diagramPlugin } from "./diagram-plugin.ts";
+
 const adrs = [
   ["0001-axiolid-ifc-split-and-kernel-contract", 1, "IFC split and kernel contract"],
   ["0002-hardware-abstraction-and-backend-selection", 2, "Hardware and backends"],
@@ -47,7 +49,11 @@ export default defineConfig({
   description: "A pure-Rust, format-agnostic geometry kernel.",
   base: "/kernel/",
   srcExclude: ["adr/_template.md"],
-  markdown: { html: false },
+  markdown: {
+    html: false,
+    math: true,
+    config: diagramPlugin,
+  },
   cleanUrls: true,
   lastUpdated: true,
   head: [
@@ -70,6 +76,7 @@ export default defineConfig({
         items: [
           { text: "Overview", link: "/" },
           { text: "Getting started", link: "/guide/getting-started" },
+          { text: "Geometry concepts", link: "/guide/geometry-concepts" },
           { text: "Capabilities", link: "/capabilities" },
           { text: "Architecture", link: "/architecture" },
           { text: "Crate map", link: "/architecture/crate-map" },

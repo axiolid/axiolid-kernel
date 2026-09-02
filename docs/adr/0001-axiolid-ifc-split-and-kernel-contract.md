@@ -19,9 +19,13 @@ Axiolid is an independent geometry workspace. Source-format adapters translate t
 - The kernel defines operation contracts separately from CPU, GPU, and third-party providers.
 - Adapters depend on data and contracts only; applications choose and compose concrete providers.
 
-```text
-source-format adapter → Axiolid values / graph → operation contract → provider
-        IFC/STEP            format-neutral          stable seam       scalar/CPU/GPU
+```mermaid
+flowchart LR
+  accTitle: Source-format adapter and geometry provider boundary
+  accDescr: A source-specific adapter lowers records into format-neutral Axiolid values and graph nodes. A typed operation contract then reaches an application-selected scalar, CPU, or GPU provider.
+  Adapter["Source-format adapter<br/>IFC / STEP / other"] --> Values["Axiolid values / graph<br/>format-neutral"]
+  Values --> Contract["Typed operation contract<br/>stable seam"]
+  Contract --> Provider["Application-selected provider<br/>scalar / CPU / GPU"]
 ```
 
 ## Alternatives considered

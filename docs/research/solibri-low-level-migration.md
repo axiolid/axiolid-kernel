@@ -6,10 +6,15 @@ Migrate only source-, vendor-, and IFC-agnostic geometry capabilities from Solib
 
 ## Architecture
 
-```text
-Solibri model / codec -> Solibri adapter -> Axiolid values and indexes
-Nehirde IFC lowering  -> IFC adapter     -> Axiolid values and indexes
-Axiolid values/indexes -> Solibri or IFC/OpenBIM rules and applications
+```mermaid
+flowchart LR
+  accTitle: Solibri and IFC migration boundaries
+  accDescr: Solibri and IFC retain separate source-specific adapters. Both lower into neutral Axiolid values and indexes, which reusable rules and applications may consume without moving source semantics into the kernel.
+  Solibri["Solibri model / codec"] --> SolibriAdapter["Solibri adapter"]
+  IFC["openbimrs/ifc lowering"] --> IFCAdapter["IFC adapter"]
+  SolibriAdapter --> Axiolid["Axiolid values / indexes"]
+  IFCAdapter --> Axiolid
+  Axiolid --> Apps["Solibri or IFC / OpenBIM<br/>rules and applications"]
 ```
 
 Adapters own conversion, caller identity, provenance, source units, and application policy. Axiolid owns opaque caller keys plus neutral coordinates, bounds, topology, predicates, and query algorithms.

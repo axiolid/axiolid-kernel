@@ -4,24 +4,24 @@ Axiolid separates **representations**, **portable operation contracts**, **algor
 
 ## Dependency direction
 
-```text
-source-format adapters / applications
-                 |
-                 v
-        facade and leaf consumers
-                 |
-      +----------+-----------+
-      |                      |
-      v                      v
-representations         portable contracts
-      |                      |
-      +----------+-----------+
-                 |
-          algorithms/providers
-                 |
-                 v
-       execution / dispatch policy
+```mermaid
+flowchart TB
+  accTitle: Axiolid package dependency direction
+  accDescr: Arrows point from a consuming role to roles it may depend on. Applications consume the facade; execution consumes providers and contracts; providers consume neutral representations and portable contracts.
+  App["Source-format adapters / applications"] --> Facade["Facade and leaf consumers"]
+  Facade --> Execution["Execution / dispatch policy"]
+  Facade --> Provider["Algorithms / providers"]
+  Facade --> Repr["Neutral representations"]
+  Facade --> Contract["Portable contracts"]
+  Execution --> Provider
+  Execution --> Contract
+  Provider --> Repr
+  Provider --> Contract
+  Contract --> Repr
 ```
+
+Arrows point from a consumer to a role it may depend on; they are not runtime
+data-flow arrows.
 
 The executable role DAG is checked by `cargo xtask architecture check`. Every workspace package declares its layer, role, domain, format neutrality, and exact internal-dependency allowlist. Production/build edges must point downward; explicit dev-only upward edges are allowed solely for integration and conformance tests.
 

@@ -9,9 +9,9 @@
 Surface/surface intersection is generically a one-dimensional manifold in four
 parameters:
 
-```text
-S1(u, v) - S2(s, t) = 0.
-```
+$$
+\mathbf S_1(u,v)-\mathbf S_2(s,t)=\mathbf 0.
+$$
 
 This is not a square isolated-root problem. Applying the existing 3x3 Krawczyk
 solver directly to all four parameters would leave one degree of freedom

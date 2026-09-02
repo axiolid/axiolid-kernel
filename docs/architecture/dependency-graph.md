@@ -6,6 +6,8 @@ Edges point from a package to an internal package it depends on.
 
 ```mermaid
 graph TD
+    accTitle: Axiolid internal package dependency graph
+    accDescr: Each arrow points from a package to another internal package it depends on.
     axiolid["axiolid\nfacade"]
     axiolid_backend_cpu["axiolid-backend-cpu\nexecution.context"]
     axiolid_backend_gpu["axiolid-backend-gpu\nexecution.context"]
