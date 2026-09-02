@@ -182,30 +182,6 @@ fn relative(root: &Path, path: &Path) -> String {
         .to_string()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::source_without_comments;
-
-    #[test]
-    fn removes_line_doc_and_nested_block_comments() {
-        let source = r#"// protobuf
-//! prost docs
-const OK: &str = "neutral"; /* outer prost /* nested protobuf */ */"#;
-        let code = source_without_comments(source);
-        assert!(!code.contains("protobuf"));
-        assert!(!code.contains("prost"));
-        assert!(code.contains("const OK"));
-    }
-
-    #[test]
-    fn preserves_identifiers_and_string_literals() {
-        let source = r##"const PROTOBUF: &str = r#"prost // not a comment"#;"##;
-        let code = source_without_comments(source);
-        assert!(code.contains("PROTOBUF"));
-        assert!(code.contains("prost // not a comment"));
-    }
-}
-
 // Downstream product names must not appear anywhere in the repository, not just
 // in Rust sources. Docs, PLAN files and scripts are published too, and naming a
 // specific end-user product in a public infrastructure repo leaks a commercial
@@ -252,4 +228,28 @@ pub fn validate_no_product_names(root: &Path, errors: &mut Vec<String>) -> Resul
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::source_without_comments;
+
+    #[test]
+    fn removes_line_doc_and_nested_block_comments() {
+        let source = r#"// protobuf
+//! prost docs
+const OK: &str = "neutral"; /* outer prost /* nested protobuf */ */"#;
+        let code = source_without_comments(source);
+        assert!(!code.contains("protobuf"));
+        assert!(!code.contains("prost"));
+        assert!(code.contains("const OK"));
+    }
+
+    #[test]
+    fn preserves_identifiers_and_string_literals() {
+        let source = r##"const PROTOBUF: &str = r#"prost // not a comment"#;"##;
+        let code = source_without_comments(source);
+        assert!(code.contains("PROTOBUF"));
+        assert!(code.contains("prost // not a comment"));
+    }
 }
