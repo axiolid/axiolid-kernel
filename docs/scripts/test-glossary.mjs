@@ -102,6 +102,7 @@ test("plugin links only first prose use and skips headings, links, and code", ()
     "/glossary#dag",
     "/glossary#b-rep",
   ]);
+  assert.match(generated[0].attrs.find(([name]) => name === "aria-label")[1], /^DAG — Directed acyclic graph\./);
   assert.equal(prose.find((token) => token.type === "code_inline").content, "DAG");
   assert.equal(prose.filter((token) => token.type === "text" && token.content.includes("another DAG")).length, 1);
 });

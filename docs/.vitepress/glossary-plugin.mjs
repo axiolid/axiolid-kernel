@@ -75,6 +75,7 @@ function linkedTextTokens(state, content, entries, lookup, matcher, seen) {
     open.attrSet("href", `/glossary#${entry.slug}`);
     open.attrSet("class", "glossary-term");
     open.attrSet("title", entry.definition);
+    open.attrSet("aria-label", `${value} — ${entry.definition}`);
     open.attrSet("data-definition", entry.definition);
     tokens.push(open);
 

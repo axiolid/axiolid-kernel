@@ -37,6 +37,9 @@ function sourceCheck(root) {
 
   if (entries.length < 8) fail(`glossary is unexpectedly small (${entries.length} entries)`);
   if (!existsSync(contract)) fail("neutral openbim.geometry boundary page is absent");
+  const contractSource = readFileSync(contract, "utf8");
+  requireIncludes(contractSource, "`openbim.geometry:tessellation.surface`", "neutral capability ID example");
+  if (contractSource.includes("`geometry.tessellation.surface`")) fail("unqualified capability ID example remains");
   if (existsSync(oldContract)) fail("obsolete application-specific contract route still exists");
 
   requireIncludes(config, "createGlossaryPlugin(glossaryEntries)(md)", "VitePress config");
@@ -80,8 +83,9 @@ function builtCheck(dist) {
   requireIncludes(architecture, 'class="glossary-term"', "built architecture page");
   requireIncludes(architecture, 'href="/kernel/glossary#dag"', "built DAG link");
   requireIncludes(architecture, "data-definition=", "built glossary tooltip");
+  requireIncludes(architecture, "aria-label=", "built glossary accessible name");
   requireIncludes(glossary, "Directed acyclic graph", "built glossary page");
-  requireIncludes(contract, "openbim.geometry", "built capability boundary");
+  requireIncludes(contract, "openbim.geometry:tessellation.surface", "built neutral capability ID");
 
   const obsoleteHtml = [
     join(dist, `architecture/${obsoleteRoute}.html`),

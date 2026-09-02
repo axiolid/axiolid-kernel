@@ -33,7 +33,7 @@ carry Pkl values through public APIs.
 ## Two distinct capability identities
 
 `openbim.geometry` uses a closed `CapabilityId` catalog such as
-`geometry.tessellation.surface`. Axiolid operation contracts use their own
+`openbim.geometry:tessellation.surface`. Axiolid operation contracts use their own
 versioned IDs such as `org.axiolid.geometry.tessellate.v1`.
 
 These IDs are intentionally **not interchangeable**:
