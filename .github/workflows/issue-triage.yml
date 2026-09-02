@@ -121,6 +121,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           NUM: ${{ github.event.issue.number }}
+          BODY: ${{ github.event.issue.body }}
         run: |
           set -euo pipefail
 
@@ -144,9 +145,13 @@ jobs:
                esac
                body=$(echo "$body" | jq --argjson f 45849869 --arg v "$p" '. + [{field_id:$f, value:$v}]') ;;
           esac
+          # Prefer the Effort the reporter actually chose in the form over a
+          # blanket default; fall back to Medium for bare API issues.
           case "$have" in
             *Effort*) : ;;
-            *) body=$(echo "$body" | jq --argjson f 45849872 --arg v Medium '. + [{field_id:$f, value:$v}]') ;;
+            *) e=$(printf '%s' "${BODY:-}" | awk '/^### Effort\r?$/{getline; getline; print; exit}' | tr -d '\r' | xargs)
+               case "$e" in Low|Medium|High) ;; *) e=Medium ;; esac
+               body=$(echo "$body" | jq --argjson f 45849872 --arg v "$e" '. + [{field_id:$f, value:$v}]') ;;
           esac
 
           if [ "$(echo "$body" | jq 'length')" = "0" ]; then
@@ -178,3 +183,32 @@ jobs:
               ;;
             *) echo "type/label consistent" ;;
           esac
+
+      - name: Set Area from the form answer
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NUM: ${{ github.event.issue.number }}
+          BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+
+          # The forms already ask for Area, but the answer only lands in the
+          # body text. Parse it rather than guessing from the title: a wrong
+          # Area silently misroutes work. 'not sure' and bare API issues are
+          # left blank on purpose, for a human to decide.
+          issue=$(gh api "repos/$REPO/issues/$NUM")
+          have=$(echo "$issue" | jq -r '[.issue_field_values[]?.issue_field_name] | join(" ")')
+          case "$have" in *Area*) echo 'Area already set'; exit 0 ;; esac
+
+          # Body layout is '### Area', blank line, then the answer.
+          area=$(printf '%s' "$BODY" | awk '/^### Area\r?$/{getline; getline; print; exit}' | tr -d '\r' | xargs)
+          case "$area" in
+            exact-brep|intersection|nurbs|mesh|architecture|release|docs) ;;
+            *) echo "no usable Area answer (got: ${area:-empty}); leaving blank"; exit 0 ;;
+          esac
+
+          jq -n --argjson f 46407131 --arg v "$area" \
+            '{issue_field_values:[{field_id:$f, value:$v}]}' > /tmp/area.json
+          gh api "repos/$REPO/issues/$NUM" -X PATCH --input /tmp/area.json \
+            --jq '[.issue_field_values[]|"\(.issue_field_name)=\(.single_select_option.name)"]|join(" ")'

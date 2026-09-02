@@ -59,20 +59,23 @@ body:
         - mesh
         - architecture
         - release
+        - docs
         - "not sure"
     validations:
       required: true
 
   - type: dropdown
-    id: size
+    id: effort
     attributes:
-      label: Size
+      label: Effort
       description: >
-        `small` = self-contained fix, no public API break. `big` = public API,
-        cross-crate, or needs a design decision.
+        `Low` = self-contained fix, no public API break. `Medium` = several
+        files or a new test surface. `High` = public API, cross-crate, or needs
+        a design decision first.
       options:
-        - small
-        - big
+        - Low
+        - Medium
+        - High
     validations:
       required: true
 

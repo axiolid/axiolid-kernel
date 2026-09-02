@@ -47,18 +47,20 @@ body:
         - mesh
         - architecture
         - release
+        - docs
         - "not sure"
     validations:
       required: true
 
   - type: dropdown
-    id: size
+    id: effort
     attributes:
-      label: Size
-      description: Papercuts are almost always `small`. Flag `big` only if the fix cascades into a public API change.
+      label: Effort
+      description: Papercuts are almost always `Low`. Use `Medium` or `High` only if the fix cascades into a public API change.
       options:
-        - small
-        - big
+        - Low
+        - Medium
+        - High
     validations:
       required: true
 

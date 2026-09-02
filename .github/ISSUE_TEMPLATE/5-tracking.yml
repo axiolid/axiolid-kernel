@@ -66,5 +66,6 @@ body:
         - mesh
         - architecture
         - release
+        - docs
     validations:
       required: true

@@ -72,15 +72,17 @@ body:
         - mesh
         - architecture
         - release
+        - docs
     validations:
       required: true
 
   - type: dropdown
-    id: size
+    id: effort
     attributes:
-      label: Size
+      label: Effort
       options:
-        - small
-        - big
+        - Low
+        - Medium
+        - High
     validations:
       required: true
