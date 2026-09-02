@@ -14,12 +14,13 @@ A downstream consumer geometry layer of 16,084 non-comment lines and 378
 public items was inventoried item by item, then classified against this
 kernel's 603 public symbols and the rows in `capabilities.md`.
 
-Every item was placed in exactly one of three layers:
+Every item was placed in exactly one of three owning layers:
 
-- **Kernel** — neutral geometry with no domain semantics.
-- **Format layer** — lowering from a source schema; belongs upstream in the
-  format library, not here.
+- **Kernel** — neutral geometry with no domain semantics. Owned here.
+- **Format layer** — lowering from a source schema into neutral geometry.
+  Owned upstream in the format library, not here.
 - **Application** — building semantics, regulatory thresholds, verdicts.
+  Owned by the consuming product.
 
 Declaration scans were used only for navigation. Classification came from
 reading bodies, because module names are unreliable: 24 files in the consumer
@@ -27,14 +28,14 @@ layer are doc-only stubs whose names promise algorithms they do not contain.
 
 ## Gaps — kernel-owned, now tracked
 
-| Capability | Evidence of need | Kernel status | Issue | Milestone |
-| --- | --- | --- | --- | --- |
-| Ray/mesh narrow phase | Consumer implements nearest-hit ray casting over triangle meshes | Broad phase only: `SpatialIndex::visit_ray`, `ray_aabb_entry` | #41 | v0.3 |
-| Planar offset | Polygon inset/outset and polyline stroke offset used for clearance envelopes | Absent; backend already vendored via `axiolid-overlay` | #42 | v0.4 |
-| Mesh/mesh distance with witnesses | Separation distance plus witness points and proximity components | `closest_points_on_triangles` exists; mesh-level composition does not | #43 | v0.4 |
-| Planar projection of meshes | Projected triangle union and vertical prism intersection | 3D and 2D halves exist; the projection between them does not | #44 | v0.4 |
-| Exact planar shortest path | Visibility-graph routing with typed unreachable reasons | Sampled routing exists in `axiolid-field`; exact planar counterpart does not | #46 | v0.4 |
-| Planar region algebra | Persistent region with set ops, erosion/dilation, components, area | `overlay()` is stateless; no region type, no component count | #47 | v0.4 |
+| Capability | Evidence of need | Kernel status | Owner | Issue | Milestone |
+| --- | --- | --- | --- | --- | --- |
+| Ray/mesh narrow phase | Consumer implements nearest-hit ray casting over triangle meshes | Broad phase only: `SpatialIndex::visit_ray`, `ray_aabb_entry` | Kernel | #41 | v0.3 |
+| Planar offset | Polygon inset/outset and polyline stroke offset used for clearance envelopes | Absent; backend already vendored via `axiolid-overlay` | Kernel | #42 | v0.4 |
+| Mesh/mesh distance with witnesses | Separation distance plus witness points and proximity components | `closest_points_on_triangles` exists; mesh-level composition does not | Kernel | #43 | v0.4 |
+| Planar projection of meshes | Projected triangle union and vertical prism intersection | 3D and 2D halves exist; the projection between them does not | Kernel | #44 | v0.4 |
+| Exact planar shortest path | Visibility-graph routing with typed unreachable reasons | Sampled routing exists in `axiolid-field`; exact planar counterpart does not | Kernel | #46 | v0.4 |
+| Planar region algebra | Persistent region with set ops, erosion/dilation, components, area | `overlay()` is stateless; no region type, no component count | Kernel | #47 | v0.4 |
 
 ### Milestone decision
 
@@ -78,10 +79,20 @@ serves them without importing their vocabulary.
 
 Also refused:
 
-- **Source-schema lowering** — placement defaults, unit policy, entity
-  identity. Belongs in the format library upstream. The audited consumer
-  geometry layer contains no such code, so the format boundary is already
-  clean there.
+- **Source-schema lowering** — placement math, profile interpretation, unit
+  policy, entity identity, and schema-mandated void cuts. Owned by the format
+  layer.
+
+  This was checked rather than assumed. The audited consumer geometry layer
+  contains 45 source-schema mentions and **zero** schema types in code — all
+  45 are comments explaining motivation, so that layer is already neutral. The
+  lowering itself lives one crate above it (~4,300 lines) and consumes only
+  `Mat4`, `Vec3` and a triangle mesh from the geometry layer below.
+
+  That upper layer hand-rolls swept-solid construction the kernel already
+  provides — `extrude`, `revolve`, `fixed_reference_sweep`, `swept_disk`,
+  `surface_curve_sweep`. That is duplication for the format layer to retire by
+  adopting the kernel; it is not a kernel gap and no issue is filed for it.
 - **Verdicts** — the kernel may report "no route exists under this envelope";
   it may never report "non-compliant". `axiolid-field::navigate` already
   states this rule in its module docs and it is upheld here.
@@ -99,3 +110,17 @@ to resolve rather than failing to compile.
 Until that is fixed, no consumer can measure which of #41-#47 already landed.
 Tracked as #45, and it is the precondition for the rest of this audit being
 actionable.
+
+## Ownership summary
+
+The full audited surface, by owning layer:
+
+| Owner | Surface | Disposition |
+| --- | --- | --- |
+| Kernel | 6 missing capabilities | Tracked as #41-#44, #46, #47 |
+| Kernel | 10 capabilities already provided | No action |
+| Format layer | ~4,300 lines of schema lowering | Not tracked here; upstream concern |
+| Application | ~5,600 lines of building semantics | Not tracked here; product concern |
+
+No capability was left unclassified. Nothing owned by the format layer or the
+application layer has been proposed as kernel work.
