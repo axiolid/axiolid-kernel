@@ -127,11 +127,11 @@ tells you nothing — that is what a
 [🧭 tracking issue](https://github.com/axiolid/kernel/issues/new?template=5-tracking.yml)
 with sub-issues is for.
 
-Milestones are a third case. A milestone **description** renders its
-checkboxes `disabled`, so a checklist there can never be ticked — it is dead
-text that goes stale silently. Exit criteria therefore live as issues
-assigned to the milestone, and the description links to them. The milestone
-progress bar then advances on its own as those issues close.
+Milestones are a third case: they carry **no list at all**. A milestone
+description is one or two lines stating the broad goal. The issues assigned to
+it *are* the exit criteria, and GitHub's progress bar tracks them as they
+close. Restating criteria in the description would duplicate that and go stale
+— and checkboxes there render `disabled`, so they can never be ticked anyway.
 
 > GitHub `[tasklist]` blocks were retired on 2025-04-30. Sub-issues replace
 > them; a plain `- [ ]` list in an *issue* body is still interactive and can

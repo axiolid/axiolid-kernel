@@ -30,6 +30,7 @@ STALE_HEADINGS = re.compile(
     r"^#{2,3}\s+.*\b(now|next|then|in progress|completed|current status)\b",
     re.IGNORECASE | re.MULTILINE,
 )
+LIST_OR_REF = re.compile(r"(?m)^[ \t]*[-*+][ \t]|#\d+|/issues/")
 CHECKBOX = re.compile(r"^\s*[-*]\s+\[[ xX]\]", re.MULTILINE)
 REQUIRED_POINTERS = (
     "orgs/axiolid/projects/1",
@@ -52,9 +53,12 @@ def milestones_on_github() -> list[str] | None:
         return None
 
 
-def milestone_checkboxes() -> list[str]:
-    """Milestone descriptions render checkboxes disabled, so a checklist
-    there can never be ticked. Exit criteria belong in issues.
+def milestone_description_problems() -> list[str]:
+    """A milestone description states one broad goal, nothing more.
+
+    Checkboxes there render disabled and can never be ticked, and any
+    restatement of the criteria duplicates the milestone's own issue list,
+    which GitHub already tracks with a progress bar.
     """
     try:
         out = subprocess.run(
@@ -65,7 +69,11 @@ def milestone_checkboxes() -> list[str]:
         return []
     bad = []
     for m in json.loads(out):
-        if re.search(r"^\s*- \[[ xX]\]", m.get("description") or "", re.M):
+        d = m.get("description") or ""
+        # A milestone states one broad goal; the issue list IS the
+        # criteria and GitHub tracks its progress. Any list here
+        # duplicates that and goes stale.
+        if LIST_OR_REF.search(d):
             bad.append(m["title"])
     return bad
 
@@ -113,11 +121,11 @@ def main() -> int:
                     f"explained here"
                 )
 
-    for title in milestone_checkboxes():
+    for title in milestone_description_problems():
         problems.append(
-            f"milestone {title!r} has a markdown checklist; those "
-            f"checkboxes render disabled and cannot track anything. "
-            f"Reference issues instead."
+            f"milestone {title!r} carries a list or issue reference in its "
+            f"description. The milestone's own issue list is the criteria and "
+            f"GitHub tracks its progress; keep the description to one broad goal."
         )
 
     if problems:
