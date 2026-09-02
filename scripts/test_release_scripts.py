@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 from pathlib import Path
+import re
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -27,6 +28,13 @@ publish = load_script("publish_workspace", "publish-workspace.py")
 
 
 class PublishWorkspaceTests(unittest.TestCase):
+    def test_release_actions_are_pinned_to_immutable_commits(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "publish.yml").read_text()
+        action_refs = re.findall(r"uses:\s+[^@\s]+@([^#\s]+)", workflow)
+        self.assertTrue(action_refs)
+        for action_ref in action_refs:
+            self.assertRegex(action_ref, r"^[0-9a-f]{40}$")
+
     def test_plan_orders_every_internal_dependency_before_its_consumer(self) -> None:
         data = publish.metadata()
         plan = publish.publish_plan(data)
@@ -60,6 +68,23 @@ class PublishWorkspaceTests(unittest.TestCase):
     def test_absent_registry_version_is_not_treated_as_published(self) -> None:
         with mock.patch.object(publish, "registry_checksum", return_value=False):
             self.assertFalse(publish.require_matching_checksum("crate", "1.0.0", "a" * 64))
+
+    def test_registry_checksum_treats_http_429_as_transient(self) -> None:
+        error = publish.urllib.error.HTTPError(
+            "https://crates.io", 429, "Too Many Requests", None, None
+        )
+        with mock.patch.object(publish.urllib.request, "urlopen", side_effect=error):
+            with mock.patch("sys.stderr") as stderr:
+                self.assertIsNone(publish.registry_checksum("crate", "1.0.0"))
+        self.assertTrue(stderr.write.called)
+
+    def test_registry_checksum_treats_transport_error_as_transient(self) -> None:
+        with mock.patch.object(
+            publish.urllib.request, "urlopen", side_effect=OSError("network unavailable")
+        ):
+            with mock.patch("sys.stderr") as stderr:
+                self.assertIsNone(publish.registry_checksum("crate", "1.0.0"))
+        self.assertTrue(stderr.write.called)
 
     def test_archive_checksum_hashes_exact_bytes(self) -> None:
         payload = b"normalized crate archive\x00"

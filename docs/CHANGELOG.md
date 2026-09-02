@@ -39,6 +39,8 @@ All notable changes to Axiolid are documented in this file.
 - Extracted scalar solid generation — profiles, lofts, sweeps, revolutions, extrusion, and bounded half-space clipping — from the L3 DAG compiler into the new L2 `axiolid-construct` crate. `axiolid-mesh-compile` now owns graph traversal, caching, model-driven directrices, and B-rep tessellation only; see [ADR 0023](./adr/0023-solid-generation-is-an-l2-crate.md).
 
 ### Fixed
+- Hardened source-neutrality checks against dependency aliases while allowing comments, and mutation-verified both behaviors.
+- Pinned release workflow actions to immutable commits and covered transient crates.io lookup failures.
 - Updated package metadata, generated crate links, documentation navigation, and the GitHub Pages base to the canonical `axiolid/kernel` repository.
 - Replaced unstable `cargo publish --workspace` with guarded stable child-first publication.
 - Added staged verification for all 31 publishable archives; `xtask` remains excluded.

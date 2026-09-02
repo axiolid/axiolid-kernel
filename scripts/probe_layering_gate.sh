@@ -131,16 +131,23 @@ else
     printf '  %-58s %s (expected RED)  MISS\n' "new unregistered package manifest" "$got"; fail=1
 fi
 
-# 5. Protobuf transport vocabulary leaking into neutral production source.
-mutate_source "axiolid-mesh source names protobuf transport" \
-    "$G/representations/discrete/mesh/src/lib.rs" "// protobuf transport mutation" RED
+# 5. Protobuf transport vocabulary leaking into executable production source.
+mutate_source "axiolid-mesh code names protobuf transport" \
+    "$G/representations/discrete/mesh/src/lib.rs" 'const PROTOBUF_TRANSPORT: &str = "protobuf";' RED
 
 # 6. Rust Protobuf implementation leaking into neutral production source.
 mutate_source "axiolid-mesh source imports prost" \
     "$G/representations/discrete/mesh/src/lib.rs" "use prost::Message;" RED
 
-# 7. Decoy: the violation exists only as a COMMENT. A gate that trips on this
-#    is a gate nobody can write an explanatory note next to.
+# 7. Renaming a dependency key must not hide its package identity.
+mutate "axiolid-mesh aliases prost dependency as p" \
+    "$G/representations/discrete/mesh/Cargo.toml" \
+    'p = { package = "prost", version = "0.13" }' RED
+
+# 8. Comments are explanatory prose, not executable coupling.
+mutate_source "Rust comment names protobuf/prost (must NOT trip)" \
+    "$G/representations/discrete/mesh/src/lib.rs" \
+    "// protobuf and prost documentation-only decoy" GREEN
 mutate "COMMENTED-OUT ifc-model dep (must NOT trip)" \
     "$G/representations/discrete/mesh/Cargo.toml" "# ifc-model.workspace = true" GREEN
 

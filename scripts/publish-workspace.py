@@ -18,6 +18,7 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.error

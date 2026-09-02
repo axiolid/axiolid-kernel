@@ -52,9 +52,7 @@ The checker enforces a role-based DAG over production/build edges and an exact d
 - facade may depend on any public Axiolid package;
 - source-format and vendor types are forbidden from all core packages.
 
-The architecture gate enforces the maintained forbidden-term catalog across
-production `src/**/*.rs` files. Tests may name those formats only to verify
-rejection and adapter boundaries; test vocabulary is not shipped library code.
+The architecture gate lexes production `src/**/*.rs` files, excludes Rust comments, and enforces the maintained forbidden-term catalog on executable tokens and literals. Cargo metadata supplies underlying dependency package names, so aliases cannot bypass the check. Tests may name those formats only to verify rejection and adapter boundaries.
 
 Narrow representation composition and lower algorithm-substrate edges are explicitly declared rather than inferred from a numeric layer.
 

@@ -24,8 +24,8 @@ jobs:
     name: Verify release packages
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@2eae45db285e407f22119950686d47e1101e071b # 1.88.0
       - name: Test release tooling and publication order
         run: |
           python3 scripts/test_release_scripts.py
@@ -43,8 +43,8 @@ jobs:
       name: crates-io
       url: https://crates.io
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@2eae45db285e407f22119950686d47e1101e071b # 1.88.0
       - name: Publish workspace in stable dependency order
         run: python3 scripts/publish-workspace.py --execute
         env:

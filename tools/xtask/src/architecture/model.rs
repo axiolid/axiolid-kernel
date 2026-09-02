@@ -14,6 +14,7 @@ pub struct PackageArchitecture {
     pub domain: String,
     pub public: bool,
     pub format_neutral: bool,
+    pub declared_dependency_packages: BTreeSet<String>,
     pub allowed_internal_dependencies: BTreeSet<String>,
     pub actual_internal_dependencies: BTreeSet<String>,
     pub production_internal_dependencies: BTreeSet<String>,
@@ -66,6 +67,13 @@ impl Architecture {
                 .replace('\\', "/");
             let allowed_internal_dependencies =
                 strings(table, "allowed-internal-dependencies", &name)?;
+            // cargo_metadata exposes the underlying package name even when the
+            // manifest renames it, so policy checks cannot be bypassed by aliases.
+            let declared_dependency_packages = package
+                .dependencies
+                .iter()
+                .map(|dependency| dependency.name.to_string())
+                .collect();
             let actual_internal_dependencies = package
                 .dependencies
                 .iter()
@@ -89,6 +97,7 @@ impl Architecture {
                     domain: string(table, "domain", &name)?,
                     public: boolean(table, "public", &name)?,
                     format_neutral: boolean(table, "format-neutral", &name)?,
+                    declared_dependency_packages,
                     allowed_internal_dependencies,
                     actual_internal_dependencies,
                     production_internal_dependencies,

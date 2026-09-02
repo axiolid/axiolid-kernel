@@ -1,4 +1,5 @@
 use super::model::{Architecture, Result};
+use rustc_lexer::{tokenize, TokenKind};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -23,7 +24,10 @@ pub fn validate(architecture: &Architecture, errors: &mut Vec<String>) -> Result
         for file in &files {
             let source = fs::read_to_string(file)
                 .map_err(|error| format!("read {}: {error}", file.display()))?;
-            let lower = source.to_ascii_lowercase();
+            // Comments are explanatory prose, not executable coupling. Lex first so
+            // identifiers and string literals remain enforceable without rejecting docs.
+            let code = source_without_comments(&source);
+            let lower = code.to_ascii_lowercase();
             if package.format_neutral {
                 for term in FORBIDDEN_FORMAT_TERMS {
                     if lower.contains(term) {
@@ -36,7 +40,7 @@ pub fn validate(architecture: &Architecture, errors: &mut Vec<String>) -> Result
                 }
             }
             for placeholder in ["todo!(", "unimplemented!("] {
-                if source.contains(placeholder) {
+                if code.contains(placeholder) {
                     errors.push(format!(
                         "{}: {} contains panicking placeholder `{placeholder}`",
                         package.name,
@@ -46,17 +50,25 @@ pub fn validate(architecture: &Architecture, errors: &mut Vec<String>) -> Result
             }
             validate_declared_module(&src, file, &source, errors)?;
         }
-        let manifest = fs::read_to_string(architecture.root.join(&package.path).join("Cargo.toml"))
-            .map_err(|error| format!("read {} manifest: {error}", package.name))?;
-        for dependency in FORBIDDEN_NATIVE_DEPENDENCIES {
-            if manifest.lines().any(|line| {
-                let line = line.trim_start();
-                !line.starts_with('#') && line.starts_with(dependency)
-            }) {
+        // Use Cargo's resolved declaration metadata, not manifest key spelling: a
+        // dependency renamed with `package = "prost"` must remain detectable.
+        for dependency in &package.declared_dependency_packages {
+            let lower = dependency.to_ascii_lowercase();
+            if FORBIDDEN_NATIVE_DEPENDENCIES.contains(&lower.as_str()) {
                 errors.push(format!(
                     "{}: forbidden native bridge dependency `{dependency}`",
                     package.name
                 ));
+            }
+            if package.format_neutral {
+                for term in FORBIDDEN_FORMAT_TERMS {
+                    if lower.contains(term) {
+                        errors.push(format!(
+                            "{}: forbidden source-format dependency `{dependency}` contains `{term}`",
+                            package.name
+                        ));
+                    }
+                }
             }
         }
         let forbids_unsafe = matches!(
@@ -77,6 +89,21 @@ pub fn validate(architecture: &Architecture, errors: &mut Vec<String>) -> Result
         }
     }
     Ok(())
+}
+
+fn source_without_comments(source: &str) -> String {
+    let mut code = String::with_capacity(source.len());
+    let mut offset = 0;
+    for token in tokenize(source) {
+        let end = offset + token.len;
+        match token.kind {
+            TokenKind::LineComment | TokenKind::BlockComment { .. } => code.push(' '),
+            _ => code.push_str(&source[offset..end]),
+        }
+        offset = end;
+    }
+    debug_assert_eq!(offset, source.len());
+    code
 }
 
 fn rust_files(root: &Path) -> Result<Vec<PathBuf>> {
@@ -153,4 +180,28 @@ fn relative(root: &Path, path: &Path) -> String {
         .unwrap_or(path)
         .display()
         .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::source_without_comments;
+
+    #[test]
+    fn removes_line_doc_and_nested_block_comments() {
+        let source = r#"// protobuf
+//! prost docs
+const OK: &str = "neutral"; /* outer prost /* nested protobuf */ */"#;
+        let code = source_without_comments(source);
+        assert!(!code.contains("protobuf"));
+        assert!(!code.contains("prost"));
+        assert!(code.contains("const OK"));
+    }
+
+    #[test]
+    fn preserves_identifiers_and_string_literals() {
+        let source = r##"const PROTOBUF: &str = r#"prost // not a comment"#;"##;
+        let code = source_without_comments(source);
+        assert!(code.contains("PROTOBUF"));
+        assert!(code.contains("prost // not a comment"));
+    }
 }
