@@ -91,13 +91,18 @@ External MCS/Axioval or wire packages map normalized semantic requests into type
 
 The migration must preserve workspace, feature, conformance, mutation,
 documentation, package, and downstream IFC gates. `scripts/verify-packages.py`
-creates and compiles every normalized publishable archive with command-scoped
-local registry patches, because a first multi-crate release cannot resolve its
-new internal names from crates.io yet. Those patches never enter published
-manifests; version requirements remain the registry contract.
-`scripts/publish-workspace.py` then derives an acyclic order across normal,
-build, and dev dependencies and publishes one crate at a time on stable Cargo.
-A rerun packages that crate without patches and skips its immutable registry
-version only when the crates.io checksum matches those exact upload bytes;
-collisions fail closed. Meaningful splits report dependency/build measurements;
-claims of improvement require evidence.
+bootstrap-preflights every normalized source archive with command-scoped local
+registry patches, because a first multi-crate release cannot resolve its new
+internal names from crates.io yet. These preliminary archives exclude
+`Cargo.lock`; the gate rejects lock/patch metadata and proves byte identity with
+unpatched archives for every internal-dependency root. They are not claimed as
+the eventual upload bytes.
+
+`scripts/publish-workspace.py` derives an acyclic order across normal, build, and
+dev dependencies and publishes one crate at a time on stable Cargo. Once a
+crate's children are visible, the publisher creates and compiles its exact
+unpatched, lockful archive, rejects patch/path-backed internal lock entries, and
+requires `cargo publish --dry-run` to reproduce the same bytes. The immutable
+crates.io checksum must then equal that local archive hash; reruns skip only an
+exact match and collisions fail closed. Meaningful splits report
+dependency/build measurements; claims of improvement require evidence.

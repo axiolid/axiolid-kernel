@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import io
 from pathlib import Path
 import re
+import tarfile
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -25,6 +27,19 @@ def load_script(name: str, filename: str):
 
 
 publish = load_script("publish_workspace", "publish-workspace.py")
+verify = load_script("verify_packages", "verify-packages.py")
+
+
+def write_crate_archive(path: Path, lock_text: str | None) -> None:
+    with tarfile.open(path, "w:gz") as archive:
+        payloads = {"crate-0.1.0/src/lib.rs": b"pub fn probe() {}\n"}
+        if lock_text is not None:
+            payloads["crate-0.1.0/Cargo.lock"] = lock_text.encode()
+        for name, payload in payloads.items():
+            member = tarfile.TarInfo(name)
+            member.size = len(payload)
+            member.mtime = 0
+            archive.addfile(member, io.BytesIO(payload))
 
 
 class PublishWorkspaceTests(unittest.TestCase):
@@ -125,6 +140,67 @@ class PublishWorkspaceTests(unittest.TestCase):
             with mock.patch.object(publish.subprocess, "run", side_effect=fake_run):
                 archive = publish.prepare_archive(package, target, environment, args)
             self.assertEqual(archive.read_bytes(), b"crate")
+
+    def test_bootstrap_archive_rejects_packaged_lock_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            archive = Path(temporary) / "crate-0.1.0.crate"
+            write_crate_archive(archive, "version = 4\n")
+            with self.assertRaisesRegex(SystemExit, "contains Cargo.lock/patch metadata"):
+                verify.assert_no_packaged_lockfile(archive)
+
+    def test_exact_archive_rejects_patch_metadata(self) -> None:
+        lock = """version = 4
+[[package]]
+name = "crate"
+version = "0.1.0"
+[[patch.unused]]
+name = "internal"
+version = "0.1.0"
+"""
+        with tempfile.TemporaryDirectory() as temporary:
+            archive = Path(temporary) / "crate-0.1.0.crate"
+            write_crate_archive(archive, lock)
+            with self.assertRaisesRegex(SystemExit, "contains patch metadata"):
+                publish.assert_registry_clean_archive(
+                    archive, "crate", "0.1.0", {"crate", "internal"}
+                )
+
+    def test_exact_archive_rejects_path_backed_internal_dependency(self) -> None:
+        lock = """version = 4
+[[package]]
+name = "crate"
+version = "0.1.0"
+[[package]]
+name = "internal"
+version = "0.1.0"
+"""
+        with tempfile.TemporaryDirectory() as temporary:
+            archive = Path(temporary) / "crate-0.1.0.crate"
+            write_crate_archive(archive, lock)
+            with self.assertRaisesRegex(SystemExit, "non-registry source"):
+                publish.assert_registry_clean_archive(
+                    archive, "crate", "0.1.0", {"crate", "internal"}
+                )
+
+    def test_publish_dry_run_must_reproduce_archive_bytes(self) -> None:
+        package = {"name": "crate", "version": "0.1.0"}
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "target" / "package"
+            target.mkdir(parents=True)
+            archive = target / "crate-0.1.0.crate"
+            archive.write_bytes(b"package bytes")
+
+            def fake_run(command, **kwargs):
+                self.assertEqual(
+                    command,
+                    [publish.CARGO, "publish", "-p", "crate", "--locked", "--dry-run", "--quiet"],
+                )
+                archive.write_bytes(b"different dry-run bytes")
+                return SimpleNamespace(returncode=0, stdout="")
+
+            with mock.patch.object(publish.subprocess, "run", side_effect=fake_run):
+                with self.assertRaisesRegex(SystemExit, "archive mismatch"):
+                    publish.reproduce_publish_dry_run(package, archive, {})
 
     def test_prepare_archive_fails_closed_on_permanent_error(self) -> None:
         package = {"name": "leaf", "version": "0.1.0"}

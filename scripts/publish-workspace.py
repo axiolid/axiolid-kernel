@@ -19,8 +19,10 @@ import json
 import os
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
+import tomllib
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -115,6 +117,49 @@ def archive_checksum(archive: Path) -> str:
     return digest.hexdigest()
 
 
+def assert_registry_clean_archive(
+    archive: Path, package_name: str, package_version: str, internal_names: set[str]
+) -> None:
+    with tarfile.open(archive, "r:gz") as package:
+        lockfiles = [member for member in package.getmembers() if member.name.endswith("/Cargo.lock")]
+        if len(lockfiles) != 1:
+            raise SystemExit(
+                f"exact upload archive {archive.name} must contain one Cargo.lock, "
+                f"found {len(lockfiles)}"
+            )
+        stream = package.extractfile(lockfiles[0])
+        if stream is None:
+            raise SystemExit(f"cannot read packaged Cargo.lock from {archive.name}")
+        lock = tomllib.loads(stream.read().decode("utf-8"))
+
+    if "patch" in lock:
+        raise SystemExit(f"exact upload archive {archive.name} contains patch metadata")
+    local_rows = 0
+    for row in lock.get("package", []):
+        name = row.get("name")
+        version = row.get("version")
+        source = row.get("source")
+        if name == package_name and version == package_version and source is None:
+            local_rows += 1
+            continue
+        if name not in internal_names:
+            continue
+        checksum = row.get("checksum")
+        if source != "registry+https://github.com/rust-lang/crates.io-index":
+            raise SystemExit(
+                f"exact upload archive {archive.name} resolves internal {name} "
+                f"through non-registry source {source!r}"
+            )
+        if not isinstance(checksum, str) or len(checksum) != 64:
+            raise SystemExit(
+                f"exact upload archive {archive.name} has no registry checksum for {name}"
+            )
+    if local_rows != 1:
+        raise SystemExit(
+            f"exact upload archive {archive.name} has {local_rows} local root lock entries"
+        )
+
+
 def require_matching_checksum(name: str, version: str, local_checksum: str) -> bool:
     remote_checksum = registry_checksum(name, version)
     if remote_checksum is False or remote_checksum is None:
@@ -153,6 +198,40 @@ def retry_delay(output: str, args: argparse.Namespace) -> tuple[int, str] | None
     if "no matching package named" in lowered or "failed to select a version" in lowered:
         return args.dependency_wait, "registry dependency propagation"
     return None
+
+
+def reproduce_publish_dry_run(
+    package: dict,
+    archive: Path,
+    environment: dict[str, str],
+) -> Path:
+    name = package["name"]
+    version = package["version"]
+    expected_bytes = archive.read_bytes()
+    expected_checksum = archive_checksum(archive)
+    archive.unlink()
+    result = subprocess.run(
+        [CARGO, "publish", "-p", name, "--locked", "--dry-run", "--quiet"],
+        cwd=ROOT,
+        env=environment,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    if result.stdout:
+        print(result.stdout, end="", flush=True)
+    if result.returncode != 0:
+        raise SystemExit(f"cargo publish --dry-run failed for {name} {version}")
+    if not archive.is_file():
+        raise SystemExit(f"cargo publish --dry-run produced no archive for {name} {version}")
+    reproduced_checksum = archive_checksum(archive)
+    if reproduced_checksum != expected_checksum or archive.read_bytes() != expected_bytes:
+        raise SystemExit(
+            f"cargo publish --dry-run archive mismatch for {name} {version}: "
+            f"package={expected_checksum} dry-run={reproduced_checksum}"
+        )
+    print(f"EXACT_ARCHIVE {name} {version} checksum={expected_checksum}", flush=True)
+    return archive
 
 
 def prepare_archive(
@@ -202,10 +281,14 @@ def publish(
     target: Path,
     environment: dict[str, str],
     args: argparse.Namespace,
+    internal_names: set[str],
 ) -> None:
     name = package["name"]
     version = package["version"]
     archive = prepare_archive(package, target, environment, args)
+    assert_registry_clean_archive(archive, name, version, internal_names)
+    archive = reproduce_publish_dry_run(package, archive, environment)
+    assert_registry_clean_archive(archive, name, version, internal_names)
     local_checksum = archive_checksum(archive)
     if require_matching_checksum(name, version, local_checksum):
         print(f"SKIP {name} {version}: published checksum matches {local_checksum}", flush=True)
@@ -223,6 +306,10 @@ def publish(
         if result.stdout:
             print(result.stdout, end="", flush=True)
         if result.returncode == 0:
+            if not archive.is_file() or archive_checksum(archive) != local_checksum:
+                raise SystemExit(
+                    f"cargo publish regenerated different local bytes for {name} {version}"
+                )
             wait_for_matching_checksum(name, version, local_checksum, args)
             print(f"PUBLISHED {name} {version} checksum={local_checksum}", flush=True)
             return
@@ -274,8 +361,9 @@ def main() -> None:
         target = Path(temporary) / "target"
         environment = os.environ.copy()
         environment["CARGO_TARGET_DIR"] = str(target)
+        internal_names = {package["name"] for package in plan}
         for package in plan:
-            publish(package, target, environment, args)
+            publish(package, target, environment, args, internal_names)
     print(f"PUBLISH_WORKSPACE=PASS crates={len(plan)}")
 
 
