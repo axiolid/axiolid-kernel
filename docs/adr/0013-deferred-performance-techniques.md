@@ -4,6 +4,11 @@
 - **Date:** 2026-08-19
 - **Deciders:** Friedrich, axiolid
 - **Supersedes:** —
+- **Package ownership amended by:** [0035](./0035-nested-ownership-and-capability-contracts.md)
+
+> Trigger conditions and proof requirements remain active. Historical
+> `axiolid-kernel::certainty` references now map to `axiolid-guarantees` and
+> operation-specific contract packages.
 
 ## Context
 

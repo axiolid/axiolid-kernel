@@ -2,6 +2,8 @@
 
 These records capture durable choices that preserve Axiolid’s format-neutral, pure-Rust, feature-tiered design. A decision record explains its context, boundary, alternatives, consequences, and follow-up risks; it is not a changelog.
 
+Package names and paths in older accepted records describe the tree at the time of the decision. Status and amendment notes govern conflicts; [ADR 0035](./0035-nested-ownership-and-capability-contracts.md) and the [implemented crate map](../architecture/current-target-crate-map.md) are authoritative for current ownership.
+
 | ADR | Decision |
 | --- | --- |
 | [0001](./0001-axiolid-ifc-split-and-kernel-contract.md) | IFC split and kernel contract |

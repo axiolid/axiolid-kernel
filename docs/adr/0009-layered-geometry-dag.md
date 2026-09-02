@@ -5,6 +5,12 @@
 - **Deciders:** Friedrich, Hermes
 - **Supersedes:** 0002 and 0004 backend/capability decisions; 0008 in part
   (neutral profile and shape vocabulary)
+- **Package ownership amended by:** [0035](./0035-nested-ownership-and-capability-contracts.md)
+
+> The neutral-DAG, runtime-selection, and provider-separation decisions remain
+> active. Package names and paths below are historical; ADR 0035 decomposed
+> `axiolid-kernel` into portable contracts, guarantees, operation contracts,
+> dispatch, and execution-owned packages.
 
 ## Context
 

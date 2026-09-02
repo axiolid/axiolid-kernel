@@ -4,6 +4,11 @@
 - **Date:** 2026-08-31
 - **Deciders:** Friedrich Schrödter
 - **Supersedes:** [0021](./0021-capability-seams-live-in-the-kernel.md)
+- **Package ownership amended by:** [0035](./0035-nested-ownership-and-capability-contracts.md)
+
+> `axiolid-construct` remains an algorithm package. Historical references to a
+> future seam in `axiolid-kernel` now mean an operation-specific portable
+> contract, introduced only with a real implementation or independent consumer.
 
 ## Context
 

@@ -4,6 +4,12 @@
 - **Date:** 2026-08-26
 - **Deciders:** Friedrich, Hermes
 - **Supersedes:** — (extends [0003](./0003-pure-rust-mesh-boolean.md) and [0014](./0014-adopt-boolmesh-mesh-boolean.md))
+- **Package ownership amended by:** [0035](./0035-nested-ownership-and-capability-contracts.md)
+
+> Boolean semantics and conformance obligations remain active. Point-in-time
+> paths below are historical; portable Boolean contracts now live in
+> `axiolid-mesh-boolean-contract`, shared admissibility in
+> `axiolid-mesh-contracts`, and provider policy in `axiolid-dispatch`.
 
 ## Context
 

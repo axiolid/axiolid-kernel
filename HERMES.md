@@ -4,20 +4,24 @@ Axiolid is a standalone pure-Rust, IFC-agnostic geometry kernel. No source-forma
 
 ## Layout
 
-- `crates/`: independently publishable kernel crates; `axiolid` is the opt-in facade.
-- `docs/adr/`: durable architecture decisions.
+- `crates/`: nested ownership tree containing 31 publishable kernel packages; `crates/facade/axiolid` is the opt-in facade.
+- `tools/xtask/`: local-only architecture checker and generated-document owner.
+- `docs/adr/`: durable architecture decisions; ADR 0035 owns the current package topology.
+- `docs/architecture/`: current and generated crate/dependency maps.
 - `docs/research/`: prior-art evidence.
-- `scripts/`: feature and mutation-verified architecture gates.
+- `scripts/`: feature, release, conformance, and mutation-verified architecture gates.
 
 ## Commands
 
 ```bash
 cargo fmt --all -- --check
 cargo build --workspace
-cargo test --workspace
+cargo test --workspace --all-features
 cargo clippy --workspace --all-targets --all-features -- -D warnings
-scripts/geometry-feature-matrix.sh
-scripts/probe_layering_gate.sh
+cargo xtask architecture check
+bash scripts/probe_layering_gate.sh
+bash scripts/field_gate.sh
+bash scripts/geometry-feature-matrix.sh
 scripts/gate.sh
 ```
 

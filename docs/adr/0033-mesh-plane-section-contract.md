@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-01
+- Package ownership amended by: [0035](./0035-nested-ownership-and-capability-contracts.md)
 
 ## Context
 
@@ -13,7 +14,7 @@ A mesh section is useful now, but it must not be presented as an exact section o
 
 ## Decision
 
-Add a backend-neutral `MeshPlaneSection` capability in `axiolid-kernel` and a portable correctness oracle, `ScalarSection`, in `axiolid-reference`.
+Add a backend-neutral `MeshPlaneSection` capability in `axiolid-mesh-section-contract` and a portable correctness oracle, `ScalarSection`, in `axiolid-reference`.
 
 The operation accepts:
 
