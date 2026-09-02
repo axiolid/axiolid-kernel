@@ -49,18 +49,31 @@ pub fn extrude_profile_exact(
     }
 }
 
+fn normalize_direction(direction: Vec3) -> Option<Vec3> {
+    if !direction.is_finite() {
+        return None;
+    }
+
+    // Scaling first avoids underflow/overflow in the squared norm while
+    // preserving every finite nonzero direction, including subnormals.
+    let scale = direction.abs().max_element();
+    if scale == 0.0 {
+        return None;
+    }
+    let scaled = direction / scale;
+    Some(scaled / scaled.length())
+}
+
 fn extrusion_offset(direction: Vec3, depth: Scalar, tolerance: Tolerance) -> GeomResult<Vec3> {
     if !depth.is_finite() || depth <= 0.0 {
         return Err(GeomError::InvalidInput(format!(
             "exact extrusion depth must be positive and finite, got {depth}"
         )));
     }
-    if !direction.is_finite() || direction.length() == 0.0 {
-        return Err(GeomError::InvalidInput(
-            "exact extrusion direction must be finite and non-zero".to_owned(),
-        ));
-    }
-    let offset = direction.normalize() * depth;
+    let direction = normalize_direction(direction).ok_or_else(|| {
+        GeomError::InvalidInput("exact extrusion direction must be finite and non-zero".to_owned())
+    })?;
+    let offset = direction * depth;
     if !offset.is_finite() {
         return Err(GeomError::Degenerate(
             "exact extrusion direction could not be normalized".to_owned(),

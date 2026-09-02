@@ -260,6 +260,27 @@ fn nonzero_direction_magnitude_is_not_a_model_length() {
 }
 
 #[test]
+fn finite_nonzero_extreme_direction_magnitudes_normalize_safely() {
+    let profile = Profile::Circle(CircleProfile {
+        radius: 1.0,
+        thickness: None,
+    });
+
+    for magnitude in [f64::MIN_POSITIVE, f64::MAX] {
+        let value = extrude_profile_exact(
+            &profile,
+            Vec3::new(0.0, 0.0, magnitude),
+            1.0,
+            Tolerance::METRE,
+        )
+        .expect("finite nonzero unitless directions must normalize without range loss");
+
+        assert_complete_and_closed(&value);
+        assert_pcurve_surface_agreement(&value);
+    }
+}
+
+#[test]
 fn invalid_exact_extrusion_inputs_are_not_reclassified_as_unsupported() {
     let error = extrude_profile_exact(
         &rectangle(None),
