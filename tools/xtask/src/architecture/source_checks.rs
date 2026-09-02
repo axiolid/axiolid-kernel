@@ -205,3 +205,51 @@ const OK: &str = "neutral"; /* outer prost /* nested protobuf */ */"#;
         assert!(code.contains("prost // not a comment"));
     }
 }
+
+// Downstream product names must not appear anywhere in the repository, not just
+// in Rust sources. Docs, PLAN files and scripts are published too, and naming a
+// specific end-user product in a public infrastructure repo leaks a commercial
+// relationship the kernel is not supposed to model.
+//
+// The two files that carry the banned list itself are exempt: they are the
+// machinery that enforces this rule.
+const FORBIDDEN_PRODUCT_TERMS: &[&str] = &["solibri"];
+
+const PRODUCT_TERM_EXEMPT_SUFFIXES: &[&str] = &[
+    "tools/xtask/src/architecture/source_checks.rs",
+    "crates/algorithms/sampled/field/tests/neutrality.rs",
+];
+
+pub fn validate_no_product_names(root: &Path, errors: &mut Vec<String>) -> Result<()> {
+    let tracked = std::process::Command::new("git")
+        .args(["ls-files", "-z"])
+        .current_dir(root)
+        .output()
+        .map_err(|error| format!("git ls-files: {error}"))?;
+    if !tracked.status.success() {
+        return Err("git ls-files failed".to_owned());
+    }
+    let listing = String::from_utf8_lossy(&tracked.stdout);
+    for entry in listing.split('\0').filter(|entry| !entry.is_empty()) {
+        let normalized = entry.replace('\\', "/");
+        if PRODUCT_TERM_EXEMPT_SUFFIXES
+            .iter()
+            .any(|exempt| normalized.ends_with(exempt) || normalized == *exempt)
+        {
+            continue;
+        }
+        let path = root.join(entry);
+        let Ok(source) = fs::read_to_string(&path) else {
+            continue; // binary or unreadable: nothing textual to leak
+        };
+        let haystack = format!("{}\n{normalized}", source.to_ascii_lowercase());
+        for term in FORBIDDEN_PRODUCT_TERMS {
+            if haystack.contains(term) {
+                errors.push(format!(
+                    "{normalized}: contains downstream product name `{term}`"
+                ));
+            }
+        }
+    }
+    Ok(())
+}

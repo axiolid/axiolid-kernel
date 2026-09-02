@@ -8,11 +8,14 @@ defect and asserts the suites FAIL. A surviving probe means the gate is blind.
 Sources are restored byte-identically afterwards.
 """
 import hashlib
+import os
 import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path("/mnt/backup/build-cache/axiolid-solibri-spatial")
+ROOT = Path(
+    os.environ.get("PROBE_ROOT", "/mnt/backup/build-cache/axiolid-probe-spatial")
+)
 
 SUITES = [
     ["cargo", "test", "-p", "axiolid-reference", "--all-features", "--test", "oracle"],

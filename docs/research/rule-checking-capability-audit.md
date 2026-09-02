@@ -49,7 +49,7 @@ above.
 | Planar offset | Polygon inset/outset and polyline stroke offset used for clearance envelopes | Absent; backend already vendored via `axiolid-overlay` | Kernel | #42 | v0.4 |
 | Mesh/mesh distance with witnesses | Separation distance plus witness points and proximity components | `closest_points_on_triangles` exists; mesh-level composition does not | Kernel | #43 | v0.4 |
 | Planar projection of meshes | Projected triangle union and vertical prism intersection | 3D and 2D halves exist; the projection between them does not | Kernel | #44 | v0.4 |
-| Exact planar shortest path | Visibility-graph routing with typed unreachable reasons | Sampled routing exists in `axiolid-field`; exact planar counterpart does not | Kernel | #46 | v0.4 |
+| Exact planar shortest path | Visibility-graph routing with typed unreachable reasons | Sampled routing exists in `axiolid-field-ops`; exact planar counterpart does not | Kernel | #46 | v0.4 |
 | Planar region algebra | Persistent region with set ops, erosion/dilation, components, area | `overlay()` is stateless; no region type, no component count | Kernel | #47 | v0.4 |
 
 ### Milestone decision
@@ -77,7 +77,7 @@ v0.4, whose subject is trustworthy discrete geometry.
 | Polygon triangulation with holes | `axiolid-construct::profile` |
 | 2D boolean overlay | `axiolid-overlay::overlay` |
 | 3D mesh boolean | `axiolid-mesh-boolean-boolmesh` provider |
-| Sampled 2.5D traversal | `axiolid-field::navigate` behind `navigation` |
+| Sampled 2.5D traversal | `axiolid-field-ops::navigate` behind `navigation` |
 
 
 ### Support verified by execution
@@ -88,15 +88,17 @@ crates that back them, not by matching symbol names:
 ```
 cargo test -p axiolid-mesh-boolean-boolmesh -p axiolid-construct \
   -p axiolid-overlay -p axiolid-measure -p axiolid-reference \
-  -p axiolid-spatial -p axiolid-mesh -p axiolid-field --all-features
+  -p axiolid-spatial -p axiolid-mesh -p axiolid-field-ops --all-features
 
-TOTAL passed=202 failed=0
+TOTAL passed=245 failed=0
 ```
 
 This check also caught one error in an earlier draft of this table: the mesh
-boolean provider was cited as `axiolid-boolmesh`, which is not a package in
-this workspace. The real name is `axiolid-mesh-boolean-boolmesh`, confirmed
-against `cargo metadata`. Name-matching alone would not have caught it.
+boolean provider was cited as `axiolid-boolmesh` and the sampled-field crate as
+`axiolid-field`; neither is a package in this workspace. The real names are
+`axiolid-mesh-boolean-boolmesh` and `axiolid-field-ops`, confirmed against
+`cargo metadata`. The second error meant a whole crate's tests were silently
+not running. Name-matching alone would not have caught either.
 
 ## Not kernel-owned — deliberately refused
 
@@ -128,7 +130,7 @@ Also refused:
   `surface_curve_sweep`. That is duplication for the format layer to retire by
   adopting the kernel; it is not a kernel gap and no issue is filed for it.
 - **Verdicts** — the kernel may report "no route exists under this envelope";
-  it may never report "non-compliant". `axiolid-field::navigate` already
+  it may never report "non-compliant". `axiolid-field-ops::navigate` already
   states this rule in its module docs and it is upheld here.
 - **Native C++ boolean backends** — the consumer uses one. The kernel ships a
   pure-Rust provider; the consumer should migrate to it rather than the kernel
@@ -158,3 +160,13 @@ The full audited surface, by owning layer:
 
 No capability was left unclassified. Nothing owned by the format layer or the
 application layer has been proposed as kernel work.
+
+## Neutrality enforcement
+
+The kernel names no downstream product. This is enforced rather than trusted:
+`cargo xtask architecture check` scans every tracked file — not just Rust
+sources — for banned product names in both content and path, exempting only the
+banned-list definition and the test that asserts it.
+
+The gate was mutation-tested: injecting the name into `docs/ROADMAP.md`, and
+separately creating a file whose *name* carried it, each produced a violation.

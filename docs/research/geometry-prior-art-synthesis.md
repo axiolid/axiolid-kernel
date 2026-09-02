@@ -14,7 +14,7 @@ algorithms named here.
 | IFC-Lite | `35594eeb99bd` | `/mnt/backup/references/ifc-lite` |
 | That Open web-ifc | `38281501ca6c` | `/mnt/backup/references/thatopen-web-ifc` |
 | That Open Fragments | `c4d48d7a5a11` | `/mnt/backup/references/thatopen-fragments` |
-| Solibri extraction | `9aa004b94bd6` | `../vendor/solibri/crates/geometry` |
+| Rule-checking geometry crate | `9aa004b94bd6` | local prior-art workspace |
 
 ## Decisions, not imitation
 
@@ -23,7 +23,7 @@ algorithms named here.
 | IfcOpenShell | IFC interpretation before neutral geometry; broad shape taxonomy; reference-oracle corpus; batch openings | OpenCascade/C++ as a mandatory dependency; format semantics in the kernel; implicit global tolerance |
 | IFC-Lite | pure-Rust exact predicates; mapped-item instancing; content-based deduplication; RTC rebasing; tiered CSG fallback; invariant/property/differential tests | one IFC-coupled geometry crate; unconditional Rayon/serialization; unbounded caches; treating every documented fallback as implemented |
 | That Open | reusable geometry plus placed instance split; lazy derived buffers; batched worker messages; compact transferable buffers; explicit disposal | parser, IFC IDs, colors, Three.js, and geometry construction in one layer; early mesh-only collapse; global epsilon/settings; one god backend |
-| Solibri | one operation trait with multiple providers; common 2D subtract path before expensive 3D CSG; invariant validation; cross-process determinism tests | BIM query vocabulary in generic geometry; optional C++ path as default; documentation that is not checked against source/features |
+| Rule-checking crate | one operation trait with multiple providers; common 2D subtract path before expensive 3D CSG; invariant validation; cross-process determinism tests | BIM query vocabulary in generic geometry; optional C++ path as default; documentation that is not checked against source/features |
 
 ## Source observations that shaped the scaffold
 
@@ -59,9 +59,9 @@ algorithms named here.
   isolation. These belong at bindings/runtime boundaries; they do not justify
   storing the canonical model as f32 render buffers.
 
-### Solibri extraction
+### Rule-checking geometry crate extraction
 
-The detailed review is in `docs/research/solibri-geometry-review.md`. The most
+The detailed review is in `docs/research/prior-art-geometry-crate-review.md`. The most
 transferable seam is `MeshSubtractor`: consumers depend on one operation while
 portable, 2D-specialized, and heavy 3D providers remain replaceable. Axiolid
 uses narrow Rust traits and executable per-operation registries rather than a

@@ -19,7 +19,7 @@ IfcOpenShell alternative" is not achievable and the premise fails.
 
 Evidence gathered before deciding:
 
-- The sibling `solibri-rs` workspace uses `manifold3d` (C++ Manifold) for its
+- A sibling prior-art workspace uses `manifold3d` (C++ Manifold) for its
   3D boolean, measured at ~256 MB of its debug build dir and requiring a C++
   toolchain — inherited by every dependent crate. It feature-gates it for
   exactly this reason.
@@ -54,7 +54,7 @@ where a caller-side loop would serialize and pay dispatch per opening.
 | Bind OpenCascade | Exactly the weight we exist to remove. |
 | Bind C++ Manifold (`manifold3d`) | Much lighter than OCCT and genuinely robust, but still a C++ toolchain requirement for every consumer. Kept as a fallback if pure Rust proves insufficient. |
 | Voxel/SDF approximation | Cheap and robust, but lossy: wrong volumes and quantities, unacceptable for BIM takeoffs. |
-| Only 2D coplanar cuts | What `solibri-rs` shipped first; insufficient for general IFC (angled cuts, solids dipping into terrain). |
+| Only 2D coplanar cuts | What a comparable prior-art workspace shipped first; insufficient for general IFC (angled cuts, solids dipping into terrain). |
 
 ## Consequences
 

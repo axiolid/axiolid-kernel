@@ -1,6 +1,6 @@
-# Review: `solibri/crates/geometry`
+# Review: a prior-art rule-checking geometry crate
 
-Read 2026-08-19 at `~/projects/vendor/solibri`, commit `9aa004b`. Every claim
+Read 2026-08-19 from a local prior-art workspace, commit `9aa004b`. Every claim
 was checked against source or by running the crate's own tests. Figures marked
 MEASURED were produced on this machine.
 
@@ -29,9 +29,10 @@ the same insight behind our L0/L1/L2 tiering, arrived at independently.
 The crate doc lists six invariants, each citing the specific failure it
 prevents:
 
-- No rendering types -- Solibri's `GEntity` had `getColorBuffer()` and
-  `getPresentationType()` on the base class of all geometry.
-- No serialization derives -- 34 of 66 Solibri geometry classes carried a
+- No rendering types -- the prior product's entity base class had
+  `getColorBuffer()` and `getPresentationType()` on the base class of all
+  geometry.
+- No serialization derives -- 34 of 66 of its geometry classes carried a
   `serialVersionUID`, which made the kernel unrefactorable without breaking
   every saved file.
 - Tolerance is a parameter -- cites IfcOpenShell's `AbstractKernel.h` opening
@@ -198,8 +199,9 @@ deprecation and no end date.
 `horizontal_cap_contact`, `dominant_plane_contact`, `slab_contact`,
 `portal`, `RouteBlockageReason`, `MobilityProfile`.
 
-The crate's own first rule is that it "does not know IFC, Solibri, rules, or
-pixels" and that a type mentioning `IfcWall` or `SSlab` belongs elsewhere.
+The crate's own first rule is that it "does not know IFC, the host product,
+rules, or pixels" and that a type mentioning a schema or product entity name
+belongs elsewhere.
 These names honour the letter (no `Ifc` prefix) while carrying building
 semantics: an external wall, a slab, a portal, and route mobility are BIM
 concepts, not geometry ones. A CAD or GIS consumer would find

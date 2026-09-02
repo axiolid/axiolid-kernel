@@ -15,8 +15,9 @@ Status: BVH implemented; octree and uniform-grid providers remain planned.
 
 ## Next implementation wave
 
-- Benchmark this BVH against the Solibri reference on representative sparse,
-  dense, and adversarial distributions before adding parallel build/query code.
+- Benchmark this BVH against an external reference implementation on
+  representative sparse, dense, and adversarial distributions before adding
+  parallel build/query code.
 - Add octree or uniform-grid providers only where a measured workload justifies
   their different update/query trade-offs.
 

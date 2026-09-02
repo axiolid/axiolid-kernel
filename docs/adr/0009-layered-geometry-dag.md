@@ -60,8 +60,8 @@ small operation traits, and physically separate execution/adaptor crates.
 
 **Positive**
 
-- IFC, future STEP/CityGML adapters, and migrated Solibri algorithms share one
-  exact representation vocabulary.
+- IFC, future STEP/CityGML adapters, and algorithms migrated from prior art
+  share one exact representation vocabulary.
 - `axiolid --no-default-features`, capability bundles, CPU/GPU adapters, and leaf
   crates provide measured compile/dependency choices.
 - Backends can be implemented out of tree under Rust's orphan rules because the

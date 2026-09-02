@@ -26,7 +26,7 @@ structured for it — per-cell independent work over a flat triangle slice — b
 the seam stays unimplemented until evidence exists.
 
 **No navigation promotion to a shared contract.** The rule is at least two
-consumers needing the same neutral contract. Solibri is one. Until a second
+consumers needing the same neutral contract. One exists today. Until a second
 appears, `navigation` stays an opt-in feature of this crate rather than a
 kernel-level trait.
 
