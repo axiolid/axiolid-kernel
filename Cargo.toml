@@ -16,6 +16,7 @@ members = [
     "crates/contracts/common/base",
     "crates/contracts/common/mesh",
     "crates/contracts/operations/compile",
+    "crates/contracts/operations/exact-compile",
     "crates/contracts/operations/mesh-boolean",
     "crates/contracts/operations/mesh-section",
     "crates/contracts/operations/tessellate",
@@ -81,6 +82,7 @@ axiolid-contracts = { path = "crates/contracts/common/base", version = "0.1.0" }
 axiolid-guarantees = { path = "crates/contracts/guarantees", version = "0.1.0" }
 axiolid-mesh-contracts = { path = "crates/contracts/common/mesh", version = "0.1.0" }
 axiolid-mesh-compile-contract = { path = "crates/contracts/operations/compile", version = "0.1.0" }
+axiolid-exact-compile-contract = { path = "crates/contracts/operations/exact-compile", version = "0.1.0" }
 axiolid-mesh-boolean-contract = { path = "crates/contracts/operations/mesh-boolean", version = "0.1.0" }
 axiolid-mesh-section-contract = { path = "crates/contracts/operations/mesh-section", version = "0.1.0" }
 axiolid-dispatch = { path = "crates/execution/dispatch", version = "0.1.0", default-features = false }

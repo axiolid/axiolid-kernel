@@ -26,6 +26,7 @@ for c in \
   axiolid-guarantees axiolid-contracts axiolid-mesh-contracts \
   axiolid-tessellation-contract axiolid-mesh-boolean-contract \
   axiolid-mesh-section-contract axiolid-mesh-compile-contract \
+  axiolid-exact-compile-contract \
   axiolid-spatial axiolid-measure axiolid-overlay axiolid-field-ops axiolid-heal \
   axiolid-reference axiolid-nurbs axiolid-construct \
   axiolid-linear axiolid-predicates axiolid-linear-intersection axiolid-evaluate \

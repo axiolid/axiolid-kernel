@@ -18,6 +18,7 @@ graph TD
     axiolid_curve["axiolid-curve\nrepresentation.atomic"]
     axiolid_dispatch["axiolid-dispatch\nexecution.dispatch"]
     axiolid_evaluate["axiolid-evaluate\nalgorithm.parametric"]
+    axiolid_exact_compile_contract["axiolid-exact-compile-contract\ncontract.operation"]
     axiolid_field["axiolid-field\nrepresentation.sampled"]
     axiolid_field_ops["axiolid-field-ops\nalgorithm.sampled"]
     axiolid_guarantees["axiolid-guarantees\ncontract.guarantees"]
@@ -112,6 +113,9 @@ graph TD
     axiolid_evaluate --> axiolid_core
     axiolid_evaluate --> axiolid_curve
     axiolid_evaluate --> axiolid_surface
+    axiolid_exact_compile_contract --> axiolid_brep
+    axiolid_exact_compile_contract --> axiolid_contracts
+    axiolid_exact_compile_contract --> axiolid_model
     axiolid_field --> axiolid_core
     axiolid_field_ops --> axiolid_core
     axiolid_field_ops --> axiolid_field
@@ -136,11 +140,13 @@ graph TD
     axiolid_mesh_boolean_contract --> axiolid_core
     axiolid_mesh_boolean_contract --> axiolid_mesh
     axiolid_mesh_boolean_contract --> axiolid_mesh_contracts
+    axiolid_mesh_compile --> axiolid_brep
     axiolid_mesh_compile --> axiolid_construct
     axiolid_mesh_compile --> axiolid_contracts
     axiolid_mesh_compile --> axiolid_core
     axiolid_mesh_compile --> axiolid_curve
     axiolid_mesh_compile --> axiolid_dispatch
+    axiolid_mesh_compile --> axiolid_exact_compile_contract
     axiolid_mesh_compile --> axiolid_guarantees
     axiolid_mesh_compile --> axiolid_measure
     axiolid_mesh_compile --> axiolid_mesh

@@ -141,6 +141,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "axiolid-exact-compile-contract"
+version = "0.1.0"
+dependencies = [
+ "axiolid-brep",
+ "axiolid-contracts",
+ "axiolid-model",
+]
+
+[[package]]
 name = "axiolid-field"
 version = "0.1.0"
 dependencies = [
@@ -228,11 +237,13 @@ dependencies = [
 name = "axiolid-mesh-compile"
 version = "0.1.0"
 dependencies = [
+ "axiolid-brep",
  "axiolid-construct",
  "axiolid-contracts",
  "axiolid-core",
  "axiolid-curve",
  "axiolid-dispatch",
+ "axiolid-exact-compile-contract",
  "axiolid-guarantees",
  "axiolid-measure",
  "axiolid-mesh",

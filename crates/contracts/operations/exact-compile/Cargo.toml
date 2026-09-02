@@ -1,0 +1,24 @@
+[package]
+name = "axiolid-exact-compile-contract"
+description = "Portable graph-to-exact-B-rep compilation contract"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[dependencies]
+axiolid-contracts.workspace = true
+axiolid-brep.workspace = true
+axiolid-model.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "contracts"
+role = "contract.operation"
+domain = "brep.compile"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-contracts", "axiolid-brep", "axiolid-model"]
