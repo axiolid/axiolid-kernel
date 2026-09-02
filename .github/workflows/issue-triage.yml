@@ -116,6 +116,48 @@ jobs:
                echo "flagged needs-triage" ;;
           esac
 
+      - name: Seed Effort and Priority when unset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NUM: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          # Effort and Priority are org-level issue fields, so they show on the
+          # issue itself rather than only on a project board. A blank field is
+          # invisible in every filter and sort, which defeats the point of
+          # having the field. Seed a conservative default and let a maintainer
+          # correct it -- never overwrite a value that is already there.
+          issue=$(gh api "repos/$REPO/issues/$NUM")
+          have=$(echo "$issue" | jq -r '[.issue_field_values[]?.issue_field_name] | join(" ")')
+          type=$(echo "$issue" | jq -r '.type.name // empty')
+
+          body='[]'
+          case "$have" in
+            *Priority*) : ;;
+            # A bug degrades something that already works, so it outranks an
+            # unstarted feature by default.
+            *) case "$type" in
+                 Bug) p=High ;;
+                 *)   p=Medium ;;
+               esac
+               body=$(echo "$body" | jq --argjson f 45849869 --arg v "$p" '. + [{field_id:$f, value:$v}]') ;;
+          esac
+          case "$have" in
+            *Effort*) : ;;
+            *) body=$(echo "$body" | jq --argjson f 45849872 --arg v Medium '. + [{field_id:$f, value:$v}]') ;;
+          esac
+
+          if [ "$(echo "$body" | jq 'length')" = "0" ]; then
+            echo "Effort and Priority already set"
+            exit 0
+          fi
+
+          echo "$body" | jq '{issue_field_values: .}' > /tmp/fields.json
+          gh api "repos/$REPO/issues/$NUM" -X PATCH --input /tmp/fields.json \
+            --jq '[.issue_field_values[]|"\(.issue_field_name)=\(.single_select_option.name)"]|join(" ")'
+
       - name: Warn when type and labels disagree
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
