@@ -42,6 +42,11 @@ def run(
     env: dict[str, str] | None = None,
     check: bool = True,
 ) -> subprocess.CompletedProcess[str]:
+    # stdout and stderr are captured on separate streams (not merged) so that
+    # incidental stderr noise from the invoked process -- e.g. a first-use
+    # rustup toolchain-sync notice on a cold CI runner -- can never land in
+    # front of machine-readable stdout (JSON from `cargo metadata`) and break
+    # a downstream json.loads call. Both streams are still shown on failure.
     process = subprocess.run(
         args,
         cwd=cwd,
@@ -49,10 +54,14 @@ def run(
         check=False,
         text=True,
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stderr=subprocess.PIPE,
     )
     if check and process.returncode:
-        fail(f"{' '.join(args)} failed in {cwd}:\n{process.stdout}")
+        fail(
+            f"{' '.join(args)} failed in {cwd}:\n"
+            f"--- stdout ---\n{process.stdout}\n"
+            f"--- stderr ---\n{process.stderr}"
+        )
     return process
 
 

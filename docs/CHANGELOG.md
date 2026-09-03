@@ -4,6 +4,10 @@ All notable changes to Axiolid are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- Fixed `scripts/test-downstream-consumers.py` merging a probed process's stderr into stdout before `json.loads`-parsing its output (e.g. `cargo metadata`): a first-use rustup/toolchain notice on a cold Windows or macOS CI runner corrupted the JSON stream and failed the black-box downstream consumer gate with a spurious `Expecting value: line 1 column 1` error. stdout and stderr are now captured on separate pipes; both are still shown together on failure.
+- Pinned Python 3.12 via `actions/setup-python` in the `rust-consumers` CI job (`.github/workflows/native.yml`): the job previously relied on the Ubuntu runner's default Python 3.10, which lacks the standard-library `tomllib` module (3.11+ only) that `test-downstream-consumers.py` and `tests/downstream/test_downstream_consumers.py` require, so every push and release failed on `ubuntu-22.04` with `ModuleNotFoundError: No module named 'tomllib'`.
+
 ## [0.4.0] - 2026-09-03
 
 ### Added
