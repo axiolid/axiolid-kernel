@@ -42,6 +42,9 @@ const adrs = [
   ["0036-use-case-specific-compilation-closures", 36, "Use-case compilation closures"],
   ["0037-mapped-3d-verification-oracle", 37, "Mapped-3D verification oracle"],
   ["0038-constructed-intersection-curves", 38, "Constructed intersection curves"],
+  ["0039-downstream-integration-contract", 39, "Downstream integration contract"],
+  ["0040-versioned-c-abi-boundary", 40, "Versioned C ABI"],
+  ["0041-cmake-and-native-release-bundles", 41, "CMake and native bundles"],
 ] as const;
 
 const adrIcon = `<svg class="adr-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg>`;
@@ -95,6 +98,8 @@ export default defineConfig({
           { text: "Architecture", link: "/architecture" },
           { text: "Crate map", link: "/architecture/crate-map" },
           { text: "Closure profiles", link: "/architecture/closure-profiles" },
+          { text: "C ABI v0.4", link: "/architecture/c-abi-v0.4" },
+          { text: "Native distribution", link: "/architecture/native-distribution" },
           { text: "Dependency graph", link: "/architecture/dependency-graph" },
           { text: "openbim.geometry boundary", link: "/architecture/openbim-geometry-boundary" },
           { text: "Public crate reference", link: "/reference/crates" },

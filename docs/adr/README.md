@@ -38,5 +38,7 @@ Package names and paths in older accepted records describe the tree at the time 
 | [0035](./0035-nested-ownership-and-capability-contracts.md) | Physical layout follows ownership; contracts remain provider-neutral |
 | [0036](./0036-use-case-specific-compilation-closures.md) | Minimal dependency closures are packages and machine-checked promises |
 | [0037](./0037-mapped-3d-verification-oracle.md) | Mapped 3D certificates require an independent verification oracle |
+| [0038](./0038-constructed-intersection-curves.md) | Constructed intersection curves carry certified topology |
 | [0039](./0039-downstream-integration-contract.md) | Downstream profiles share a versioned, typed capability handshake |
 | [0040](./0040-versioned-c-abi-boundary.md) | Native consumers use a versioned, allocation-neutral C ABI |
+| [0041](./0041-cmake-and-native-release-bundles.md) | CMake consumers share one target across immutable source and native archives |

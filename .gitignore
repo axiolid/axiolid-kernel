@@ -26,6 +26,9 @@ __pycache__/
 # Generated API docs (cargo doc output), regenerate via `cargo doc --workspace --no-deps`
 /docs/api/target-doc/
 
+# Generated native release archives
+/dist/
+
 # VitePress build artifacts
 docs/node_modules/
 docs/.vitepress/dist/

@@ -15,9 +15,9 @@
  * v0.4 ABI status code.
  */
 enum AxiolidStatus
-#if __STDC_VERSION__ >= 202311L
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : int32_t
-#endif // __STDC_VERSION__ >= 202311L
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
   AxiolidStatus_Ok = 0,
   AxiolidStatus_NullPointer = 1,
@@ -32,19 +32,21 @@ enum AxiolidStatus
   AxiolidStatus_NoError = 10,
   AxiolidStatus_Panic = 255,
 };
+#ifndef __cplusplus
 #if __STDC_VERSION__ >= 202311L
 typedef enum AxiolidStatus AxiolidStatus;
 #else
 typedef int32_t AxiolidStatus;
 #endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
 
 /**
  * Operation identifier in a capability descriptor.
  */
 enum AxiolidOperation
-#if __STDC_VERSION__ >= 202311L
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : int32_t
-#endif // __STDC_VERSION__ >= 202311L
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
   AxiolidOperation_CurveEvaluation = 1,
   AxiolidOperation_SurfaceEvaluation = 2,
@@ -59,19 +61,21 @@ enum AxiolidOperation
   AxiolidOperation_GraphCompilation = 11,
   AxiolidOperation_Unknown = 255,
 };
+#ifndef __cplusplus
 #if __STDC_VERSION__ >= 202311L
 typedef enum AxiolidOperation AxiolidOperation;
 #else
 typedef int32_t AxiolidOperation;
 #endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
 
 /**
  * Representation identifier in a capability descriptor.
  */
 enum AxiolidRepresentation
-#if __STDC_VERSION__ >= 202311L
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : int32_t
-#endif // __STDC_VERSION__ >= 202311L
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
   AxiolidRepresentation_Scalar = 1,
   AxiolidRepresentation_Linear = 2,
@@ -88,46 +92,52 @@ enum AxiolidRepresentation
   AxiolidRepresentation_SampledField = 13,
   AxiolidRepresentation_Unknown = 255,
 };
+#ifndef __cplusplus
 #if __STDC_VERSION__ >= 202311L
 typedef enum AxiolidRepresentation AxiolidRepresentation;
 #else
 typedef int32_t AxiolidRepresentation;
 #endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
 
 /**
  * Exactness promise in a capability descriptor.
  */
 enum AxiolidExactness
-#if __STDC_VERSION__ >= 202311L
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : int32_t
-#endif // __STDC_VERSION__ >= 202311L
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
   AxiolidExactness_Exact = 1,
   AxiolidExactness_ToleranceBounded = 2,
 };
+#ifndef __cplusplus
 #if __STDC_VERSION__ >= 202311L
 typedef enum AxiolidExactness AxiolidExactness;
 #else
 typedef int32_t AxiolidExactness;
 #endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
 
 /**
  * Representation stored by an operation result.
  */
 enum AxiolidGeometryKind
-#if __STDC_VERSION__ >= 202311L
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : int32_t
-#endif // __STDC_VERSION__ >= 202311L
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
   AxiolidGeometryKind_TriangleMesh = 1,
   AxiolidGeometryKind_ExactBrep = 2,
   AxiolidGeometryKind_Unknown = 255,
 };
+#ifndef __cplusplus
 #if __STDC_VERSION__ >= 202311L
 typedef enum AxiolidGeometryKind AxiolidGeometryKind;
 #else
 typedef int32_t AxiolidGeometryKind;
 #endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
 
 /**
  * Globally unique opaque context token. Zero is always invalid.
@@ -267,6 +277,10 @@ typedef struct {
 #define AXIOLID_BOOLEAN_UNION 1
 
 #define AXIOLID_PROVIDER_PORTABLE 1
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 /**
  * Execute a tolerance-bounded mesh Boolean and return an owned result handle.
@@ -487,5 +501,9 @@ AxiolidStatus axiolid_v0_4_subtract_many(AxiolidContextHandle context,
  * Every non-null pointer must be aligned and valid for the documented read or write extent.
  */
 AxiolidStatus axiolid_v0_4_version(AxiolidVersion *out_version);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif  // __cplusplus
 
 #endif  /* AXIOLID_CAPI_V0_4_H */

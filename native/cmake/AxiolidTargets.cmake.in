@@ -1,0 +1,31 @@
+if(TARGET Axiolid::axiolid)
+  return()
+endif()
+
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "@SYSTEM_NAME@")
+  message(FATAL_ERROR "This Axiolid package targets @SYSTEM_NAME@, not ${CMAKE_SYSTEM_NAME}")
+endif()
+if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "@PROCESSOR_REGEX@")
+  message(FATAL_ERROR "This Axiolid package does not support processor ${CMAKE_SYSTEM_PROCESSOR}")
+endif()
+
+add_library(Axiolid::axiolid_shared SHARED IMPORTED)
+set_target_properties(Axiolid::axiolid_shared PROPERTIES
+  IMPORTED_LOCATION "${PACKAGE_PREFIX_DIR}/@SHARED_LOCATION@"
+  INTERFACE_INCLUDE_DIRECTORIES "${PACKAGE_PREFIX_DIR}/include"
+)
+@SHARED_IMPLIB_PROPERTY@
+
+add_library(Axiolid::axiolid_static STATIC IMPORTED)
+set_target_properties(Axiolid::axiolid_static PROPERTIES
+  IMPORTED_LOCATION "${PACKAGE_PREFIX_DIR}/@STATIC_LOCATION@"
+  INTERFACE_INCLUDE_DIRECTORIES "${PACKAGE_PREFIX_DIR}/include"
+  INTERFACE_LINK_LIBRARIES "@STATIC_LINK_LIBRARIES@"
+)
+
+add_library(Axiolid::axiolid INTERFACE IMPORTED)
+if(AXIOLID_LINKAGE STREQUAL "STATIC")
+  set_property(TARGET Axiolid::axiolid PROPERTY INTERFACE_LINK_LIBRARIES Axiolid::axiolid_static)
+else()
+  set_property(TARGET Axiolid::axiolid PROPERTY INTERFACE_LINK_LIBRARIES Axiolid::axiolid_shared)
+endif()

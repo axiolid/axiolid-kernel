@@ -1,0 +1,102 @@
+name: Native integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
+
+jobs:
+  cmake:
+    name: ${{ matrix.os }} / ${{ matrix.build_type }} / ${{ matrix.linkage }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-15-intel, windows-2022]
+        build_type: [Debug, Release]
+        linkage: [SHARED, STATIC]
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target/native-ci
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-15-intel' && '13.0' || '' }}
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+        with:
+          toolchain: 1.88.0
+      - name: Verify source/package CMake equivalence
+        run: python scripts/test-native-cmake.py --build-type ${{ matrix.build_type }} --linkage ${{ matrix.linkage }}
+      - name: Exercise immutable source pin
+        if: matrix.os == 'ubuntu-22.04' && matrix.build_type == 'Release' && matrix.linkage == 'SHARED'
+        run: python scripts/test-native-fetch.py --build-type Release
+      - name: Package host release artifact
+        if: github.event_name == 'release' && matrix.build_type == 'Release' && matrix.linkage == 'SHARED'
+        run: python scripts/package-native.py --target ${{ matrix.os == 'ubuntu-22.04' && 'x86_64-unknown-linux-gnu' || matrix.os == 'macos-15-intel' && 'x86_64-apple-darwin' || 'x86_64-pc-windows-msvc' }} --output-dir dist/native
+      - name: Verify host release artifact
+        if: github.event_name == 'release' && matrix.build_type == 'Release' && matrix.linkage == 'SHARED'
+        shell: bash
+        run: |
+          archive=$(find dist/native -type f \( -name '*.tar.gz' -o -name '*.zip' \) -print -quit)
+          python scripts/verify-native-package.py "$archive"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: github.event_name == 'release' && matrix.build_type == 'Release' && matrix.linkage == 'SHARED'
+        with:
+          name: native-${{ matrix.os }}
+          path: dist/native/*
+          if-no-files-found: error
+
+  cross-aarch64-linux:
+    name: Cross / aarch64-unknown-linux-gnu
+    runs-on: ubuntu-22.04
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target/native-ci
+      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+        with:
+          toolchain: 1.88.0
+          targets: aarch64-unknown-linux-gnu
+      - name: Install cross linker
+        run: sudo apt-get update && sudo -S -p '' apt-get install --yes gcc-aarch64-linux-gnu
+      - name: Build and package cross target
+        run: python scripts/package-native.py --target aarch64-unknown-linux-gnu --output-dir dist/native
+      - name: Verify cross-target binary identities
+        run: python scripts/verify-native-package.py dist/native/axiolid-native-v0.4.0-aarch64-unknown-linux-gnu.tar.gz
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: github.event_name == 'release'
+        with:
+          name: native-aarch64-linux
+          path: dist/native/*
+          if-no-files-found: error
+
+  publish-assets:
+    name: Attach native archives
+    if: github.event_name == 'release'
+    needs: [cmake, cross-aarch64-linux]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - name: Require the native package release tag
+        run: test "${{ github.event.release.tag_name }}" = "v0.4.0"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: native-*
+          path: dist/native
+          merge-multiple: true
+      - name: Verify release set and consolidate checksums
+        run: python scripts/verify-native-release-set.py dist/native --source-commit "$(git rev-parse HEAD)"
+      - name: Attach immutable release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/native/* --clobber

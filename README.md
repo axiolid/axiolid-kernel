@@ -64,7 +64,7 @@ broader `parametric` bundle:
 axiolid = { git = "https://github.com/axiolid/kernel.git", default-features = false, features = ["nurbs"] }
 ```
 
-See [Getting started](https://axiolid.github.io/kernel/guide/getting-started) before selecting a bundle. Native consumers use the generated [`axiolid.h`](./crates/facade/axiolid-capi/include/axiolid.h) boundary; its [v0.4 ABI, ownership, refusal, and concurrency contract](./docs/architecture/c-abi-v0.4.md) is explicit.
+See [Getting started](https://axiolid.github.io/kernel/guide/getting-started) before selecting a bundle. Native consumers use the generated [`axiolid.h`](./crates/facade/axiolid-capi/include/axiolid.h) boundary through the stable `Axiolid::axiolid` [CMake source/package workflow](./docs/architecture/native-distribution.md); the [v0.4 ABI, ownership, refusal, and concurrency contract](./docs/architecture/c-abi-v0.4.md) is explicit.
 
 ## Architecture at a glance
 

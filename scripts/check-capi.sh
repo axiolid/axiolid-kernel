@@ -11,6 +11,9 @@ if [[ "$(uname -s)" == Linux ]]; then
   library_symbols="$(nm -D --defined-only "${target_dir}/release/libaxiolid_capi.so" | awk '$2 == "T" {print $3}' | sort -u)"
   diff -u <(printf '%s\n' "$header_symbols") <(printf '%s\n' "$library_symbols")
 fi
+printf '#include "axiolid.h"\nint main() { return (int)AxiolidStatus_Ok; }\n' |
+  "${CXX:-c++}" -std=c++17 -Wall -Wextra -Werror \
+    -I crates/facade/axiolid-capi/include -x c++ -fsyntax-only -
 "${CC:-cc}" -std=c11 -Wall -Wextra -Werror \
   -I crates/facade/axiolid-capi/include \
   crates/facade/axiolid-capi/tests/c/smoke.c \

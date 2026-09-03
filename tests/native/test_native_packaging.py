@@ -1,0 +1,199 @@
+from __future__ import annotations
+
+import importlib.util
+import json
+import tempfile
+import unittest
+import zipfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def load(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+pack = load("package_native", ROOT / "scripts/package-native.py")
+verify = load("verify_native", ROOT / "scripts/verify-native-package.py")
+
+
+class NativePackagingTests(unittest.TestCase):
+    @staticmethod
+    def manifest_files() -> dict[str, bytes]:
+        root = "axiolid-native-v0.4.0-x86_64-unknown-linux-gnu"
+        relative = {
+            "LICENSE": b"license",
+            "include/axiolid.h": b"header",
+            "lib/cmake/Axiolid/AxiolidConfig.cmake": b"config",
+            "lib/cmake/Axiolid/AxiolidConfigVersion.cmake": b"version",
+            "lib/cmake/Axiolid/AxiolidFetch.cmake": b"fetch",
+            "lib/cmake/Axiolid/AxiolidTargets.cmake": b"targets",
+        }
+        manifest = {
+            "schema_version": 1,
+            "package_version": "0.4.0",
+            "abi_version": "0.4",
+            "source_commit": "a" * 40,
+            "source_dirty": False,
+            "target": "x86_64-unknown-linux-gnu",
+            "profile": "release",
+            "rustc": "rustc 1.88.0 (6b00bc388 2025-06-23)\nrest",
+            "files": {
+                name: {"sha256": verify.digest(payload), "size": len(payload)}
+                for name, payload in relative.items()
+            },
+        }
+        files = {f"{root}/{name}": payload for name, payload in relative.items()}
+        files[f"{root}/manifest.json"] = json.dumps(manifest).encode()
+        return files
+
+    def test_platform_layouts_are_explicit(self) -> None:
+        self.assertEqual(
+            pack.layout("x86_64-unknown-linux-gnu")["shared"], "libaxiolid_capi.so"
+        )
+        self.assertEqual(
+            pack.layout("x86_64-apple-darwin")["shared"], "libaxiolid_capi.dylib"
+        )
+        self.assertEqual(
+            pack.layout("x86_64-pc-windows-msvc")["static"], "axiolid_capi.lib"
+        )
+        with self.assertRaises(ValueError):
+            pack.layout("wasm32-unknown-unknown")
+        self.assertEqual(pack.SUPPORTED_TARGETS, verify.SUPPORTED_TARGETS)
+        for target in pack.SUPPORTED_TARGETS:
+            rendered = pack.render_targets(pack.layout(target))
+            self.assertNotIn("@", rendered)
+            self.assertIn("CMAKE_SYSTEM_PROCESSOR", rendered)
+
+    def test_archive_paths_fail_closed(self) -> None:
+        for value in (
+            "../escape",
+            "/absolute",
+            "root/../../escape",
+            "..\\escape",
+            "C:/escape",
+        ):
+            with self.assertRaises(ValueError):
+                verify.safe_name(value)
+        with tempfile.TemporaryDirectory() as temporary:
+            archive = Path(temporary) / "bad.zip"
+            with zipfile.ZipFile(archive, "w") as bundle:
+                bundle.writestr("../escape", b"bad")
+            with self.assertRaises(ValueError):
+                verify.read_archive(archive)
+            link_archive = Path(temporary) / "link.zip"
+            link = zipfile.ZipInfo("root/link")
+            link.create_system = 3
+            link.external_attr = 0o120777 << 16
+            with zipfile.ZipFile(link_archive, "w") as bundle:
+                bundle.writestr(link, b"target")
+            with self.assertRaises(ValueError):
+                verify.read_archive(link_archive)
+
+    def test_machine_decoder_covers_release_formats(self) -> None:
+        elf = bytearray(20)
+        elf[:6] = b"\x7fELF\x02\x01"
+        elf[18:20] = (62).to_bytes(2, "little")
+        self.assertEqual(verify.machine(bytes(elf)), "x86_64")
+        macho = b"\xcf\xfa\xed\xfe" + (0x0100000C).to_bytes(4, "little")
+        self.assertEqual(verify.machine(macho), "aarch64")
+        pe = bytearray(72)
+        pe[:2] = b"MZ"
+        pe[60:64] = (64).to_bytes(4, "little")
+        pe[64:68] = bytes((0x50, 0x45, 0, 0))
+        pe[68:70] = (0x8664).to_bytes(2, "little")
+        self.assertEqual(verify.machine(bytes(pe)), "x86_64")
+        coff_import = bytearray((0, 0, 0xFF, 0xFF, 0, 0, 0, 0))
+        coff_import[6:8] = (0xAA64).to_bytes(2, "little")
+        self.assertEqual(verify.machine(bytes(coff_import)), "aarch64")
+        weak_prefix = (0x8664).to_bytes(2, "little") + bytes(62)
+        self.assertIsNone(verify.machine(weak_prefix))
+
+    def test_shared_library_requires_platform_image_magic(self) -> None:
+        root = "axiolid-native-v0.4.0-x86_64-unknown-linux-gnu"
+        files = {
+            f"{root}/lib/libaxiolid_capi.so": (0x8664).to_bytes(2, "little")
+            + bytes(62),
+            f"{root}/lib/libaxiolid_capi.a": b"!<arch>\n",
+            f"{root}/include/axiolid.h": (
+                b"Generated by `cargo xtask ffi header` axiolid_v0_4_version"
+            ),
+        }
+        with self.assertRaisesRegex(ValueError, "image format"):
+            verify.verify_binaries(files, root, {"target": "x86_64-unknown-linux-gnu"})
+
+    def test_manifest_schema_is_strict_and_root_is_bound(self) -> None:
+        files = self.manifest_files()
+        root, _ = verify.verify_files(files, allow_dirty=False)
+        self.assertEqual(root, "axiolid-native-v0.4.0-x86_64-unknown-linux-gnu")
+        manifest_name = f"{root}/manifest.json"
+        manifest = json.loads(files[manifest_name])
+        del manifest["source_dirty"]
+        files[manifest_name] = json.dumps(manifest).encode()
+        with self.assertRaises(ValueError):
+            verify.verify_files(files, allow_dirty=False)
+
+        renamed = {
+            name.replace(root, "renamed", 1): payload
+            for name, payload in self.manifest_files().items()
+        }
+        with self.assertRaises(ValueError):
+            verify.verify_files(renamed, allow_dirty=False)
+
+    def test_build_type_default_is_top_level_only(self) -> None:
+        cmake = (ROOT / "native/CMakeLists.txt").read_text()
+        guard = "if(PROJECT_IS_TOP_LEVEL AND NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)"
+        self.assertIn(guard, cmake)
+        self.assertEqual(cmake.count("set(CMAKE_BUILD_TYPE"), 1)
+
+    def test_archive_writers_are_reproducible(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            stage = root / "payload"
+            stage.mkdir()
+            (stage / "file.txt").write_text("stable\n")
+            first_tar, second_tar = root / "a.tar.gz", root / "b.tar.gz"
+            pack.tar_archive(stage, first_tar, 1_700_000_000)
+            pack.tar_archive(stage, second_tar, 1_700_000_000)
+            self.assertEqual(first_tar.read_bytes(), second_tar.read_bytes())
+            first_zip, second_zip = root / "a.zip", root / "b.zip"
+            pack.zip_archive(stage, first_zip, 1_700_000_000)
+            pack.zip_archive(stage, second_zip, 1_700_000_000)
+            self.assertEqual(first_zip.read_bytes(), second_zip.read_bytes())
+
+    def test_static_archive_members_are_architecture_checked(self) -> None:
+        elf = bytearray(20)
+        elf[:6] = b"\x7fELF\x02\x01"
+        elf[18:20] = (183).to_bytes(2, "little")
+        name = b"member.o/".ljust(16)
+        header = (
+            name
+            + b"0".ljust(12)
+            + b"0".ljust(6)
+            + b"0".ljust(6)
+            + b"644".ljust(8)
+            + str(len(elf)).encode().ljust(10)
+            + b"`\n"
+        )
+        payload = b"!<arch>\n" + header + bytes(elf)
+        self.assertEqual(verify.archive_machines(payload), {"aarch64"})
+        elf[18:20] = (40).to_bytes(2, "little")
+        unsupported = b"!<arch>\n" + header + bytes(elf)
+        with self.assertRaises(ValueError):
+            verify.archive_machines(unsupported)
+
+        coff = bytearray(60)
+        coff[:2] = (0x01C4).to_bytes(2, "little")
+        coff[2:4] = (1).to_bytes(2, "little")
+        hidden_header = b"hidden/".ljust(16) + header[16:48] + b"60".ljust(10) + b"`\n"
+        with self.assertRaises(ValueError):
+            verify.archive_machines(b"!<arch>\n" + hidden_header + bytes(coff))
+
+
+if __name__ == "__main__":
+    unittest.main()
