@@ -4,6 +4,8 @@ All notable changes to Axiolid are documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-03
+
 ### Added
 - Added `scripts/prepare-release.py`, a version-bump and changelog-rollover tool: validates a strictly-forward semver bump, rejects releasing an empty Unreleased section, dates and rolls the Unreleased section into a versioned heading, and bumps both `[workspace.package].version` and every internal `axiolid-*` path-dependency version requirement in `[workspace.dependencies]` so 0.x caret semantics never strand an internal dependency behind the bumped crate it points to.
 - Wired the release pipeline into `scripts/gate.sh`: it now runs the release script unit tests, the publish dependency-order plan, and the lock-free bootstrap package preflight for all 38 publishable archives, so a broken release pipeline fails the same gate as any other regression instead of being discovered only at `workflow_dispatch` time.
