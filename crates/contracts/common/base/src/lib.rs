@@ -10,6 +10,8 @@ pub mod capability;
 pub mod capability_id;
 pub mod error;
 pub mod execution;
+pub mod integration;
+pub mod profiles;
 
 pub use axiolid_guarantees::{Certified, EscalationLadder, Precision, Sign};
 pub use backend::Backend;
@@ -21,3 +23,9 @@ pub use execution::{
     DataResidency, Determinism, DevicePreference, ExecutionOptions, OutputBound, Parallelism,
     Residency, ScratchRequirement,
 };
+pub use integration::{
+    ApiVersion, BoundaryContract, CapabilityDescriptor, CapabilityRequirement, Exactness,
+    IntegrationDescriptor, IntegrationProfile, Ownership, Representation, RequirementRefusal,
+    ThreadSafety, INTEGRATION_API_VERSION, MINIMUM_RUST_VERSION,
+};
+pub use profiles::{ProfileContract, V04_PROFILE_CONTRACTS};

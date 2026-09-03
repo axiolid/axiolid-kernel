@@ -7,6 +7,10 @@
 //! parallel scheduling, and GPU adapters are opt-in. Leaf crates remain public
 //! for consumers that want an even narrower dependency graph.
 
+/// Versioned description of the compiled downstream surface.
+#[cfg(feature = "integration")]
+pub mod integration;
+
 /// Always-available scalar, transform, and bounds vocabulary.
 pub mod core {
     pub use axiolid_core::*;

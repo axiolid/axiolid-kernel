@@ -13,6 +13,8 @@ step "architecture mutation probe" scripts/probe_layering_gate.sh
 step "closure check" cargo xtask architecture closure check
 step "closure mutation probe" scripts/probe_closure_gate.sh
 step "roadmap freshness" python3 scripts/check-roadmap-freshness.py
+step "integration contract" scripts/check-integration-contract.sh
+step "integration contract mutation" python3 scripts/probe_integration_contract_gate.py
 step "build --workspace" cargo build --workspace
 step "test --workspace" cargo test --workspace
 step "test --all-features" cargo test --workspace --all-features

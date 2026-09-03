@@ -37,3 +37,5 @@ Package names and paths in older accepted records describe the tree at the time 
 | [0034](./0034-authored-open-profile-contract.md) | Authored open profiles are graph declarations, not areas |
 | [0035](./0035-nested-ownership-and-capability-contracts.md) | Physical layout follows ownership; contracts remain provider-neutral |
 | [0036](./0036-use-case-specific-compilation-closures.md) | Minimal dependency closures are packages and machine-checked promises |
+| [0037](./0037-mapped-3d-verification-oracle.md) | Mapped 3D certificates require an independent verification oracle |
+| [0039](./0039-downstream-integration-contract.md) | Downstream profiles share a versioned, typed capability handshake |

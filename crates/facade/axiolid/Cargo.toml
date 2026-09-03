@@ -10,7 +10,8 @@ homepage.workspace = true
 readme.workspace = true
 
 [features]
-default = ["mesh", "cpu"]
+default = ["mesh", "cpu", "integration"]
+integration = ["contracts"]
 
 # Representation capabilities. These features are additive.
 mesh = ["dep:axiolid-mesh"]
@@ -67,6 +68,7 @@ gpu = ["graph-compile", "dep:axiolid-backend-gpu"]
 
 # Named bundles describe capability, not a source format.
 discrete = [
+    "integration",
     "mesh",
     "profiles",
     "primitives",
@@ -79,7 +81,7 @@ discrete = [
     "generate",
     "cpu",
 ]
-parametric = ["model", "curves", "surfaces", "topology", "nurbs"]
+parametric = ["integration", "model", "curves", "surfaces", "topology", "nurbs"]
 advanced = ["discrete", "parametric", "heal"]
 full = ["advanced", "parallel", "simd", "gpu"]
 
