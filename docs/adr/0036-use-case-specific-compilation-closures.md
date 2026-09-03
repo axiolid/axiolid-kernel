@@ -196,3 +196,41 @@ capable of failing rather than assumed to be.
   remain future work.
 - Package count is not runtime performance. It bounds what a consumer compiles,
   not how fast the resulting code runs.
+
+---
+
+## Phase 3 amendment: 2D plan-geometry boundary
+
+Issue #1 asked whether a plan viewer can use Axiolid curves and transforms without
+implicitly compiling the solid/CSG stack. The answer is yes, with leaf-package
+dependencies rather than the application facade.
+
+### Decision
+
+Declare `2d-curves` as a compatibility profile. Its consumer depends directly on
+`axiolid-core` and `axiolid-curve`; `axiolid-linear` is the curve vocabulary's
+only transitive Axiolid package. Unit conversion remains scalar preprocessing at
+the adapter boundary and therefore requires no geometry dependency.
+
+The profile explicitly forbids every other Axiolid workspace package. This
+includes `axiolid-model`, `axiolid-topology`, `axiolid-brep`, `axiolid-mesh`,
+`axiolid-construct`, the application facade, execution packages, and providers.
+A downstream plan viewer can therefore select 2D representations, normalize
+units, apply affine transforms, and retain analytic 2D curves without acquiring
+a solid kernel.
+
+### Measured result
+
+`cargo xtask architecture closure explain 2d-curves` resolves exactly three
+internal packages and one external package (`glam`). The isolated fixture
+constructs and transforms real public values. `scripts/probe_closure_gate.sh`
+then injects `axiolid-model` and requires the closure check to reject the graph.
+
+### Not claimed
+
+- `axiolid-curve` contains both 2D and 3D curve vocabulary; this profile proves a
+  small dependency graph, not dimensional erasure within that crate.
+- Curve evaluation is a separate choice. Adding `axiolid-evaluate` intentionally
+  selects the broader `parametric-curves` closure, including surface values.
+- Full solid construction should use the application facade or the exact CAD
+  packages documented by the other profiles; it is not part of `2d-curves`.

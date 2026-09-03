@@ -1,0 +1,13 @@
+[package]
+name = "axiolid-consumer-2d-curves"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# This fixture is its own workspace root so workspace feature unification cannot
+# hide dependencies a real 2D-only downstream application would compile.
+[workspace]
+
+[dependencies]
+axiolid-core = { path = "../../../crates/foundation/core", default-features = false }
+axiolid-curve = { path = "../../../crates/representations/analytic/curve", default-features = false }

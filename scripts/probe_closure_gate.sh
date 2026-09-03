@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Mutation probe: prove each declared closure gate can actually FAIL.
+# Mutation probe: prove each narrow closure gate can actually FAIL.
 #
-# A gate that never fails proves nothing. For every profile we inject a
-# forbidden dependency into its fixture and require the checker to reject it,
-# then restore the fixture and require a clean pass.
+# A gate that never fails proves nothing. For every profile with forbidden
+# packages we inject one forbidden dependency into its fixture and require the
+# checker to reject it, then restore the fixture and require a clean pass.
 set -uo pipefail
 export PATH="$HOME/.cargo/bin:$PATH"
 cd "$(dirname "$0")/.."
@@ -28,6 +28,7 @@ probe() {
 
 probe linear-intersection-minimal axiolid-curve     crates/representations/analytic/curve
 probe mesh-rule-checker           axiolid-nurbs     crates/algorithms/parametric/nurbs
+probe 2d-curves                   axiolid-model     crates/representations/modeling/graph
 probe parametric-curves           axiolid-reference crates/algorithms/reference
 probe cad-exact                   axiolid-mesh      crates/representations/discrete/mesh
 

@@ -99,6 +99,7 @@ export default defineConfig({
           { text: "Architecture", link: "/architecture" },
           { text: "Crate map", link: "/architecture/crate-map" },
           { text: "Closure profiles", link: "/architecture/closure-profiles" },
+          { text: "2D-only consumers", link: "/architecture/2d-only-consumers" },
           { text: "C ABI v0.4", link: "/architecture/c-abi-v0.4" },
           { text: "Native distribution", link: "/architecture/native-distribution" },
           { text: "Dependency graph", link: "/architecture/dependency-graph" },

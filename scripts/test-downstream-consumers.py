@@ -22,6 +22,7 @@ NATIVE_CONSUMER = ROOT / "tests/native/cmake-consumer"
 PROFILES = (
     "linear-intersection-minimal",
     "mesh-rule-checker",
+    "2d-curves",
     "parametric-curves",
     "cad-exact",
     "rust-facade-application",

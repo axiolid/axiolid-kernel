@@ -5,6 +5,7 @@ All notable changes to Axiolid are documented in this file.
 ## [Unreleased]
 
 ### Added
+- Added a machine-checked `2d-curves` downstream closure: points, affine transforms, application-owned unit conversion, and 2D curve vocabulary compile exactly `axiolid-core`, `axiolid-linear`, and `axiolid-curve`, while every solid/CSG, mesh, topology, B-rep, facade, and provider package is forbidden and mutation-tested.
 - Added mutation-proven black-box compatibility gates that copy Rust leaf/facade and native C/C++ consumers outside the workspace, pin Rust dependencies to one immutable Git artifact, consume only verified native archives through exported CMake targets, execute semantic success and typed-refusal paths, and run on Linux, macOS, and Windows.
 - Added `Axiolid::axiolid` CMake integration for immutable source builds and verified native archives, with shared/static selection, deterministic manifests/checksums, Linux/macOS/Windows Debug/Release CI, and an AArch64 Linux cross-build gate.
 - Added the versioned `axiolid-capi` native boundary with generated C11 declarations, opaque globally unique handles, explicit ownership transfer, structured context-owned errors, bounded mesh import/export, Boolean and batch operations, audit/bounds/measurement/transform queries, exact-result classification, typed exact refusal, panic containment, and compiled C/Rust smoke coverage.

@@ -418,13 +418,7 @@ pub fn explain(root: &Path, name: &str) -> Result<()> {
     println!("profile: {}", profile.name);
     println!("{}", profile.description);
     println!();
-    println!("consumer Cargo.toml:");
-    println!("    [dependencies]");
-    println!("    axiolid-linear = {{ version = \"0.1\", default-features = false }}");
-    println!("    axiolid-linear-intersection = {{ version = \"0.1\", default-features = false }}");
-    println!();
-    println!("facade alternative (one extra compilation unit, same capability):");
-    println!("    axiolid = {{ version = \"0.1\", default-features = false, features = [\"linear-intersection\"] }}");
+    println!("fixture manifest: {}", profile.manifest);
     println!();
     println!("features: {:?}", profile.features);
     println!();

@@ -94,6 +94,61 @@ forbidden_internal = [
 ]
 
 [[profile]]
+name = "2d-curves"
+manifest = "tests/consumers/2d-curves/Cargo.toml"
+description = "A 2D plan-geometry application: curves, affine transforms, and application-owned unit conversion without solids or CSG."
+features = []
+
+# This is the documented 2D-only boundary for downstream plan viewers. Unit
+# conversion is scalar preprocessing and intentionally adds no kernel package.
+expected_internal = [
+    "axiolid-core",
+    "axiolid-curve",
+    "axiolid-linear",
+]
+
+# Keep this exhaustive. Most importantly, mesh/model/topology/B-rep/construct and
+# every provider/facade stay out of a plan-view dependency graph.
+forbidden_internal = [
+    "axiolid",
+    "axiolid-backend-cpu",
+    "axiolid-backend-gpu",
+    "axiolid-brep",
+    "axiolid-capi",
+    "axiolid-construct",
+    "axiolid-contracts",
+    "axiolid-dispatch",
+    "axiolid-evaluate",
+    "axiolid-exact-compile-contract",
+    "axiolid-field",
+    "axiolid-field-ops",
+    "axiolid-guarantees",
+    "axiolid-heal",
+    "axiolid-linear-intersection",
+    "axiolid-measure",
+    "axiolid-mesh",
+    "axiolid-mesh-boolean-boolmesh",
+    "axiolid-mesh-boolean-contract",
+    "axiolid-mesh-compile",
+    "axiolid-mesh-compile-contract",
+    "axiolid-mesh-contracts",
+    "axiolid-mesh-section-contract",
+    "axiolid-model",
+    "axiolid-nurbs",
+    "axiolid-oracle",
+    "axiolid-overlay",
+    "axiolid-predicates",
+    "axiolid-primitive",
+    "axiolid-profile",
+    "axiolid-ray-mesh",
+    "axiolid-reference",
+    "axiolid-spatial",
+    "axiolid-surface",
+    "axiolid-tessellation-contract",
+    "axiolid-topology",
+]
+
+[[profile]]
 name = "parametric-curves"
 manifest = "tests/consumers/parametric-curves/Cargo.toml"
 description = "A parametric application: curve/surface values plus scalar evaluation, without the reference umbrella."

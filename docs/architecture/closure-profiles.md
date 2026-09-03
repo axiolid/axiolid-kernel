@@ -8,6 +8,7 @@ Each profile is a compatibility promise verified by `cargo xtask architecture cl
 | --- | --- | --- |
 | `linear-intersection-minimal` | 5 | A line-query application: linear values plus certified linear intersection. |
 | `mesh-rule-checker` | 4 | A rule checker over discrete meshes: mesh values, spatial acceleration, measurement. |
+| `2d-curves` | 3 | A 2D plan-geometry application: curves, affine transforms, and application-owned unit conversion without solids or CSG. |
 | `parametric-curves` | 7 | A parametric application: curve/surface values plus scalar evaluation, without the reference umbrella. |
 | `cad-exact` | 11 | A CAD application: analytic curves/surfaces, topology, exact B-rep results, and NURBS. |
 | `rust-facade-application` | 28 | Supported facade boundary with portable providers for the v0.4 reference workflows. |
@@ -43,6 +44,20 @@ Compiles exactly these internal packages:
 - `axiolid-spatial`
 
 And must never acquire any of 31 forbidden packages, including `axiolid`, `axiolid-backend-cpu`, `axiolid-backend-gpu`.
+
+## 2d-curves
+
+A 2D plan-geometry application: curves, affine transforms, and application-owned unit conversion without solids or CSG.
+
+Fixture: `tests/consumers/2d-curves/Cargo.toml`
+
+Compiles exactly these internal packages:
+
+- `axiolid-core`
+- `axiolid-curve`
+- `axiolid-linear`
+
+And must never acquire any of 36 forbidden packages, including `axiolid`, `axiolid-backend-cpu`, `axiolid-backend-gpu`.
 
 ## parametric-curves
 
