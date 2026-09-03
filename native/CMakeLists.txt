@@ -38,12 +38,18 @@ if(WIN32)
   set(_shared_name "axiolid_capi.dll")
   set(_shared_implib_name "axiolid_capi.dll.lib")
   set(_static_name "axiolid_capi.lib")
+  set(_axiolid_implib_byproducts
+    "${_artifact_root}/debug/${_shared_implib_name}"
+    "${_artifact_root}/release/${_shared_implib_name}"
+  )
 elseif(APPLE)
   set(_shared_name "libaxiolid_capi.dylib")
   set(_static_name "libaxiolid_capi.a")
+  set(_axiolid_implib_byproducts)
 else()
   set(_shared_name "libaxiolid_capi.so")
   set(_static_name "libaxiolid_capi.a")
+  set(_axiolid_implib_byproducts)
 endif()
 
 if(PROJECT_IS_TOP_LEVEL AND NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
@@ -59,6 +65,12 @@ add_custom_target(axiolid-cargo-build ALL
           --manifest-path "${AXIOLID_SOURCE_ROOT}/Cargo.toml"
           --package axiolid-capi ${_target_args}
   WORKING_DIRECTORY "${AXIOLID_SOURCE_ROOT}"
+  BYPRODUCTS
+    "${_artifact_root}/debug/${_shared_name}"
+    "${_artifact_root}/release/${_shared_name}"
+    "${_artifact_root}/debug/${_static_name}"
+    "${_artifact_root}/release/${_static_name}"
+    ${_axiolid_implib_byproducts}
   COMMAND_EXPAND_LISTS
   VERBATIM
 )
