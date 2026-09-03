@@ -1,5 +1,12 @@
 #![forbid(unsafe_code)]
-//! Validated, deterministic planar boolean overlay.
+//! Validated, deterministic planar boolean overlay and offset.
+mod offset;
+
+pub use offset::{
+    offset_polygons, polygon_area, ring_area, stroke_polyline, total_area, CapStyle, JoinStyle,
+    OffsetEvidence, OffsetResult,
+};
+
 use axiolid_core::{Frame2, Point2, Tolerance};
 use i_overlay::core::{fill_rule::FillRule as BackendFill, overlay_rule::OverlayRule};
 use i_overlay::float::single::SingleFloatOverlay;
@@ -42,6 +49,14 @@ pub enum OverlayError {
     /// Non-adjacent boundary segments meet or cross.
     SelfIntersection,
     HoleOutsideOuter,
+    /// An offset distance or stroke width was not finite, or a width was not
+    /// positive. A non-finite distance cannot produce a bounded region.
+    InvalidOffsetDistance,
+    /// A join or cap parameter was not a finite positive value.
+    ///
+    /// Separate from [`OverlayError::InvalidOffsetDistance`] because the fix is
+    /// different: the caller passed a malformed style, not a malformed measure.
+    InvalidOffsetStyle,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OverlayEvidence {
@@ -100,7 +115,7 @@ fn self_intersects(r: &Ring, t: Tolerance) -> bool {
     false
 }
 
-fn validate_ring(r: &Ring, t: Tolerance) -> Result<(), OverlayError> {
+pub(crate) fn validate_ring(r: &Ring, t: Tolerance) -> Result<(), OverlayError> {
     if r.points.len() < 3 {
         return Err(OverlayError::RingTooShort);
     };
@@ -170,7 +185,7 @@ fn backend(p: &[Polygon]) -> Vec<Vec<Vec<[f64; 2]>>> {
         })
         .collect()
 }
-fn canonical(mut r: Ring, want_positive: bool) -> Ring {
+pub(crate) fn canonical(mut r: Ring, want_positive: bool) -> Ring {
     if (signed(&r) > 0.) != want_positive {
         r.points.reverse()
     };
