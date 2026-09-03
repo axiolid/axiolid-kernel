@@ -26,6 +26,11 @@ harness = false
 # dev-dependency deliberately: the production provider must never depend on the
 # reference implementation at runtime.
 axiolid-reference.workspace = true
+# The certified exact predicates, used to re-decide the provider's orientation
+# choices independently (#24). Dev-only for the same reason as the reference
+# oracle: production dispatch must not depend on the checker.
+axiolid-predicates.workspace = true
+axiolid-guarantees.workspace = true
 axiolid-dispatch = { workspace = true, features = ["mesh-boolean"] }
 
 [package.metadata.axiolid]
@@ -35,4 +40,4 @@ role = "provider.mesh"
 domain = "mesh.boolean"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-core", "axiolid-contracts", "axiolid-dispatch", "axiolid-mesh", "axiolid-mesh-boolean-contract", "axiolid-mesh-contracts", "axiolid-reference"]
+allowed-internal-dependencies = ["axiolid-core", "axiolid-contracts", "axiolid-dispatch", "axiolid-guarantees", "axiolid-mesh", "axiolid-mesh-boolean-contract", "axiolid-mesh-contracts", "axiolid-predicates", "axiolid-reference"]

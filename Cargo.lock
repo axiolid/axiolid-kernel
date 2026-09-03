@@ -278,9 +278,11 @@ dependencies = [
  "axiolid-contracts",
  "axiolid-core",
  "axiolid-dispatch",
+ "axiolid-guarantees",
  "axiolid-mesh",
  "axiolid-mesh-boolean-contract",
  "axiolid-mesh-contracts",
+ "axiolid-predicates",
  "axiolid-reference",
  "boolmesh",
 ]

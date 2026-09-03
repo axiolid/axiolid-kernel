@@ -141,9 +141,11 @@ graph TD
     axiolid_mesh_boolean_boolmesh --> axiolid_contracts
     axiolid_mesh_boolean_boolmesh --> axiolid_core
     axiolid_mesh_boolean_boolmesh --> axiolid_dispatch
+    axiolid_mesh_boolean_boolmesh --> axiolid_guarantees
     axiolid_mesh_boolean_boolmesh --> axiolid_mesh
     axiolid_mesh_boolean_boolmesh --> axiolid_mesh_boolean_contract
     axiolid_mesh_boolean_boolmesh --> axiolid_mesh_contracts
+    axiolid_mesh_boolean_boolmesh --> axiolid_predicates
     axiolid_mesh_boolean_boolmesh --> axiolid_reference
     axiolid_mesh_boolean_contract --> axiolid_contracts
     axiolid_mesh_boolean_contract --> axiolid_core
