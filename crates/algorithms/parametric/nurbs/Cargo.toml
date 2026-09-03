@@ -18,6 +18,9 @@ axiolid-evaluate.workspace = true
 axiolid-predicates.workspace = true
 axiolid-surface.workspace = true
 
+[dev-dependencies]
+axiolid-oracle.workspace = true
+
 [package.metadata.axiolid]
 architecture-version = 1
 layer = "algorithms"
@@ -25,4 +28,4 @@ role = "algorithm.parametric"
 domain = "parametric.nurbs"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-core", "axiolid-curve", "axiolid-contracts", "axiolid-guarantees", "axiolid-evaluate", "axiolid-predicates", "axiolid-surface"]
+allowed-internal-dependencies = ["axiolid-core", "axiolid-curve", "axiolid-contracts", "axiolid-guarantees", "axiolid-evaluate", "axiolid-oracle", "axiolid-predicates", "axiolid-surface"]

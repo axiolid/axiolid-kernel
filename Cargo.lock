@@ -314,7 +314,19 @@ dependencies = [
  "axiolid-curve",
  "axiolid-evaluate",
  "axiolid-guarantees",
+ "axiolid-oracle",
  "axiolid-predicates",
+ "axiolid-surface",
+]
+
+[[package]]
+name = "axiolid-oracle"
+version = "0.1.0"
+dependencies = [
+ "axiolid-contracts",
+ "axiolid-core",
+ "axiolid-curve",
+ "axiolid-evaluate",
  "axiolid-surface",
 ]
 

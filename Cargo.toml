@@ -37,6 +37,7 @@ members = [
     "crates/execution/cpu",
     "crates/execution/gpu",
     "crates/facade/axiolid",
+    "tools/oracle",
     "tools/xtask",
 ]
 
@@ -78,6 +79,7 @@ axiolid-predicates = { path = "crates/algorithms/predicates", version = "0.1.0",
 axiolid-linear-intersection = { path = "crates/algorithms/query/intersection/linear", version = "0.1.0", default-features = false }
 axiolid-reference = { path = "crates/algorithms/reference", version = "0.1.0" }
 axiolid-mesh-compile = { path = "crates/execution/compile", version = "0.1.0" }
+axiolid-oracle = { path = "tools/oracle", version = "0.1.0" }
 axiolid-contracts = { path = "crates/contracts/common/base", version = "0.1.0" }
 axiolid-guarantees = { path = "crates/contracts/guarantees", version = "0.1.0" }
 axiolid-mesh-contracts = { path = "crates/contracts/common/mesh", version = "0.1.0" }

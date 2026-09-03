@@ -1,0 +1,27 @@
+[package]
+name = "axiolid-oracle"
+description = "Independent mapped-3D verification oracle for intersection and inversion results"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+publish = false
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-contracts.workspace = true
+axiolid-curve.workspace = true
+axiolid-evaluate.workspace = true
+axiolid-surface.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "tools"
+role = "tool.oracle"
+domain = "verification.oracle"
+public = false
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-contracts", "axiolid-core", "axiolid-curve", "axiolid-evaluate", "axiolid-surface"]

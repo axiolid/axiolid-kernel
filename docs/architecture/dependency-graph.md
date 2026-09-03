@@ -35,6 +35,7 @@ graph TD
     axiolid_mesh_section_contract["axiolid-mesh-section-contract\ncontract.operation"]
     axiolid_model["axiolid-model\nrepresentation.graph"]
     axiolid_nurbs["axiolid-nurbs\nalgorithm.parametric"]
+    axiolid_oracle["axiolid-oracle\ntool.oracle"]
     axiolid_overlay["axiolid-overlay\nalgorithm.planar"]
     axiolid_predicates["axiolid-predicates\nalgorithm.reference"]
     axiolid_primitive["axiolid-primitive\nrepresentation.atomic"]
@@ -185,8 +186,14 @@ graph TD
     axiolid_nurbs --> axiolid_curve
     axiolid_nurbs --> axiolid_evaluate
     axiolid_nurbs --> axiolid_guarantees
+    axiolid_nurbs --> axiolid_oracle
     axiolid_nurbs --> axiolid_predicates
     axiolid_nurbs --> axiolid_surface
+    axiolid_oracle --> axiolid_contracts
+    axiolid_oracle --> axiolid_core
+    axiolid_oracle --> axiolid_curve
+    axiolid_oracle --> axiolid_evaluate
+    axiolid_oracle --> axiolid_surface
     axiolid_overlay --> axiolid_core
     axiolid_predicates --> axiolid_core
     axiolid_predicates --> axiolid_guarantees
