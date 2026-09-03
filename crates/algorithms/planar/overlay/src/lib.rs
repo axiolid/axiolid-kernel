@@ -1,11 +1,13 @@
 #![forbid(unsafe_code)]
 //! Validated, deterministic planar boolean overlay and offset.
 mod offset;
+mod region;
 
 pub use offset::{
     offset_polygons, polygon_area, ring_area, stroke_polyline, total_area, CapStyle, JoinStyle,
     OffsetEvidence, OffsetResult,
 };
+pub use region::{Region, RegionEvidence};
 
 use axiolid_core::{Frame2, Point2, Tolerance};
 use i_overlay::core::{fill_rule::FillRule as BackendFill, overlay_rule::OverlayRule};
