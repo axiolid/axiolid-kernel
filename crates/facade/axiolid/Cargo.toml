@@ -57,6 +57,8 @@ graph-compile = ["contracts", "model", "mesh", "dep:axiolid-mesh-compile-contrac
 dispatch-mesh-boolean = ["mesh-boolean", "dep:axiolid-dispatch", "axiolid-dispatch/mesh-boolean"]
 dispatch-mesh-section = ["mesh-section", "dep:axiolid-dispatch", "axiolid-dispatch/mesh-section"]
 generate = ["mesh", "profiles", "curves", "primitives", "mesh-boolean", "brep", "dep:axiolid-construct"]
+portable-provider = ["dep:axiolid-mesh-boolean-boolmesh", "dep:axiolid-reference"]
+application = ["discrete", "dispatch-mesh-boolean", "dispatch-mesh-section", "portable-provider"]
 
 # Execution contexts and operation adapters. CPU stays portable by default;
 # optimized paths are selected at runtime, never by building the whole crate for
@@ -111,10 +113,12 @@ axiolid-heal = { workspace = true, optional = true }
 axiolid-contracts = { workspace = true, optional = true }
 axiolid-mesh-contracts = { workspace = true, optional = true }
 axiolid-mesh-boolean-contract = { workspace = true, optional = true }
+axiolid-mesh-boolean-boolmesh = { workspace = true, optional = true }
 axiolid-mesh-section-contract = { workspace = true, optional = true }
 axiolid-mesh-compile-contract = { workspace = true, optional = true }
 axiolid-dispatch = { workspace = true, optional = true }
 axiolid-construct = { workspace = true, optional = true }
+axiolid-reference = { workspace = true, optional = true }
 axiolid-backend-cpu = { workspace = true, optional = true }
 axiolid-backend-gpu = { workspace = true, optional = true }
 
@@ -125,4 +129,4 @@ role = "facade"
 domain = "public"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-backend-cpu", "axiolid-backend-gpu", "axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-linear", "axiolid-linear-intersection", "axiolid-predicates", "axiolid-field", "axiolid-field-ops", "axiolid-construct", "axiolid-heal", "axiolid-contracts", "axiolid-dispatch", "axiolid-evaluate", "axiolid-mesh-boolean-contract", "axiolid-mesh-compile-contract", "axiolid-mesh-contracts", "axiolid-mesh-section-contract", "axiolid-measure", "axiolid-mesh", "axiolid-model", "axiolid-nurbs", "axiolid-overlay", "axiolid-primitive", "axiolid-profile", "axiolid-ray-mesh", "axiolid-spatial", "axiolid-surface", "axiolid-tessellation-contract", "axiolid-topology"]
+allowed-internal-dependencies = ["axiolid-backend-cpu", "axiolid-backend-gpu", "axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-linear", "axiolid-linear-intersection", "axiolid-predicates", "axiolid-field", "axiolid-field-ops", "axiolid-construct", "axiolid-heal", "axiolid-contracts", "axiolid-dispatch", "axiolid-evaluate", "axiolid-mesh-boolean-boolmesh", "axiolid-mesh-boolean-contract", "axiolid-mesh-compile-contract", "axiolid-mesh-contracts", "axiolid-mesh-section-contract", "axiolid-measure", "axiolid-mesh", "axiolid-model", "axiolid-nurbs", "axiolid-overlay", "axiolid-primitive", "axiolid-profile", "axiolid-ray-mesh", "axiolid-reference", "axiolid-spatial", "axiolid-surface", "axiolid-tessellation-contract", "axiolid-topology"]

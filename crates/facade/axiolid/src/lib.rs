@@ -11,6 +11,10 @@
 #[cfg(feature = "integration")]
 pub mod integration;
 
+/// Supported provider-neutral application boundary.
+#[cfg(feature = "application")]
+pub mod application;
+
 /// Always-available scalar, transform, and bounds vocabulary.
 pub mod core {
     pub use axiolid_core::*;

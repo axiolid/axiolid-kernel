@@ -22,6 +22,7 @@ step "clippy" cargo clippy --workspace --all-targets -- -D warnings
 step "clippy --all-features" cargo clippy --workspace --all-targets --all-features -- -D warnings
 step "doc" env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 step "feature matrix" scripts/geometry-feature-matrix.sh
+step "Rust facade consumer" cargo run --quiet --manifest-path tests/consumers/rust-facade-application/Cargo.toml
 for c in \
   axiolid-core axiolid-curve axiolid-surface axiolid-primitive axiolid-profile \
   axiolid-topology axiolid-brep axiolid-mesh axiolid-field axiolid-model \

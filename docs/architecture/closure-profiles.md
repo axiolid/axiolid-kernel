@@ -10,6 +10,7 @@ Each profile is a compatibility promise verified by `cargo xtask architecture cl
 | `mesh-rule-checker` | 4 | A rule checker over discrete meshes: mesh values, spatial acceleration, measurement. |
 | `parametric-curves` | 7 | A parametric application: curve/surface values plus scalar evaluation, without the reference umbrella. |
 | `cad-exact` | 11 | A CAD application: analytic curves/surfaces, topology, exact B-rep results, and NURBS. |
+| `rust-facade-application` | 28 | Supported facade boundary with portable providers for the v0.4 reference workflows. |
 
 ## linear-intersection-minimal
 
@@ -81,3 +82,42 @@ Compiles exactly these internal packages:
 - `axiolid-topology`
 
 And must never acquire any of 24 forbidden packages, including `axiolid`, `axiolid-backend-cpu`, `axiolid-backend-gpu`.
+
+## rust-facade-application
+
+Supported facade boundary with portable providers for the v0.4 reference workflows.
+
+Fixture: `tests/consumers/rust-facade-application/Cargo.toml`
+
+Compiles exactly these internal packages:
+
+- `axiolid`
+- `axiolid-backend-cpu`
+- `axiolid-brep`
+- `axiolid-construct`
+- `axiolid-contracts`
+- `axiolid-core`
+- `axiolid-curve`
+- `axiolid-dispatch`
+- `axiolid-evaluate`
+- `axiolid-guarantees`
+- `axiolid-linear`
+- `axiolid-measure`
+- `axiolid-mesh`
+- `axiolid-mesh-boolean-boolmesh`
+- `axiolid-mesh-boolean-contract`
+- `axiolid-mesh-contracts`
+- `axiolid-mesh-section-contract`
+- `axiolid-model`
+- `axiolid-nurbs`
+- `axiolid-predicates`
+- `axiolid-primitive`
+- `axiolid-profile`
+- `axiolid-ray-mesh`
+- `axiolid-reference`
+- `axiolid-spatial`
+- `axiolid-surface`
+- `axiolid-tessellation-contract`
+- `axiolid-topology`
+
+And must never acquire any of 0 forbidden packages, including ``.

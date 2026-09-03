@@ -63,6 +63,7 @@ graph TD
     axiolid --> axiolid_linear_intersection
     axiolid --> axiolid_measure
     axiolid --> axiolid_mesh
+    axiolid --> axiolid_mesh_boolean_boolmesh
     axiolid --> axiolid_mesh_boolean_contract
     axiolid --> axiolid_mesh_compile_contract
     axiolid --> axiolid_mesh_contracts
@@ -74,6 +75,7 @@ graph TD
     axiolid --> axiolid_primitive
     axiolid --> axiolid_profile
     axiolid --> axiolid_ray_mesh
+    axiolid --> axiolid_reference
     axiolid --> axiolid_spatial
     axiolid --> axiolid_surface
     axiolid --> axiolid_tessellation_contract

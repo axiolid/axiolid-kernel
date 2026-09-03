@@ -73,6 +73,8 @@ fn enabled_features() -> Vec<&'static str> {
     compiled_feature!(features, "discrete");
     compiled_feature!(features, "parametric");
     compiled_feature!(features, "advanced");
+    compiled_feature!(features, "application");
+    compiled_feature!(features, "portable-provider");
     compiled_feature!(features, "full");
     features.sort_unstable();
     features

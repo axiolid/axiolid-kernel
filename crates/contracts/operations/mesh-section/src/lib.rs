@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 //! Portable mesh plane-section operation contract and evidence.
 
+pub mod conformance;
 mod contract;
 
 pub use contract::{

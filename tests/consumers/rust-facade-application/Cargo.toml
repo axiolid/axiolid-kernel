@@ -1,0 +1,10 @@
+[package]
+name = "axiolid-rust-facade-probe"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+axiolid = { path = "../../../crates/facade/axiolid", features = ["application"] }

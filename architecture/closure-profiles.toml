@@ -192,3 +192,43 @@ forbidden_internal = [
     "axiolid-spatial",
     "axiolid-tessellation-contract",
 ]
+
+[[profile]]
+name = "rust-facade-application"
+manifest = "tests/consumers/rust-facade-application/Cargo.toml"
+description = "Supported facade boundary with portable providers for the v0.4 reference workflows."
+features = []
+
+# Deliberately broad and frozen: this is the application bundle. Narrow callers
+# continue to use the leaf profiles above and must not acquire this closure.
+expected_internal = [
+    "axiolid",
+    "axiolid-backend-cpu",
+    "axiolid-brep",
+    "axiolid-construct",
+    "axiolid-contracts",
+    "axiolid-core",
+    "axiolid-curve",
+    "axiolid-dispatch",
+    "axiolid-evaluate",
+    "axiolid-guarantees",
+    "axiolid-linear",
+    "axiolid-measure",
+    "axiolid-mesh",
+    "axiolid-mesh-boolean-boolmesh",
+    "axiolid-mesh-boolean-contract",
+    "axiolid-mesh-contracts",
+    "axiolid-mesh-section-contract",
+    "axiolid-model",
+    "axiolid-nurbs",
+    "axiolid-predicates",
+    "axiolid-primitive",
+    "axiolid-profile",
+    "axiolid-ray-mesh",
+    "axiolid-reference",
+    "axiolid-spatial",
+    "axiolid-surface",
+    "axiolid-tessellation-contract",
+    "axiolid-topology",
+]
+forbidden_internal = []

@@ -44,7 +44,8 @@ axiolid = { git = "https://github.com/axiolid/kernel.git", default-features = fa
 | Bundle | Includes | Does not imply |
 | --- | --- | --- |
 | default | core values, mesh facade, portable CPU shell | every mesh algorithm |
-| `discrete` | mesh-centric representations and declared algorithms/providers | exact B-rep evaluation |
+| `discrete` | mesh-centric representations and operation contracts | a selected executable provider |
+| `application` | supported portable provider selection plus v0.4 reference workflows | exact Boolean parity |
 | `parametric` | curve, surface, topology, primitive, and graph vocabulary plus general NURBS reference algorithms | a complete CAD modeling/intersection kernel |
 | `advanced` | `discrete` + `parametric` + healing vocabulary | production GPU computation |
 | `full` | advanced facade plus optional parallel/SIMD/GPU seams | that each acceleration path is implemented or faster |
@@ -60,3 +61,28 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 ```
 
 For the architecture-specific feature matrix and mutation probes, see [Contributing](/guide/contributing).
+
+## Use the supported application boundary
+
+Enable `application` when a program wants one coherent portable provider path instead of assembling registries and implementation crates itself:
+
+```toml
+axiolid = { git = "https://github.com/axiolid/kernel.git", rev = "<verified-commit>", features = ["application"] }
+```
+
+Provider choice is still explicit:
+
+```rust
+use axiolid::application::ApplicationBuilder;
+
+let app = ApplicationBuilder::new()
+    .with_portable_boolean()?
+    .with_portable_section()
+    .build();
+let advertised = app.descriptor();
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+The boundary provides mesh validation, surface/volume measurement, Boolean and batch-subtraction operations, ray/mesh queries, and strict exact-profile extrusion. `ApplicationError` preserves the requested operation, selected provider, tolerance, and typed underlying refusal. It never substitutes a mesh when exact output was requested.
+
+The complete program is the [external Rust facade probe](https://github.com/axiolid/kernel/tree/main/tests/consumers/rust-facade-application). The closure budget is part of `cargo xtask architecture closure check`.

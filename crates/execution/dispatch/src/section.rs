@@ -9,7 +9,10 @@ use axiolid_contracts::{
 use axiolid_core::Frame3;
 use axiolid_mesh::{audit_mesh_scratch_bytes, try_audit_mesh, TriMesh};
 use axiolid_mesh_contracts::SolidRequirements;
-use axiolid_mesh_section_contract::{MeshPlaneSection, SectionLimits, SectionOutcome};
+use axiolid_mesh_section_contract::{
+    conformance::{ConformanceReport, ConformanceSuite},
+    MeshPlaneSection, SectionLimits, SectionOutcome,
+};
 
 #[derive(Debug, Clone)]
 struct RegisteredSection {
@@ -40,6 +43,23 @@ impl MeshPlaneSectionRegistry {
         P: MeshPlaneSection + 'static,
     {
         self.register_arc(priority, Arc::new(provider));
+    }
+
+    /// Validate a provider with the shared conformance suite before registration.
+    pub fn register_conformant<P>(
+        &mut self,
+        priority: i32,
+        provider: P,
+    ) -> Result<(), Box<ConformanceReport>>
+    where
+        P: MeshPlaneSection + 'static,
+    {
+        let report = ConformanceSuite::run(&provider);
+        if !report.is_success() {
+            return Err(Box::new(report));
+        }
+        self.register(priority, provider);
+        Ok(())
     }
 
     /// Register a shared implementation. Higher priorities run first.

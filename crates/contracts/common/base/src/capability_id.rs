@@ -34,6 +34,14 @@ pub mod capability_ids {
         CapabilityId::from_static("org.axiolid.geometry.mesh-boolean.v1");
     pub const MESH_SECTION: CapabilityId =
         CapabilityId::from_static("org.axiolid.geometry.mesh-section.v1");
+    pub const MESH_VALIDATE: CapabilityId =
+        CapabilityId::from_static("org.axiolid.geometry.mesh-validate.v1");
+    pub const MESH_MEASURE: CapabilityId =
+        CapabilityId::from_static("org.axiolid.geometry.mesh-measure.v1");
+    pub const RAY_MESH: CapabilityId =
+        CapabilityId::from_static("org.axiolid.geometry.ray-mesh.v1");
+    pub const EXACT_EXTRUDE: CapabilityId =
+        CapabilityId::from_static("org.axiolid.geometry.exact-extrude.v1");
     pub const GRAPH_TO_MESH: CapabilityId =
         CapabilityId::from_static("org.axiolid.geometry.graph-to-mesh.v1");
     /// Graph lowered to an exact B-rep, or refused.
@@ -42,10 +50,14 @@ pub mod capability_ids {
     /// promises analytic supports and trims survive, never triangles.
     pub const GRAPH_TO_EXACT_BREP: CapabilityId =
         CapabilityId::from_static("org.axiolid.geometry.graph-to-exact-brep.v1");
-    pub const ALL: [CapabilityId; 5] = [
+    pub const ALL: [CapabilityId; 9] = [
         TESSELLATE,
         MESH_BOOLEAN,
         MESH_SECTION,
+        MESH_VALIDATE,
+        MESH_MEASURE,
+        RAY_MESH,
+        EXACT_EXTRUDE,
         GRAPH_TO_MESH,
         GRAPH_TO_EXACT_BREP,
     ];

@@ -61,6 +61,9 @@ pub enum Representation {
     Topology,
     ExactBrep,
     TriangleMesh,
+    MeshHealth,
+    Measurements,
+    RayHit,
     ModelGraph,
     SampledField,
 }

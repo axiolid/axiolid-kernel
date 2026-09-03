@@ -23,6 +23,10 @@ The protocol recognizes these stable identifiers. Presence here defines vocabula
 | `org.axiolid.geometry.tessellate.v1` |
 | `org.axiolid.geometry.mesh-boolean.v1` |
 | `org.axiolid.geometry.mesh-section.v1` |
+| `org.axiolid.geometry.mesh-validate.v1` |
+| `org.axiolid.geometry.mesh-measure.v1` |
+| `org.axiolid.geometry.ray-mesh.v1` |
+| `org.axiolid.geometry.exact-extrude.v1` |
 | `org.axiolid.geometry.graph-to-mesh.v1` |
 | `org.axiolid.geometry.graph-to-exact-brep.v1` |
 
