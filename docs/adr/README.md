@@ -44,3 +44,4 @@ Package names and paths in older accepted records describe the tree at the time 
 | [0041](./0041-cmake-and-native-release-bundles.md) | CMake consumers share one target across immutable source and native archives |
 | [0042](./0042-black-box-downstream-compatibility-gate.md) | Downstream compatibility is an executable black-box gate |
 | [0043](./0043-release-version-and-changelog-automation.md) | Release version/changelog rollover is a checked, reviewed script |
+| [0044](./0044-pointcloud-representation-and-reconstruction.md) | Pointcloud representation and reconstruction extend the discrete-family DAG |

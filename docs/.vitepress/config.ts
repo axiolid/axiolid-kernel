@@ -47,6 +47,7 @@ const adrs = [
   ["0041-cmake-and-native-release-bundles", 41, "CMake and native bundles"],
   ["0042-black-box-downstream-compatibility-gate", 42, "Black-box compatibility gate"],
   ["0043-release-version-and-changelog-automation", 43, "Release version/changelog automation"],
+  ["0044-pointcloud-representation-and-reconstruction", 44, "Pointcloud representation and reconstruction"],
 ] as const;
 
 const adrIcon = `<svg class="adr-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg>`;
