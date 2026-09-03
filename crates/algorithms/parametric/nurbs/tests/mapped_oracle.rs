@@ -277,16 +277,17 @@ fn degenerate_tangency_candidates_are_reported_with_their_mapped_deviation() {
     let outcome = intersect_curve2_certified(&curve, &curve, options).unwrap();
     let CertifiedCurveIntersection2::Degenerate {
         classification,
-        candidate_boxes,
+        contacts,
         ..
     } = outcome
     else {
         panic!("a self-pair is a structural overlap, not a transverse root");
     };
     assert_eq!(classification, CurveIntersectionDegeneracy::Overlap);
-    assert!(!candidate_boxes.is_empty());
+    assert!(!contacts.is_empty());
 
-    for candidate in &candidate_boxes {
+    for contact in &contacts {
+        let candidate = contact.parameters;
         let witness = curve_pair_deviation2(
             &Curve2::BSpline(curve.clone()),
             &Curve2::BSpline(curve.clone()),
@@ -304,4 +305,59 @@ fn degenerate_tangency_candidates_are_reported_with_their_mapped_deviation() {
             witness.deviation
         );
     }
+}
+
+#[test]
+fn a_boundary_crossing_contact_really_meets_in_mapped_3d() {
+    // A BoundaryCrossing is a positive claim that a transverse root exists
+    // on a shared cell edge. Verify it against geometry, not parameters.
+    let split = BSplineCurve {
+        degree: 1,
+        control_points: vec![
+            Point2::new(-1.0, 0.0),
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+        ],
+        knots: vec![0.0, 0.5, 1.0],
+        multiplicities: vec![2, 1, 2],
+        weights: None,
+        knot_spec: KnotSpec::Unspecified,
+        closed: false,
+        self_intersect: Some(false),
+    };
+    let crossing = bezier2(vec![Point2::new(0.0, -1.0), Point2::new(0.0, 1.0)]);
+    let options = CertifiedCurveIntersectionOptions::new(1e-9, 100_000, 64).unwrap();
+
+    let outcome = intersect_curve2_certified(&split, &crossing, options).unwrap();
+    let CertifiedCurveIntersection2::Degenerate {
+        classification,
+        contacts,
+        ..
+    } = outcome
+    else {
+        panic!("a knot-boundary crossing is reported as a classified contact");
+    };
+    assert_eq!(
+        classification,
+        CurveIntersectionDegeneracy::BoundaryCrossing
+    );
+    assert_eq!(contacts.len(), 1);
+
+    let owned = contacts[0].parameters;
+    let witness = curve_pair_deviation2(
+        &Curve2::BSpline(split.clone()),
+        &Curve2::BSpline(crossing.clone()),
+        CurvePairBox {
+            first: span(owned.first.start, owned.first.end),
+            second: span(owned.second.start, owned.second.end),
+        },
+        density(),
+    )
+    .expect("planar evaluation");
+
+    assert!(
+        witness.deviation <= 1e-9,
+        "a claimed boundary crossing does not meet in 3D: deviation {}",
+        witness.deviation
+    );
 }

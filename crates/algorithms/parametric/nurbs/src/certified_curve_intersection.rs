@@ -76,6 +76,16 @@ pub struct TransverseCurveIntersection2 {
     pub jacobian_determinant_lower_bound: Scalar,
 }
 
+/// One classified non-transverse contact, owned by exactly one parameter box.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ClassifiedCurveContact2 {
+    /// Product-domain box that owns this contact.
+    pub parameters: CurvePairParameterBox,
+    /// Proven structural class, or `Unresolved` when no proof completed.
+    pub classification: CurveIntersectionDegeneracy,
+}
+
 /// Singular or not-yet-isolated curve relationship.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -88,6 +98,15 @@ pub enum CurveIntersectionDegeneracy {
     Overlap,
     /// Candidate boxes remain but no supported proof classified them.
     Unresolved,
+    /// A transverse contact proven to sit on a boundary shared by adjacent cells.
+    ///
+    /// Strict-interior Krawczyk isolation cannot prove a root that lies exactly
+    /// on a cell edge, so a crossing at an interior knot would otherwise be
+    /// reported as an unresolved fragment per incident cell. This class states
+    /// the positive fact instead: the residual is not excluded and the tangents
+    /// are certainly NOT parallel, so a transverse crossing exists in the fused
+    /// boundary box and is owned by it exactly once.
+    BoundaryCrossing,
 }
 
 /// Planar curve/curve classification under the implemented proof paths.
@@ -104,10 +123,15 @@ pub enum CertifiedCurveIntersection2 {
     },
     /// A singular or currently unsupported candidate was not called transverse.
     Degenerate {
-        /// Proven structural class, or `Unresolved` when no proof completed.
+        /// Strongest class proven across `contacts`.
+        ///
+        /// Precedence is `Overlap` > `Tangency` > `PointContact` > `Unresolved`:
+        /// a caller that only wants one verdict gets the most structural one,
+        /// while `contacts` retains which box proved what.
         classification: CurveIntersectionDegeneracy,
-        /// Product-domain boxes containing the singular/unresolved relationship.
-        candidate_boxes: Vec<CurvePairParameterBox>,
+        /// Per-box classification. Boxes are deduplicated and boundary-owned,
+        /// so a root on a shared cell endpoint appears exactly once.
+        contacts: Vec<ClassifiedCurveContact2>,
         /// Generated root cells inspected by the classifier.
         visited_nodes: u32,
     },
@@ -137,35 +161,34 @@ pub fn intersect_curve2_certified(
             resource: "certified curve intersection budget",
         })?;
     if first == second {
-        let mut candidate_boxes = Vec::new();
-        candidate_boxes
+        let mut contacts = Vec::new();
+        contacts
             .try_reserve_exact(first_cells.len())
             .map_err(|_| GeomError::BudgetExceeded {
                 resource: "certified curve intersection result allocation",
             })?;
-        candidate_boxes.extend(
-            first_cells
-                .iter()
-                .zip(&second_cells)
-                .map(|(first_cell, second_cell)| pair_box(first_cell, second_cell)),
-        );
         let classification = if has_control_point_extent(first) {
             CurveIntersectionDegeneracy::Overlap
         } else {
             CurveIntersectionDegeneracy::PointContact
         };
-        return Ok(CertifiedCurveIntersection2::Degenerate {
-            classification,
-            candidate_boxes,
-            visited_nodes,
-        });
+        for (first_cell, second_cell) in first_cells.iter().zip(&second_cells) {
+            push_contact(
+                &mut contacts,
+                pair_box(first_cell, second_cell),
+                classification,
+            )?;
+        }
+        return Ok(degenerate(contacts, visited_nodes));
     }
     if structural_start_tangency(first, second) || structural_start_tangency(second, first) {
-        return Ok(CertifiedCurveIntersection2::Degenerate {
-            classification: CurveIntersectionDegeneracy::Tangency,
-            candidate_boxes: vec![pair_box(&first_cells[0], &second_cells[0])],
-            visited_nodes,
-        });
+        let mut contacts = Vec::new();
+        push_contact(
+            &mut contacts,
+            pair_box(&first_cells[0], &second_cells[0]),
+            CurveIntersectionDegeneracy::Tangency,
+        )?;
+        return Ok(degenerate(contacts, visited_nodes));
     }
     if linear_polynomial(first) && linear_polynomial(second) {
         return classify_lines(
@@ -210,7 +233,7 @@ fn classify_nonlinear(
             resource: "certified curve intersection pending allocation",
         })?;
     let mut intersections = Vec::new();
-    let mut unresolved = Vec::new();
+    let mut contacts = Vec::new();
 
     for (first_index, first_base) in first_cells.iter().enumerate() {
         for (second_index, second_base) in second_cells.iter().enumerate() {
@@ -237,16 +260,17 @@ fn classify_nonlinear(
                         && root.second_parameter.end - root.second_parameter.start
                             <= options.parameter_tolerance()
                     {
-                        push_result(&mut intersections, root)?;
+                        push_root(&mut intersections, root)?;
                         continue;
                     }
                     if depth >= options.max_depth() {
-                        push_result(
-                            &mut unresolved,
+                        push_contact(
+                            &mut contacts,
                             CurvePairParameterBox {
                                 first: root.first_parameter,
                                 second: root.second_parameter,
                             },
+                            CurveIntersectionDegeneracy::Unresolved,
                         )?;
                         continue;
                     }
@@ -278,7 +302,11 @@ fn classify_nonlinear(
                     continue;
                 }
                 if depth >= options.max_depth() {
-                    push_result(&mut unresolved, pair_box(&first_cell, &second_cell))?;
+                    push_contact(
+                        &mut contacts,
+                        pair_box(&first_cell, &second_cell),
+                        classify_exhausted_box(&first_cell, &second_cell, first_base, second_base)?,
+                    )?;
                     continue;
                 }
                 visited_nodes = visited_nodes
@@ -328,18 +356,227 @@ fn classify_nonlinear(
         }
     }
 
-    if unresolved.is_empty() {
+    if contacts.is_empty() {
         Ok(CertifiedCurveIntersection2::Complete {
             intersections,
             visited_nodes,
         })
     } else {
-        Ok(CertifiedCurveIntersection2::Degenerate {
-            classification: CurveIntersectionDegeneracy::Unresolved,
-            candidate_boxes: unresolved,
-            visited_nodes,
-        })
+        Ok(degenerate(contacts, visited_nodes))
     }
+}
+
+/// Rank a class so a single summary verdict can be derived from many contacts.
+///
+/// A positive-dimensional overlap subsumes a tangency, which subsumes an
+/// isolated point contact; `Unresolved` is weakest because it asserts nothing.
+fn classification_rank(classification: CurveIntersectionDegeneracy) -> u8 {
+    match classification {
+        CurveIntersectionDegeneracy::Overlap => 4,
+        CurveIntersectionDegeneracy::Tangency => 3,
+        CurveIntersectionDegeneracy::BoundaryCrossing => 2,
+        CurveIntersectionDegeneracy::PointContact => 1,
+        CurveIntersectionDegeneracy::Unresolved => 0,
+    }
+}
+
+/// Two parameter boxes describe the same contact.
+///
+/// Adjacent Bézier cells share an endpoint, so the same root is reachable from
+/// both sides of a knot. Ownership is resolved by comparing the closed boxes
+/// exactly: subdivision copies endpoints bit-for-bit rather than recomputing
+/// them, so equal boxes really are the same contact and not two near-misses.
+fn same_contact(left: &CurvePairParameterBox, right: &CurvePairParameterBox) -> bool {
+    left.first.start == right.first.start
+        && left.first.end == right.first.end
+        && left.second.start == right.second.start
+        && left.second.end == right.second.end
+}
+
+fn push_contact(
+    contacts: &mut Vec<ClassifiedCurveContact2>,
+    parameters: CurvePairParameterBox,
+    classification: CurveIntersectionDegeneracy,
+) -> GeomResult<()> {
+    if let Some(existing) = contacts
+        .iter_mut()
+        .find(|contact| same_contact(&contact.parameters, &parameters))
+    {
+        // Keep the strongest proof for a box we have already claimed instead of
+        // reporting the same contact twice under two different classes.
+        if classification_rank(classification) > classification_rank(existing.classification) {
+            existing.classification = classification;
+        }
+        return Ok(());
+    }
+    push_result(
+        contacts,
+        ClassifiedCurveContact2 {
+            parameters,
+            classification,
+        },
+    )
+}
+
+/// Collapse contacts that meet across a shared cell boundary.
+///
+/// Krawczyk proves roots in the STRICT interior of a box. A root lying exactly
+/// on a boundary shared by adjacent product cells is therefore never proved
+/// transverse: it fragments into up to four touching unresolved boxes, one per
+/// incident cell. Reporting four contacts for one geometric root is exactly
+/// the double-counting #5 forbids, so touching boxes of equal class are fused
+/// into their hull and the fused box owns the contact.
+fn fuse_touching(mut contacts: Vec<ClassifiedCurveContact2>) -> Vec<ClassifiedCurveContact2> {
+    let mut fused: Vec<ClassifiedCurveContact2> = Vec::new();
+    for contact in contacts.drain(..) {
+        if let Some(existing) = fused.iter_mut().find(|owner| {
+            // Overlap spans stay separate.
+            owner.classification == contact.classification
+                && owner.classification != CurveIntersectionDegeneracy::Overlap
+                && intervals_touch(owner.parameters.first, contact.parameters.first)
+                && intervals_touch(owner.parameters.second, contact.parameters.second)
+        }) {
+            existing.parameters = hull_box(existing.parameters, contact.parameters);
+            continue;
+        }
+        fused.push(contact);
+    }
+    fused
+}
+
+fn hull_box(left: CurvePairParameterBox, right: CurvePairParameterBox) -> CurvePairParameterBox {
+    CurvePairParameterBox {
+        first: hull_interval(left.first, right.first),
+        second: hull_interval(left.second, right.second),
+    }
+}
+
+fn hull_interval(left: ParameterInterval, right: ParameterInterval) -> ParameterInterval {
+    ParameterInterval {
+        start: left.start.min(right.start),
+        end: left.end.max(right.end),
+    }
+}
+
+fn degenerate(
+    contacts: Vec<ClassifiedCurveContact2>,
+    visited_nodes: u32,
+) -> CertifiedCurveIntersection2 {
+    let contacts = fuse_touching(contacts);
+    let classification = contacts
+        .iter()
+        .map(|contact| contact.classification)
+        .max_by_key(|&class| classification_rank(class))
+        .unwrap_or(CurveIntersectionDegeneracy::Unresolved);
+    CertifiedCurveIntersection2::Degenerate {
+        classification,
+        contacts,
+        visited_nodes,
+    }
+}
+
+/// Record a transverse root, resolving boundary ownership.
+///
+/// Two adjacent product cells share a closed edge, so a root exactly on that
+/// edge is isolated twice — once per cell. Both proofs are real; the root is
+/// not. The first owner wins and the duplicate is dropped, so a shared-endpoint
+/// crossing is reported exactly once (#5).
+fn push_root(
+    intersections: &mut Vec<TransverseCurveIntersection2>,
+    root: TransverseCurveIntersection2,
+) -> GeomResult<()> {
+    if intersections
+        .iter()
+        .any(|existing| roots_overlap(existing, &root))
+    {
+        return Ok(());
+    }
+    push_result(intersections, root)
+}
+
+/// Two isolated roots enclose the same point.
+///
+/// Certified intervals are closed, so touching intervals (`a.end == b.start`)
+/// are the shared-endpoint case that ownership must collapse. Disjoint
+/// intervals are genuinely different roots and are both kept.
+fn roots_overlap(
+    left: &TransverseCurveIntersection2,
+    right: &TransverseCurveIntersection2,
+) -> bool {
+    intervals_touch(left.first_parameter, right.first_parameter)
+        && intervals_touch(left.second_parameter, right.second_parameter)
+}
+
+fn intervals_touch(left: ParameterInterval, right: ParameterInterval) -> bool {
+    left.start <= right.end && right.start <= left.end
+}
+
+/// Classify a box that survived subdivision to the depth limit.
+///
+/// Reaching the limit means Krawczyk never proved a transverse root. For a
+/// genuine transverse crossing that should not happen: transversality makes the
+/// Jacobian invertible and the operator contractive. The usual cause is
+/// TANGENCY — the tangent directions align, the determinant approaches zero,
+/// and no contraction exists.
+///
+/// This is a positive proof, not an inference from failure. Over the WHOLE
+/// box, conservative derivative interval hulls must bound the cross product
+/// `d1 x d2` to an interval containing zero while the residual is not excluded.
+/// Evaluating parallelism at the midpoints alone would be unsound: two float
+/// midpoints of a transverse pair can be accidentally parallel. If the cross
+/// product is certainly nonzero, or either derivative hull contains the zero
+/// vector (a cusp or stationary parameterisation), the box stays `Unresolved`
+/// rather than carrying a class the code cannot prove.
+fn classify_exhausted_box(
+    first: &crate::certified_bezier::Cell,
+    second: &crate::certified_bezier::Cell,
+    first_base: &crate::certified_bezier::Cell,
+    second_base: &crate::certified_bezier::Cell,
+) -> GeomResult<CurveIntersectionDegeneracy> {
+    let first_derivative = first.derivative_intervals()?;
+    let second_derivative = second.derivative_intervals()?;
+
+    // A hull containing the zero vector cannot certify a direction at all.
+    if derivative_hull_contains_zero(first_derivative)
+        || derivative_hull_contains_zero(second_derivative)
+    {
+        return Ok(CurveIntersectionDegeneracy::Unresolved);
+    }
+
+    // 2D cross product over interval hulls: d1.x*d2.y - d1.y*d2.x.
+    let cross = first_derivative[0]
+        .multiply(second_derivative[1])?
+        .subtract(first_derivative[1].multiply(second_derivative[0])?)?;
+    if cross.contains_zero() {
+        return Ok(CurveIntersectionDegeneracy::Tangency);
+    }
+    // The residual is not excluded and the tangents are certainly not parallel,
+    // so a transverse crossing exists here. Strict-interior isolation simply
+    // cannot name it, because it sits on the shared cell boundary.
+    // `BoundaryCrossing` may only be claimed when the box actually reaches a
+    // shared cell endpoint. Budget exhaustion in a cell interior proves
+    // nothing and stays `Unresolved`.
+    let on_boundary =
+        touches_base_endpoint(first, first_base) || touches_base_endpoint(second, second_base);
+    if on_boundary {
+        return Ok(CurveIntersectionDegeneracy::BoundaryCrossing);
+    }
+    Ok(CurveIntersectionDegeneracy::Unresolved)
+}
+
+/// The refined box reaches an endpoint of its originating Bezier cell.
+///
+/// Subdivision copies endpoints bit-for-bit, so an exact comparison identifies
+/// the shared-boundary case without a tolerance.
+fn touches_base_endpoint(
+    refined: &crate::certified_bezier::Cell,
+    base: &crate::certified_bezier::Cell,
+) -> bool {
+    refined.start == base.start || refined.end == base.end
+}
+
+fn derivative_hull_contains_zero(derivative: [Interval; 3]) -> bool {
+    derivative[0].contains_zero() && derivative[1].contains_zero()
 }
 
 fn push_result<T>(target: &mut Vec<T>, value: T) -> GeomResult<()> {
@@ -633,11 +870,15 @@ fn classify_lines(
             (false, false) => unreachable!("a degenerate segment was already established"),
         };
         return Ok(if intersects {
-            CertifiedCurveIntersection2::Degenerate {
-                classification: CurveIntersectionDegeneracy::PointContact,
-                candidate_boxes: boxes,
-                visited_nodes,
+            let mut contacts = Vec::new();
+            for owned in boxes {
+                push_contact(
+                    &mut contacts,
+                    owned,
+                    CurveIntersectionDegeneracy::PointContact,
+                )?;
             }
+            degenerate(contacts, visited_nodes)
         } else {
             CertifiedCurveIntersection2::Complete {
                 intersections: Vec::new(),
@@ -658,11 +899,16 @@ fn classify_lines(
                 visited_nodes,
             });
         };
-        return Ok(CertifiedCurveIntersection2::Degenerate {
-            classification,
-            candidate_boxes: boxes,
+        return Ok(degenerate(
+            {
+                let mut contacts = Vec::new();
+                for owned in boxes {
+                    push_contact(&mut contacts, owned, classification)?;
+                }
+                contacts
+            },
             visited_nodes,
-        });
+        ));
     }
     let intersects = !same_strict_sign(signs[0], signs[1])
         && !same_strict_sign(signs[2], signs[3])
@@ -809,7 +1055,10 @@ fn intervals_resolved(
 fn unresolved_box(box_: CurvePairParameterBox, visited_nodes: u32) -> CertifiedCurveIntersection2 {
     CertifiedCurveIntersection2::Degenerate {
         classification: CurveIntersectionDegeneracy::Unresolved,
-        candidate_boxes: vec![box_],
+        contacts: vec![ClassifiedCurveContact2 {
+            parameters: box_,
+            classification: CurveIntersectionDegeneracy::Unresolved,
+        }],
         visited_nodes,
     }
 }

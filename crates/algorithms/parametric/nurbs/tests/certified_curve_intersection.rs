@@ -129,9 +129,9 @@ fn singular_or_boundary_boxes_remain_explicitly_unresolved() {
         outcome,
         CertifiedCurveIntersection2::Degenerate {
             classification: CurveIntersectionDegeneracy::Unresolved,
-            ref candidate_boxes,
+            ref contacts,
             ..
-        } if !candidate_boxes.is_empty()
+        } if !contacts.is_empty()
     ));
 }
 
@@ -235,16 +235,16 @@ fn identical_multispan_overlap_reports_only_corresponding_parameter_boxes() {
     let outcome = intersect_curve2_certified(&curve, &curve, options(1_024)).unwrap();
     let CertifiedCurveIntersection2::Degenerate {
         classification: CurveIntersectionDegeneracy::Overlap,
-        candidate_boxes,
+        contacts,
         ..
     } = outcome
     else {
         panic!("an identical curve must be structurally overlapping");
     };
-    assert_eq!(candidate_boxes.len(), 2);
-    assert!(candidate_boxes
+    assert_eq!(contacts.len(), 2);
+    assert!(contacts
         .iter()
-        .all(|candidate| candidate.first == candidate.second));
+        .all(|contact| contact.parameters.first == contact.parameters.second));
 }
 
 #[test]
