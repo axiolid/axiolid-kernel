@@ -94,6 +94,7 @@ export default defineConfig({
         items: [
           { text: "Overview", link: "/" },
           { text: "Getting started", link: "/guide/getting-started" },
+          { text: "Downstream integration", link: "/guide/downstream-integration" },
           { text: "Geometry concepts", link: "/guide/geometry-concepts" },
           { text: "Glossary", link: "/glossary" },
           { text: "Capabilities", link: "/capabilities" },
