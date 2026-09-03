@@ -24,6 +24,7 @@ SUPPORTED_TARGETS = {
     "aarch64-unknown-linux-gnu",
     "x86_64-apple-darwin",
     "x86_64-pc-windows-msvc",
+    "aarch64-pc-windows-msvc",
 }
 
 
@@ -50,6 +51,11 @@ def layout(target: str) -> dict[str, str]:
     if target not in SUPPORTED_TARGETS:
         raise ValueError(f"unsupported native target: {target}")
     if "windows-msvc" in target:
+        processor = (
+            "^(aarch64|arm64|ARM64)$"
+            if target.startswith("aarch64-")
+            else "^(x86_64|AMD64|amd64)$"
+        )
         return {
             "shared": "axiolid_capi.dll",
             "shared_location": "bin/axiolid_capi.dll",
@@ -58,7 +64,7 @@ def layout(target: str) -> dict[str, str]:
             "format": "zip",
             "static_links": "",
             "system": "Windows",
-            "processor_regex": "^(x86_64|AMD64|amd64)$",
+            "processor_regex": processor,
         }
     if "apple-darwin" in target:
         return {
