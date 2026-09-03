@@ -27,6 +27,9 @@ step "feature matrix" scripts/geometry-feature-matrix.sh
 step "Rust facade consumer" cargo run --quiet --manifest-path tests/consumers/rust-facade-application/Cargo.toml
 step "C ABI header and smoke" scripts/check-capi.sh
 step "native CMake/package integration" scripts/check-native-packaging.sh
+step "release script tests" python3 -m unittest scripts.test_release_scripts
+step "release publish plan" python3 scripts/publish-workspace.py
+step "release package preflight" python3 scripts/verify-packages.py
 for c in \
   axiolid-core axiolid-curve axiolid-surface axiolid-primitive axiolid-profile \
   axiolid-topology axiolid-brep axiolid-mesh axiolid-field axiolid-model \

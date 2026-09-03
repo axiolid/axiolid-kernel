@@ -28,6 +28,7 @@ def load_script(name: str, filename: str):
 
 publish = load_script("publish_workspace", "publish-workspace.py")
 verify = load_script("verify_packages", "verify-packages.py")
+prepare_release = load_script("prepare_release", "prepare-release.py")
 
 
 def write_crate_archive(path: Path, lock_text: str | None) -> None:
@@ -68,7 +69,7 @@ class PublishWorkspaceTests(unittest.TestCase):
             str(Path(package["manifest_path"]).parent.resolve()): package["name"]
             for package in plan
         }
-        self.assertEqual(len(plan), 31)
+        self.assertEqual(len(plan), 38)
         for package in plan:
             for dependency in package["dependencies"]:
                 dependency_path = dependency.get("path")
@@ -211,6 +212,74 @@ version = "0.1.0"
             with mock.patch.object(publish.subprocess, "run", return_value=result):
                 with self.assertRaisesRegex(SystemExit, "failed permanently"):
                     publish.prepare_archive(package, target, {}, args)
+
+
+    def test_prepare_release_requires_a_forward_version_bump(self) -> None:
+        with self.assertRaisesRegex(SystemExit, "strictly greater"):
+            prepare_release.require_forward_bump("0.1.0", "0.1.0")
+        with self.assertRaisesRegex(SystemExit, "strictly greater"):
+            prepare_release.require_forward_bump("0.2.0", "0.1.9")
+        prepare_release.require_forward_bump("0.1.0", "0.2.0")
+
+    def test_prepare_release_rejects_malformed_semver(self) -> None:
+        with self.assertRaisesRegex(SystemExit, "not a valid semantic version"):
+            prepare_release.parse_semver("v0.2.0")
+        with self.assertRaisesRegex(SystemExit, "not a valid semantic version"):
+            prepare_release.parse_semver("0.2")
+
+    def test_prepare_release_rolls_unreleased_into_a_dated_heading(self) -> None:
+        prefix = "# Changelog\n\n"
+        body = "\n### Added\n- one\n\n"
+        suffix = "## [0.1.0] - 2026-01-01\n\nfirst\n"
+        rolled = prepare_release.rolled_changelog(prefix, body, suffix, "0.2.0", "2026-09-03")
+        self.assertIn("## [Unreleased]\n\n## [0.2.0] - 2026-09-03\n### Added\n- one\n\n", rolled)
+        self.assertTrue(rolled.endswith(suffix))
+
+    def test_prepare_release_rejects_an_empty_unreleased_section(self) -> None:
+        with self.assertRaisesRegex(SystemExit, "nothing to release"):
+            prepare_release.require_nonempty_unreleased("\nno entries here\n")
+
+    def test_prepare_release_bumps_workspace_and_every_internal_dependency(self) -> None:
+        original = prepare_release.CARGO_TOML
+        try:
+            with tempfile.TemporaryDirectory() as temporary:
+                cargo_toml = Path(temporary) / "Cargo.toml"
+                cargo_toml.write_text(
+                    "[workspace.package]\n"
+                    'version = "0.1.0"\n'
+                    "\n"
+                    "[workspace.dependencies]\n"
+                    'axiolid-core = { path = "crates/foundation/core", version = "0.1.0" }\n'
+                    'glam = "0.29"\n',
+                    encoding="utf-8",
+                )
+                prepare_release.CARGO_TOML = cargo_toml
+                bumped = prepare_release.bumped_workspace_toml("0.2.0", "0.1.0")
+                self.assertIn('version = "0.2.0"\n', bumped)
+                self.assertIn(
+                    'axiolid-core = { path = "crates/foundation/core", version = "0.2.0" }',
+                    bumped,
+                )
+                self.assertIn('glam = "0.29"', bumped)
+        finally:
+            prepare_release.CARGO_TOML = original
+
+    def test_prepare_release_fails_closed_when_no_dependency_matches_current_version(
+        self,
+    ) -> None:
+        original = prepare_release.CARGO_TOML
+        try:
+            with tempfile.TemporaryDirectory() as temporary:
+                cargo_toml = Path(temporary) / "Cargo.toml"
+                cargo_toml.write_text(
+                    '[workspace.package]\nversion = "0.1.0"\n\n[workspace.dependencies]\nglam = "0.29"\n',
+                    encoding="utf-8",
+                )
+                prepare_release.CARGO_TOML = cargo_toml
+                with self.assertRaisesRegex(SystemExit, "no internal axiolid-\\* dependency"):
+                    prepare_release.bumped_workspace_toml("0.2.0", "0.1.0")
+        finally:
+            prepare_release.CARGO_TOML = original
 
 
 if __name__ == "__main__":

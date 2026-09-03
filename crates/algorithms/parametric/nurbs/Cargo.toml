@@ -19,6 +19,9 @@ axiolid-predicates.workspace = true
 axiolid-surface.workspace = true
 
 [dev-dependencies]
+# axiolid-oracle carries no crates.io version (publish = false, test-only);
+# `workspace = true` resolves it through the versionless path entry in
+# [workspace.dependencies] so cargo package strips it cleanly.
 axiolid-oracle.workspace = true
 
 [package.metadata.axiolid]

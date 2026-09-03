@@ -5,6 +5,8 @@ All notable changes to Axiolid are documented in this file.
 ## [Unreleased]
 
 ### Added
+- Added `scripts/prepare-release.py`, a version-bump and changelog-rollover tool: validates a strictly-forward semver bump, rejects releasing an empty Unreleased section, dates and rolls the Unreleased section into a versioned heading, and bumps both `[workspace.package].version` and every internal `axiolid-*` path-dependency version requirement in `[workspace.dependencies]` so 0.x caret semantics never strand an internal dependency behind the bumped crate it points to.
+- Wired the release pipeline into `scripts/gate.sh`: it now runs the release script unit tests, the publish dependency-order plan, and the lock-free bootstrap package preflight for all 38 publishable archives, so a broken release pipeline fails the same gate as any other regression instead of being discovered only at `workflow_dispatch` time.
 - Added a machine-checked `2d-curves` downstream closure: points, affine transforms, application-owned unit conversion, and 2D curve vocabulary compile exactly `axiolid-core`, `axiolid-linear`, and `axiolid-curve`, while every solid/CSG, mesh, topology, B-rep, facade, and provider package is forbidden and mutation-tested.
 - Added mutation-proven black-box compatibility gates that copy Rust leaf/facade and native C/C++ consumers outside the workspace, pin Rust dependencies to one immutable Git artifact, consume only verified native archives through exported CMake targets, execute semantic success and typed-refusal paths, and run on Linux, macOS, and Windows.
 - Added `Axiolid::axiolid` CMake integration for immutable source builds and verified native archives, with shared/static selection, deterministic manifests/checksums, Linux/macOS/Windows Debug/Release CI, and an AArch64 Linux cross-build gate.
@@ -62,6 +64,7 @@ All notable changes to Axiolid are documented in this file.
 - Extracted scalar solid generation — profiles, lofts, sweeps, revolutions, extrusion, and bounded half-space clipping — from the L3 DAG compiler into the new L2 `axiolid-construct` crate. `axiolid-mesh-compile` now owns graph traversal, caching, model-driven directrices, and B-rep tessellation only; see [ADR 0023](./adr/0023-solid-generation-is-an-l2-crate.md).
 
 ### Fixed
+- Removed the pinned `version = "0.1.0"` requirement from the workspace-level `axiolid-oracle` path dependency (test-only, `publish = false`). `axiolid-nurbs` depends on it only as a `dev-dependency`; the stale version requirement made `cargo package`/`scripts/verify-packages.py` fail with `no matching package named axiolid-oracle` because Cargo cannot strip a versioned path dev-dependency the way it strips a versionless one.
 - Normalized generated C-header line endings before freshness comparison so the same committed ABI header verifies on Windows and Unix hosts.
 - Hardened source-neutrality checks against dependency aliases while allowing comments, and mutation-verified both behaviors.
 - Pinned every documentation and release workflow action to immutable commits; repository-wide regression coverage rejects mutable refs.
