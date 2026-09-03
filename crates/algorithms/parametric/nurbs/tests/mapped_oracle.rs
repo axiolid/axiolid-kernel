@@ -11,10 +11,12 @@
 use axiolid_core::{Point2, Point3, Tolerance};
 use axiolid_curve::{BSplineCurve, BSplineCurve3, Curve2, Curve3, KnotSpec};
 use axiolid_nurbs::{
-    intersect_curve2_certified, intersect_curve_surface_certified, invert_surface_certified,
-    project_surface_certified, CertifiedCurveIntersection2, CertifiedCurveIntersectionOptions,
+    construct_surface_surface_curves, intersect_curve2_certified,
+    intersect_curve_surface_certified, invert_surface_certified, project_surface_certified,
+    CertifiedCurveIntersection2, CertifiedCurveIntersectionOptions,
     CertifiedCurveSurfaceIntersection3, CertifiedCurveSurfaceIntersectionOptions,
-    CertifiedSurfaceProjection3, CertifiedSurfaceProjectionOptions, CurveIntersectionDegeneracy,
+    CertifiedSurfaceProjection3, CertifiedSurfaceProjectionOptions,
+    CertifiedSurfaceSurfaceIntersectionOptions, CurveIntersectionDegeneracy,
 };
 use axiolid_oracle::{
     closer_point_refutation, curve_pair_deviation2, curve_surface_deviation, CurvePairBox,
@@ -403,4 +405,75 @@ fn a_unique_inverse_names_the_queried_point_in_mapped_3d() {
         refutation.is_none(),
         "the oracle found a closer point than the accepted inversion residual: {refutation:?}"
     );
+}
+
+#[test]
+fn a_constructed_intersection_curve_lies_on_both_surfaces_in_mapped_3d() {
+    // Issue #6 requires oracle verification in mapped 3D. Sample the
+    // CONSTRUCTED curve and, at each sample, ask the independent oracle to
+    // refute the claim that the point is ON each surface. A point of a true
+    // intersection curve has distance zero to BOTH surfaces.
+    let first = plane_patch([
+        [Point3::new(-1.0, -1.0, 0.0), Point3::new(-1.0, 1.0, 0.0)],
+        [Point3::new(1.0, -1.0, 0.0), Point3::new(1.0, 1.0, 0.0)],
+    ]);
+    let second = plane_patch([
+        [Point3::new(-0.5, 0.0, -1.0), Point3::new(-0.5, 0.0, 1.0)],
+        [Point3::new(0.5, 0.0, -1.0), Point3::new(0.5, 0.0, 1.0)],
+    ]);
+
+    let options = CertifiedSurfaceSurfaceIntersectionOptions::new(1.0e-6, 100_000, 100_000, 64)
+        .expect("valid options");
+    let curves = construct_surface_surface_curves(&first, &second, options)
+        .expect("a valid query")
+        .expect("transverse planes are constructible");
+
+    let curve = Curve3::BSpline(curves[0].curve.clone());
+    let tolerance = 1e-6;
+    for step in 0..=16 {
+        let t = f64::from(step) / 16.0;
+        let sample = axiolid_evaluate::evaluate3(&curve, t).expect("curve evaluation");
+
+        // Claiming distance 0 to a surface is refutable: if the oracle finds
+        // ANY surface point closer than 0, the sample is not on the surface.
+        // Here the reverse is what matters, so claim the tolerance instead
+        // and require the oracle to REFUTE it by finding a surface point
+        // within tolerance. A successful refutation is positive evidence that
+        // the surface really does pass through this sample.
+        for (label, surface) in [("first", &first), ("second", &second)] {
+            let claim = DistanceClaim::new(sample, tolerance, 0.0).expect("valid claim");
+            let witness = closer_point_refutation(
+                &Operand::Surface {
+                    surface: &Surface::BSpline((*surface).clone()),
+                    u: span(0.0, 1.0),
+                    v: span(0.0, 1.0),
+                },
+                claim,
+                density(),
+            )
+            .expect("surface scan");
+
+            assert!(
+                witness.is_some(),
+                "no {label}-surface point within {tolerance} of the constructed curve at t={t}"
+            );
+        }
+    }
+}
+
+fn plane_patch(points: [[Point3; 2]; 2]) -> BSplineSurface {
+    BSplineSurface {
+        u_degree: 1,
+        v_degree: 1,
+        control_points: vec![points[0].to_vec(), points[1].to_vec()],
+        u_knots: vec![0.0, 1.0],
+        u_multiplicities: vec![2, 2],
+        v_knots: vec![0.0, 1.0],
+        v_multiplicities: vec![2, 2],
+        weights: None,
+        u_closed: false,
+        v_closed: false,
+        knot_spec: KnotSpec::Unspecified,
+        self_intersect: None,
+    }
 }

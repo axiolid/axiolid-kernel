@@ -21,6 +21,7 @@ mod certified_surface_projection;
 mod certified_surface_surface_intersection;
 mod curve_analysis;
 mod curve_projection;
+mod intersection_curve;
 mod periodic;
 mod periodic_surface;
 mod projection;
@@ -61,6 +62,10 @@ pub use certified_surface_surface_intersection::{
 };
 pub use curve_analysis::{analyze_curve2, analyze_curve3, CurveDifferential2, CurveDifferential3};
 pub use curve_projection::{project_curve2, project_curve3};
+pub use intersection_curve::{
+    construct_curve_surface_points, construct_surface_surface_curves,
+    ConstructedCurveSurfacePoint3, ConstructedIntersectionCurve3, IntersectionCurveRefusal,
+};
 pub use periodic::{
     curve2_seam_continuity, curve3_seam_continuity, wrap_curve2_parameter, wrap_curve3_parameter,
     PeriodicCurve2, PeriodicCurve3, SeamContinuity,
