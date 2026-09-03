@@ -16,6 +16,7 @@ mod certified_curve_surface_intersection;
 mod certified_projection;
 mod certified_refinement;
 mod certified_surface_bezier;
+mod certified_surface_inversion;
 mod certified_surface_projection;
 mod certified_surface_surface_intersection;
 mod curve_analysis;
@@ -45,6 +46,10 @@ pub use certified_projection::{
     CurveProjectionCertificate2, CurveProjectionCertificate3, ParameterInterval,
     SurfaceParameterBox, SurfaceProjectionCertificate3, SurfaceProjectionUnresolvedReason,
     MAX_CERTIFIED_SURFACE_PROJECTION_DEPTH, MAX_CERTIFIED_SURFACE_PROJECTION_WORK,
+};
+pub use certified_surface_inversion::{
+    invert_periodic_surface_certified, invert_surface_certified, SurfaceInversionCertificate3,
+    SurfaceInversionRefusal,
 };
 pub use certified_surface_projection::{
     project_periodic_surface_certified, project_surface_certified,

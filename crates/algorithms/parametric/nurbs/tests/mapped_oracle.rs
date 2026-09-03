@@ -8,11 +8,11 @@
 //!
 //! Failures report the measured 3D deviation, not just a disagreement.
 
-use axiolid_core::{Point2, Point3};
+use axiolid_core::{Point2, Point3, Tolerance};
 use axiolid_curve::{BSplineCurve, BSplineCurve3, Curve2, Curve3, KnotSpec};
 use axiolid_nurbs::{
-    intersect_curve2_certified, intersect_curve_surface_certified, project_surface_certified,
-    CertifiedCurveIntersection2, CertifiedCurveIntersectionOptions,
+    intersect_curve2_certified, intersect_curve_surface_certified, invert_surface_certified,
+    project_surface_certified, CertifiedCurveIntersection2, CertifiedCurveIntersectionOptions,
     CertifiedCurveSurfaceIntersection3, CertifiedCurveSurfaceIntersectionOptions,
     CertifiedSurfaceProjection3, CertifiedSurfaceProjectionOptions, CurveIntersectionDegeneracy,
 };
@@ -359,5 +359,48 @@ fn a_boundary_crossing_contact_really_meets_in_mapped_3d() {
         witness.deviation <= 1e-9,
         "a claimed boundary crossing does not meet in 3D: deviation {}",
         witness.deviation
+    );
+}
+
+#[test]
+fn a_unique_inverse_names_the_queried_point_in_mapped_3d() {
+    // The inverse claims (u, v) NAMES the point. Verify that independently:
+    // evaluate the returned parameters through the oracle and refute any
+    // closer disagreement.
+    let surface = planar_patch();
+    let target = Point3::new(0.25, 0.5, 0.0);
+    // The parameter tolerance bounds the reported ENCLOSURE, which is the
+    // hull of the touching cells that cover the minimizer, so it is asked for
+    // at cell-pair scale rather than single-cell scale.
+    let options = CertifiedSurfaceProjectionOptions::new(
+        Tolerance::new(1e-8, 1e-12).unwrap(),
+        1e-4,
+        100_000,
+        64,
+    )
+    .unwrap();
+
+    let certificate = invert_surface_certified(&surface, target, options)
+        .expect("a valid query")
+        .expect("an interior on-surface point inverts uniquely");
+
+    // Independent check: nothing on the surface is meaningfully closer than
+    // the certified residual the inversion accepted.
+    let claim =
+        DistanceClaim::new(target, certificate.residual_upper_bound, 1e-9).expect("valid claim");
+    let refutation = closer_point_refutation(
+        &Operand::Surface {
+            surface: &Surface::BSpline(surface),
+            u: span(0.0, 1.0),
+            v: span(0.0, 1.0),
+        },
+        claim,
+        density(),
+    )
+    .expect("surface scan");
+
+    assert!(
+        refutation.is_none(),
+        "the oracle found a closer point than the accepted inversion residual: {refutation:?}"
     );
 }
