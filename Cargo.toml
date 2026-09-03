@@ -27,6 +27,7 @@ members = [
     "crates/algorithms/construction/construct",
     "crates/algorithms/planar/overlay",
     "crates/algorithms/query/intersection/linear",
+    "crates/algorithms/query/intersection/ray-mesh",
     "crates/algorithms/query/spatial",
     "crates/algorithms/query/measure",
     "crates/algorithms/sampled/field",
@@ -77,6 +78,7 @@ axiolid-field-ops = { path = "crates/algorithms/sampled/field", version = "0.1.0
 i_overlay = "4.5.2"
 axiolid-predicates = { path = "crates/algorithms/predicates", version = "0.1.0", default-features = false }
 axiolid-linear-intersection = { path = "crates/algorithms/query/intersection/linear", version = "0.1.0", default-features = false }
+axiolid-ray-mesh = { path = "crates/algorithms/query/intersection/ray-mesh", version = "0.1.0", default-features = false }
 axiolid-reference = { path = "crates/algorithms/reference", version = "0.1.0" }
 axiolid-mesh-compile = { path = "crates/execution/compile", version = "0.1.0" }
 axiolid-oracle = { path = "tools/oracle", version = "0.1.0" }

@@ -38,6 +38,7 @@ dependencies = [
  "axiolid-predicates",
  "axiolid-primitive",
  "axiolid-profile",
+ "axiolid-ray-mesh",
  "axiolid-spatial",
  "axiolid-surface",
  "axiolid-tessellation-contract",
@@ -359,6 +360,17 @@ version = "0.1.0"
 dependencies = [
  "axiolid-core",
  "axiolid-curve",
+]
+
+[[package]]
+name = "axiolid-ray-mesh"
+version = "0.1.0"
+dependencies = [
+ "axiolid-core",
+ "axiolid-guarantees",
+ "axiolid-mesh",
+ "axiolid-predicates",
+ "axiolid-spatial",
 ]
 
 [[package]]

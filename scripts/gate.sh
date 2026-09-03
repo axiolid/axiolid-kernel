@@ -29,7 +29,7 @@ for c in \
   axiolid-exact-compile-contract \
   axiolid-spatial axiolid-measure axiolid-overlay axiolid-field-ops axiolid-heal \
   axiolid-reference axiolid-nurbs axiolid-construct \
-  axiolid-linear axiolid-predicates axiolid-linear-intersection axiolid-evaluate \
+  axiolid-linear axiolid-predicates axiolid-linear-intersection axiolid-ray-mesh axiolid-evaluate \
   axiolid-mesh-boolean-boolmesh axiolid-mesh-compile axiolid-dispatch \
   axiolid-backend-cpu axiolid-backend-gpu axiolid; do
   step "isolated build -p $c" cargo build -p "$c"

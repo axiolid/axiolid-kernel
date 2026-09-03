@@ -40,6 +40,7 @@ graph TD
     axiolid_predicates["axiolid-predicates\nalgorithm.reference"]
     axiolid_primitive["axiolid-primitive\nrepresentation.atomic"]
     axiolid_profile["axiolid-profile\nrepresentation.region"]
+    axiolid_ray_mesh["axiolid-ray-mesh\nalgorithm.query"]
     axiolid_reference["axiolid-reference\nalgorithm.reference"]
     axiolid_spatial["axiolid-spatial\nalgorithm.query"]
     axiolid_surface["axiolid-surface\nrepresentation.atomic"]
@@ -72,6 +73,7 @@ graph TD
     axiolid --> axiolid_predicates
     axiolid --> axiolid_primitive
     axiolid --> axiolid_profile
+    axiolid --> axiolid_ray_mesh
     axiolid --> axiolid_spatial
     axiolid --> axiolid_surface
     axiolid --> axiolid_tessellation_contract
@@ -200,6 +202,11 @@ graph TD
     axiolid_primitive --> axiolid_core
     axiolid_profile --> axiolid_core
     axiolid_profile --> axiolid_curve
+    axiolid_ray_mesh --> axiolid_core
+    axiolid_ray_mesh --> axiolid_guarantees
+    axiolid_ray_mesh --> axiolid_mesh
+    axiolid_ray_mesh --> axiolid_predicates
+    axiolid_ray_mesh --> axiolid_spatial
     axiolid_reference --> axiolid_contracts
     axiolid_reference --> axiolid_core
     axiolid_reference --> axiolid_curve

@@ -98,6 +98,15 @@ pub mod spatial {
     pub use axiolid_spatial::*;
 }
 
+/// Narrow-phase ray/triangle-mesh nearest-hit intersection.
+///
+/// Composes with the `spatial` broad phase: a caller can feed BVH candidate
+/// keys into `nearest_hit_among`, or scan a whole mesh with `nearest_hit`.
+#[cfg(feature = "ray-mesh")]
+pub mod ray_mesh {
+    pub use axiolid_ray_mesh::*;
+}
+
 #[cfg(feature = "measure")]
 pub mod measure {
     pub use axiolid_measure::*;

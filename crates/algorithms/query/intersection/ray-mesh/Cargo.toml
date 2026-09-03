@@ -1,0 +1,31 @@
+[package]
+name = "axiolid-ray-mesh"
+description = "Narrow-phase ray/triangle-mesh nearest-hit intersection"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[features]
+default = []
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-guarantees.workspace = true
+axiolid-mesh.workspace = true
+axiolid-predicates.workspace = true
+
+[dev-dependencies]
+axiolid-spatial.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "algorithms"
+role = "algorithm.query"
+domain = "query.intersection.ray-mesh"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core", "axiolid-guarantees", "axiolid-mesh", "axiolid-predicates", "axiolid-spatial"]
