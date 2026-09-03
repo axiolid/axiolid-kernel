@@ -8,6 +8,7 @@ publish = false
 
 [dependencies]
 cargo_metadata.workspace = true
+cbindgen.workspace = true
 rustc_lexer.workspace = true
 serde_json.workspace = true
 

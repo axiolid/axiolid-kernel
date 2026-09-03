@@ -1,0 +1,10 @@
+[package]
+name = "axiolid-c-abi-profile-probe"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+axiolid-capi = { path = "../../../crates/facade/axiolid-capi" }

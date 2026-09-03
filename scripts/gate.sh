@@ -23,6 +23,7 @@ step "clippy --all-features" cargo clippy --workspace --all-targets --all-featur
 step "doc" env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 step "feature matrix" scripts/geometry-feature-matrix.sh
 step "Rust facade consumer" cargo run --quiet --manifest-path tests/consumers/rust-facade-application/Cargo.toml
+step "C ABI header and smoke" scripts/check-capi.sh
 for c in \
   axiolid-core axiolid-curve axiolid-surface axiolid-primitive axiolid-profile \
   axiolid-topology axiolid-brep axiolid-mesh axiolid-field axiolid-model \
@@ -34,7 +35,7 @@ for c in \
   axiolid-reference axiolid-nurbs axiolid-construct \
   axiolid-linear axiolid-predicates axiolid-linear-intersection axiolid-ray-mesh axiolid-evaluate \
   axiolid-mesh-boolean-boolmesh axiolid-mesh-compile axiolid-dispatch \
-  axiolid-backend-cpu axiolid-backend-gpu axiolid; do
+  axiolid-backend-cpu axiolid-backend-gpu axiolid axiolid-capi; do
   step "isolated build -p $c" cargo build -p "$c"
 done
 echo

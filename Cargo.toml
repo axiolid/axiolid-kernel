@@ -38,6 +38,7 @@ members = [
     "crates/execution/cpu",
     "crates/execution/gpu",
     "crates/facade/axiolid",
+    "crates/facade/axiolid-capi",
     "tools/oracle",
     "tools/xtask",
 ]
@@ -101,6 +102,7 @@ ahash = "0.8"
 memmap2 = "0.9"
 criterion = { version = "0.5", features = ["html_reports"] }
 cargo_metadata = "0.19"
+cbindgen = "0.29.0"
 rustc_lexer = "0.1.0"
 serde_json = "1"
 

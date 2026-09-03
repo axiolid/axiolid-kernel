@@ -71,17 +71,29 @@ pub fn validate(architecture: &Architecture, errors: &mut Vec<String>) -> Result
                 }
             }
         }
-        let forbids_unsafe = matches!(
+        let unsafe_boundary = package.name == "axiolid-capi";
+        let forbids_unsafe = (matches!(
             package.layer.as_str(),
             "foundation" | "representations" | "contracts" | "facade"
-        ) || package.name == "axiolid-backend-gpu";
+        ) || package.name == "axiolid-backend-gpu")
+            && !unsafe_boundary;
+        let lib = src.join("lib.rs");
         if forbids_unsafe {
-            let lib = src.join("lib.rs");
             let source = fs::read_to_string(&lib)
                 .map_err(|error| format!("read {}: {error}", lib.display()))?;
             if !source.contains("#![forbid(unsafe_code)]") {
                 errors.push(format!(
                     "{}: {} must forbid unsafe code",
+                    package.name,
+                    relative(&architecture.root, &lib)
+                ));
+            }
+        } else if unsafe_boundary {
+            let source = fs::read_to_string(&lib)
+                .map_err(|error| format!("read {}: {error}", lib.display()))?;
+            if !source.contains("#![deny(unsafe_op_in_unsafe_fn)]") {
+                errors.push(format!(
+                    "{}: {} must deny unsafe operations outside explicit unsafe blocks",
                     package.name,
                     relative(&architecture.root, &lib)
                 ));

@@ -232,3 +232,43 @@ expected_internal = [
     "axiolid-topology",
 ]
 forbidden_internal = []
+
+[[profile]]
+name = "c-abi-profile"
+manifest = "tests/consumers/c-abi-profile/Cargo.toml"
+description = "Versioned native boundary over the supported portable application provider bundle."
+features = []
+
+# This closure is deliberately the Rust application bundle plus only the ABI boundary.
+expected_internal = [
+    "axiolid",
+    "axiolid-backend-cpu",
+    "axiolid-brep",
+    "axiolid-capi",
+    "axiolid-construct",
+    "axiolid-contracts",
+    "axiolid-core",
+    "axiolid-curve",
+    "axiolid-dispatch",
+    "axiolid-evaluate",
+    "axiolid-guarantees",
+    "axiolid-linear",
+    "axiolid-measure",
+    "axiolid-mesh",
+    "axiolid-mesh-boolean-boolmesh",
+    "axiolid-mesh-boolean-contract",
+    "axiolid-mesh-contracts",
+    "axiolid-mesh-section-contract",
+    "axiolid-model",
+    "axiolid-nurbs",
+    "axiolid-predicates",
+    "axiolid-primitive",
+    "axiolid-profile",
+    "axiolid-ray-mesh",
+    "axiolid-reference",
+    "axiolid-spatial",
+    "axiolid-surface",
+    "axiolid-tessellation-contract",
+    "axiolid-topology",
+]
+forbidden_internal = []

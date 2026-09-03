@@ -12,6 +12,7 @@ graph TD
     axiolid_backend_cpu["axiolid-backend-cpu\nexecution.context"]
     axiolid_backend_gpu["axiolid-backend-gpu\nexecution.context"]
     axiolid_brep["axiolid-brep\nrepresentation.composed"]
+    axiolid_capi["axiolid-capi\nfacade.native-c"]
     axiolid_construct["axiolid-construct\nalgorithm.construction"]
     axiolid_contracts["axiolid-contracts\ncontract.common"]
     axiolid_core["axiolid-core\nfoundation.values"]
@@ -89,6 +90,7 @@ graph TD
     axiolid_brep --> axiolid_curve
     axiolid_brep --> axiolid_surface
     axiolid_brep --> axiolid_topology
+    axiolid_capi --> axiolid
     axiolid_construct --> axiolid_brep
     axiolid_construct --> axiolid_contracts
     axiolid_construct --> axiolid_core

@@ -4,7 +4,7 @@ Axiolid is a standalone pure-Rust, IFC-agnostic geometry kernel. No source-forma
 
 ## Layout
 
-- `crates/`: nested ownership tree containing 31 publishable kernel packages; `crates/facade/axiolid` is the opt-in facade.
+- `crates/`: nested ownership tree containing publishable kernel packages; `crates/facade/axiolid` is the opt-in Rust facade and `crates/facade/axiolid-capi` is the sole unsafe C ABI boundary.
 - `tools/xtask/`: local-only architecture checker and generated-document owner.
 - `docs/adr/`: durable architecture decisions; ADR 0035 owns the current package topology.
 - `docs/architecture/`: current and generated crate/dependency maps.
@@ -22,7 +22,8 @@ cargo xtask architecture check
 bash scripts/probe_layering_gate.sh
 bash scripts/field_gate.sh
 bash scripts/geometry-feature-matrix.sh
+scripts/check-capi.sh
 scripts/gate.sh
 ```
 
-The workspace has no C++ dependency path. Concrete execution providers must remain optional and require a portable scalar correctness oracle before claiming an operation trait.
+The workspace has no C++ dependency path. `axiolid-capi` is the sole audited unsafe Rust boundary and must deny unsafe operations in unsafe functions; every other facade, contract, representation, and foundation crate forbids unsafe code. Concrete execution providers must remain optional and require a portable scalar correctness oracle before claiming an operation trait.

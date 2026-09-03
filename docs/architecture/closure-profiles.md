@@ -11,6 +11,7 @@ Each profile is a compatibility promise verified by `cargo xtask architecture cl
 | `parametric-curves` | 7 | A parametric application: curve/surface values plus scalar evaluation, without the reference umbrella. |
 | `cad-exact` | 11 | A CAD application: analytic curves/surfaces, topology, exact B-rep results, and NURBS. |
 | `rust-facade-application` | 28 | Supported facade boundary with portable providers for the v0.4 reference workflows. |
+| `c-abi-profile` | 29 | Versioned native boundary over the supported portable application provider bundle. |
 
 ## linear-intersection-minimal
 
@@ -94,6 +95,46 @@ Compiles exactly these internal packages:
 - `axiolid`
 - `axiolid-backend-cpu`
 - `axiolid-brep`
+- `axiolid-construct`
+- `axiolid-contracts`
+- `axiolid-core`
+- `axiolid-curve`
+- `axiolid-dispatch`
+- `axiolid-evaluate`
+- `axiolid-guarantees`
+- `axiolid-linear`
+- `axiolid-measure`
+- `axiolid-mesh`
+- `axiolid-mesh-boolean-boolmesh`
+- `axiolid-mesh-boolean-contract`
+- `axiolid-mesh-contracts`
+- `axiolid-mesh-section-contract`
+- `axiolid-model`
+- `axiolid-nurbs`
+- `axiolid-predicates`
+- `axiolid-primitive`
+- `axiolid-profile`
+- `axiolid-ray-mesh`
+- `axiolid-reference`
+- `axiolid-spatial`
+- `axiolid-surface`
+- `axiolid-tessellation-contract`
+- `axiolid-topology`
+
+And must never acquire any of 0 forbidden packages, including ``.
+
+## c-abi-profile
+
+Versioned native boundary over the supported portable application provider bundle.
+
+Fixture: `tests/consumers/c-abi-profile/Cargo.toml`
+
+Compiles exactly these internal packages:
+
+- `axiolid`
+- `axiolid-backend-cpu`
+- `axiolid-brep`
+- `axiolid-capi`
 - `axiolid-construct`
 - `axiolid-contracts`
 - `axiolid-core`
