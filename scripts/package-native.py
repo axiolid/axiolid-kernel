@@ -56,7 +56,12 @@ def layout(target: str) -> dict[str, str]:
             "implib": "axiolid_capi.dll.lib",
             "static": "axiolid_capi.lib",
             "format": "zip",
-            "static_links": "",
+            # `rustc --print=native-static-libs` for `axiolid-capi` on
+            # x86_64-pc-windows-msvc (verified via cross-compile, both
+            # dev and release profiles, 2026-09-03): std pulls these in
+            # for env/threading/RNG/error-reporting. msvcrt is handled by
+            # CMake's own runtime-library selection, not listed here.
+            "static_links": "kernel32.lib;ntdll.lib;userenv.lib;ws2_32.lib;dbghelp.lib",
             "system": "Windows",
             "processor_regex": "^(x86_64|AMD64|amd64)$",
         }

@@ -96,6 +96,12 @@ if(UNIX AND NOT APPLE)
   set_property(TARGET axiolid_static APPEND PROPERTY INTERFACE_LINK_LIBRARIES "dl;pthread;m")
 elseif(APPLE)
   set_property(TARGET axiolid_static APPEND PROPERTY INTERFACE_LINK_LIBRARIES "-framework Security;-framework CoreFoundation")
+elseif(WIN32)
+  # rustc --print=native-static-libs for axiolid-capi on x86_64-pc-windows-msvc
+  # (cross-compiled, dev and release profiles, confirmed identical): std pulls
+  # these in for env/threading/RNG/error-reporting. msvcrt is handled by
+  # CMake's own runtime-library selection, not listed here.
+  set_property(TARGET axiolid_static APPEND PROPERTY INTERFACE_LINK_LIBRARIES "kernel32.lib;ntdll.lib;userenv.lib;ws2_32.lib;dbghelp.lib")
 endif()
 
 add_library(axiolid_native INTERFACE)
@@ -130,7 +136,12 @@ if(AXIOLID_ENABLE_INSTALL)
   elseif(APPLE)
     set(STATIC_LINK_LIBRARIES "-framework CoreFoundation;-framework Security")
   else()
-    set(STATIC_LINK_LIBRARIES "")
+    # rustc --print=native-static-libs for axiolid-capi on
+    # x86_64-pc-windows-msvc (cross-compiled, dev and release profiles,
+    # confirmed identical): std pulls these in for env/threading/RNG/
+    # error-reporting. msvcrt is handled by CMake's own runtime-library
+    # selection, not listed here.
+    set(STATIC_LINK_LIBRARIES "kernel32.lib;ntdll.lib;userenv.lib;ws2_32.lib;dbghelp.lib")
   endif()
   configure_file(
     "${CMAKE_CURRENT_LIST_DIR}/cmake/AxiolidTargets.cmake.in"
