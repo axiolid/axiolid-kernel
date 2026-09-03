@@ -15,6 +15,25 @@ concurrency:
   cancel-in-progress: ${{ github.event_name != 'release' }}
 
 jobs:
+  rust-consumers:
+    name: Rust consumers / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-15-intel, windows-2022]
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target/downstream-ci
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+        with:
+          toolchain: 1.88.0
+      - name: Unit-test downstream gate policy
+        run: python -m unittest tests/downstream/test_downstream_consumers.py
+      - name: Exercise immutable copied Rust consumers
+        run: python scripts/test-downstream-consumers.py --revision "${{ github.sha }}"
+
   cmake:
     name: ${{ matrix.os }} / ${{ matrix.build_type }} / ${{ matrix.linkage }}
     strategy:
@@ -33,7 +52,7 @@ jobs:
         with:
           toolchain: 1.88.0
       - name: Verify source/package CMake equivalence
-        run: python scripts/test-native-cmake.py --build-type ${{ matrix.build_type }} --linkage ${{ matrix.linkage }}
+        run: python scripts/test-native-cmake.py --build-type ${{ matrix.build_type }} --linkage ${{ matrix.linkage }} --mutations
       - name: Exercise immutable source pin
         if: matrix.os == 'ubuntu-22.04' && matrix.build_type == 'Release' && matrix.linkage == 'SHARED'
         run: python scripts/test-native-fetch.py --build-type Release

@@ -10,6 +10,12 @@ fn root() -> Result<PathBuf, String> {
     Ok(metadata.workspace_root.into_std_path_buf())
 }
 
+fn canonicalize_line_endings(bytes: Vec<u8>) -> Result<Vec<u8>, String> {
+    let text = String::from_utf8(bytes)
+        .map_err(|error| format!("cbindgen emitted non-UTF-8 output: {error}"))?;
+    Ok(text.replace("\r\n", "\n").into_bytes())
+}
+
 fn rendered_header() -> Result<Vec<u8>, String> {
     let root = root()?;
     let crate_dir = root.join("crates/facade/axiolid-capi");
@@ -22,7 +28,7 @@ fn rendered_header() -> Result<Vec<u8>, String> {
         .map_err(|error| error.to_string())?;
     let mut bytes = Vec::new();
     bindings.write(&mut bytes);
-    Ok(bytes)
+    canonicalize_line_endings(bytes)
 }
 
 pub fn header() -> Result<(), String> {
@@ -34,7 +40,7 @@ pub fn header() -> Result<(), String> {
 
 pub fn check() -> Result<(), String> {
     let path = root()?.join("crates/facade/axiolid-capi/include/axiolid.h");
-    let committed = fs::read(&path).map_err(|error| error.to_string())?;
+    let committed = canonicalize_line_endings(fs::read(&path).map_err(|error| error.to_string())?)?;
     let rendered = rendered_header()?;
     if committed != rendered {
         return Err(format!(
@@ -44,4 +50,17 @@ pub fn check() -> Result<(), String> {
     }
     println!("C header is current");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::canonicalize_line_endings;
+
+    #[test]
+    fn generated_header_has_platform_independent_line_endings() {
+        assert_eq!(
+            canonicalize_line_endings(b"first\r\nsecond\n".to_vec()).unwrap(),
+            b"first\nsecond\n"
+        );
+    }
 }

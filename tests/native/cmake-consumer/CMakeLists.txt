@@ -3,6 +3,10 @@ project(AxiolidCMakeConsumer LANGUAGES C CXX)
 
 if(AXIOLID_SOURCE_TREE)
   add_subdirectory("${AXIOLID_SOURCE_TREE}/native" axiolid-native)
+elseif(AXIOLID_PACKAGE_ROOT)
+  find_package(Axiolid 0.4 CONFIG REQUIRED
+    PATHS "${AXIOLID_PACKAGE_ROOT}"
+    NO_DEFAULT_PATH)
 else()
   find_package(Axiolid 0.4 CONFIG REQUIRED)
 endif()

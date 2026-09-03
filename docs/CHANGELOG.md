@@ -5,6 +5,7 @@ All notable changes to Axiolid are documented in this file.
 ## [Unreleased]
 
 ### Added
+- Added mutation-proven black-box compatibility gates that copy Rust leaf/facade and native C/C++ consumers outside the workspace, pin Rust dependencies to one immutable Git artifact, consume only verified native archives through exported CMake targets, execute semantic success and typed-refusal paths, and run on Linux, macOS, and Windows.
 - Added `Axiolid::axiolid` CMake integration for immutable source builds and verified native archives, with shared/static selection, deterministic manifests/checksums, Linux/macOS/Windows Debug/Release CI, and an AArch64 Linux cross-build gate.
 - Added the versioned `axiolid-capi` native boundary with generated C11 declarations, opaque globally unique handles, explicit ownership transfer, structured context-owned errors, bounded mesh import/export, Boolean and batch operations, audit/bounds/measurement/transform queries, exact-result classification, typed exact refusal, panic containment, and compiled C/Rust smoke coverage.
 - Added the supported `axiolid::application` boundary with explicit portable-provider selection, capability inspection, typed operation/provider/tolerance errors, shared Boolean and section conformance checks, and an isolated downstream consumer/closure fixture. The facade exposes validation, measurement, Boolean and batched subtraction, mesh sectioning, ray queries, and strict exact-profile extrusion without leaking concrete providers or silently falling back from exact to mesh.
@@ -60,6 +61,7 @@ All notable changes to Axiolid are documented in this file.
 - Extracted scalar solid generation — profiles, lofts, sweeps, revolutions, extrusion, and bounded half-space clipping — from the L3 DAG compiler into the new L2 `axiolid-construct` crate. `axiolid-mesh-compile` now owns graph traversal, caching, model-driven directrices, and B-rep tessellation only; see [ADR 0023](./adr/0023-solid-generation-is-an-l2-crate.md).
 
 ### Fixed
+- Normalized generated C-header line endings before freshness comparison so the same committed ABI header verifies on Windows and Unix hosts.
 - Hardened source-neutrality checks against dependency aliases while allowing comments, and mutation-verified both behaviors.
 - Pinned every documentation and release workflow action to immutable commits; repository-wide regression coverage rejects mutable refs.
 - Updated the field gate, its 10/10 mutation probe, and nested ownership documentation for the `axiolid-field` value / `axiolid-field-ops` algorithm split, including all facade feature tiers.

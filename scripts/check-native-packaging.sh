@@ -25,4 +25,4 @@ then
   exit 1
 fi
 
-python3 scripts/test-native-cmake.py --build-type Release --linkage SHARED
+python3 scripts/test-native-cmake.py --build-type Release --linkage SHARED --mutations

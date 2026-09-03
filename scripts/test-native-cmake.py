@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -34,13 +35,18 @@ def run(args: list[str], *, env: dict[str, str] | None = None) -> str:
 
 
 def configure_build_test(
-    build: Path, build_type: str, linkage: str, extra: list[str], env: dict[str, str]
+    consumer: Path,
+    build: Path,
+    build_type: str,
+    linkage: str,
+    extra: list[str],
+    env: dict[str, str],
 ) -> str:
     run(
         [
             "cmake",
             "-S",
-            str(CONSUMER),
+            str(consumer),
             "-B",
             str(build),
             f"-DCMAKE_BUILD_TYPE={build_type}",
@@ -138,10 +144,145 @@ def install_source_package(
     )
 
 
+def expect_consumer_failure(
+    consumer: Path,
+    build: Path,
+    build_type: str,
+    linkage: str,
+    package_root: Path,
+    env: dict[str, str],
+    *,
+    configure_may_fail: bool,
+) -> None:
+    configured = subprocess.run(
+        [
+            "cmake",
+            "-S",
+            str(consumer),
+            "-B",
+            str(build),
+            f"-DCMAKE_BUILD_TYPE={build_type}",
+            f"-DAXIOLID_LINKAGE={linkage}",
+            f"-DAXIOLID_PACKAGE_ROOT={package_root}",
+        ],
+        env=env,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    if configured.returncode:
+        if configure_may_fail:
+            return
+        raise RuntimeError(
+            "symbol mutation failed during configuration instead of compile/link"
+        )
+    built = subprocess.run(
+        ["cmake", "--build", str(build), "--config", build_type, "--parallel", "2"],
+        env=env,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    if built.returncode == 0:
+        raise RuntimeError(f"mutated consumer unexpectedly built: {consumer.name}")
+
+
+def assert_package_mutations(
+    consumer: Path,
+    package_root: Path,
+    work: Path,
+    build_type: str,
+    linkage: str,
+    env: dict[str, str],
+) -> None:
+    symbol_consumer = work / "mutation-symbol-consumer"
+    shutil.copytree(consumer, symbol_consumer)
+    for name in ("main.c", "main.cpp"):
+        source = symbol_consumer / name
+        mutated = source.read_text(encoding="utf-8").replace(
+            "axiolid_v0_4_version", "axiolid_v0_4_removed_symbol"
+        )
+        if mutated == source.read_text(encoding="utf-8"):
+            raise RuntimeError(f"symbol mutation did not alter {name}")
+        source.write_text(mutated, encoding="utf-8")
+    expect_consumer_failure(
+        symbol_consumer,
+        work / "mutation-symbol-build",
+        build_type,
+        linkage,
+        package_root,
+        env,
+        configure_may_fail=False,
+    )
+    no_header = work / "mutation-no-header-package"
+    shutil.copytree(package_root, no_header)
+    (no_header / "include/axiolid.h").unlink()
+    expect_consumer_failure(
+        consumer,
+        work / "mutation-header-build",
+        build_type,
+        linkage,
+        no_header,
+        env,
+        configure_may_fail=True,
+    )
+
+    no_config = work / "mutation-no-config-package"
+    shutil.copytree(package_root, no_config)
+    (no_config / "lib/cmake/Axiolid/AxiolidConfig.cmake").unlink()
+    expect_consumer_failure(
+        consumer,
+        work / "mutation-package-build",
+        build_type,
+        linkage,
+        no_config,
+        env,
+        configure_may_fail=True,
+    )
+
+    mutations = ["symbol", "header", "package"]
+    if linkage == "STATIC":
+        no_runtime_links = work / "mutation-no-runtime-links-package"
+        shutil.copytree(package_root, no_runtime_links)
+        targets = no_runtime_links / "lib/cmake/Axiolid/AxiolidTargets.cmake"
+        original = targets.read_text(encoding="utf-8")
+        mutated = re.sub(
+            r'^  INTERFACE_LINK_LIBRARIES "[^\"]+"\n',
+            "",
+            original,
+            count=1,
+            flags=re.MULTILINE,
+        )
+        if mutated == original and os.name != "nt":
+            raise RuntimeError(
+                "static package declares no runtime-link closure to test"
+            )
+        if mutated != original:
+            targets.write_text(mutated, encoding="utf-8")
+            expect_consumer_failure(
+                consumer,
+                work / "mutation-runtime-links-build",
+                build_type,
+                linkage,
+                no_runtime_links,
+                env,
+                configure_may_fail=False,
+            )
+            mutations.append("runtime links")
+    print(f"native package mutations rejected: {', '.join(mutations)}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build-type", choices=("Debug", "Release"), default="Release")
     parser.add_argument("--linkage", choices=("SHARED", "STATIC"), default="SHARED")
+    parser.add_argument(
+        "--mutations",
+        action="store_true",
+        help="prove required symbol, header, and package removal are rejected",
+    )
     args = parser.parse_args()
     profile = "debug" if args.build_type == "Debug" else "release"
     try:
@@ -152,8 +293,11 @@ def main() -> int:
                 env.get("CARGO_TARGET_DIR", work / "cargo-target")
             ).resolve()
             env["CARGO_TARGET_DIR"] = str(cargo_target)
+            consumer = work / "consumer"
+            shutil.copytree(CONSUMER, consumer)
             assert_embedded_build_type_unchanged(work, cargo_target, env)
             source = configure_build_test(
+                consumer,
                 work / "source",
                 args.build_type,
                 args.linkage,
@@ -172,10 +316,11 @@ def main() -> int:
                 env,
             )
             installed = configure_build_test(
+                consumer,
                 work / "installed-consumer",
                 args.build_type,
                 args.linkage,
-                [f"-DCMAKE_PREFIX_PATH={install_prefix}"],
+                [f"-DAXIOLID_PACKAGE_ROOT={install_prefix}"],
                 env,
             )
             package_output = work / "packages"
@@ -206,16 +351,26 @@ def main() -> int:
             )
             package_root = Path(verify_log.strip().splitlines()[-1])
             packaged = configure_build_test(
+                consumer,
                 work / "package",
                 args.build_type,
                 args.linkage,
-                [f"-DCMAKE_PREFIX_PATH={package_root}"],
+                [f"-DAXIOLID_PACKAGE_ROOT={package_root}"],
                 env,
             )
             if source != installed or source != packaged or source != "0.4":
                 raise RuntimeError(
                     "source/install/archive behavior differs: "
                     f"{source!r}, {installed!r}, {packaged!r}"
+                )
+            if args.mutations:
+                assert_package_mutations(
+                    consumer,
+                    package_root,
+                    work,
+                    args.build_type,
+                    args.linkage,
+                    env,
                 )
     except (OSError, RuntimeError, subprocess.SubprocessError) as error:
         print(f"native CMake test failed: {error}", file=sys.stderr)
