@@ -29,6 +29,7 @@ axiolid-topology.workspace = true
 axiolid-tessellation-contract.workspace = true
 earcut = "0.4"
 [dev-dependencies]
+axiolid-heal.workspace = true
 # The measurement oracle. `volume_properties` audits closed-two-manifoldness
 # before it integrates, so using it makes the generation tests assert
 # watertightness and volume in one call instead of trusting a hand-rolled
@@ -43,4 +44,4 @@ role = "algorithm.construction"
 domain = "construction"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-contracts", "axiolid-evaluate", "axiolid-guarantees", "axiolid-mesh-boolean-contract", "axiolid-mesh-contracts", "axiolid-measure", "axiolid-mesh", "axiolid-nurbs", "axiolid-overlay", "axiolid-predicates", "axiolid-primitive", "axiolid-profile", "axiolid-reference", "axiolid-surface", "axiolid-tessellation-contract", "axiolid-topology"]
+allowed-internal-dependencies = ["axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-contracts", "axiolid-evaluate", "axiolid-guarantees", "axiolid-heal", "axiolid-mesh-boolean-contract", "axiolid-mesh-contracts", "axiolid-measure", "axiolid-mesh", "axiolid-nurbs", "axiolid-overlay", "axiolid-predicates", "axiolid-primitive", "axiolid-profile", "axiolid-reference", "axiolid-surface", "axiolid-tessellation-contract", "axiolid-topology"]

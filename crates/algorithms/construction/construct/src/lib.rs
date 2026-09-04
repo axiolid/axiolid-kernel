@@ -47,6 +47,7 @@ pub mod feature;
 pub mod half_space;
 pub mod hull;
 pub mod loft;
+pub mod polyhedron;
 pub mod profile;
 pub mod result;
 pub mod revolve;

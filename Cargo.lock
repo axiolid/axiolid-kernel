@@ -142,6 +142,7 @@ dependencies = [
  "axiolid-curve",
  "axiolid-evaluate",
  "axiolid-guarantees",
+ "axiolid-heal",
  "axiolid-measure",
  "axiolid-mesh",
  "axiolid-mesh-boolean-contract",

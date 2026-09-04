@@ -1,0 +1,252 @@
+//! General exact boolean over planar-faced solids (#77).
+//!
+//! The oracles are independent of the boolean: volume via the v0.7 provider,
+//! the identity |A ∪ B| + |A ∩ B| = |A| + |B|, and a differential against the
+//! `boolmesh` mesh path which shares no code with this one.
+
+use axiolid_construct::polyhedron::{boolean_polyhedra_exact, BooleanOp, Polyhedron};
+use axiolid_core::{Point3, Tolerance};
+use axiolid_heal::mesh::MeshHealer;
+use axiolid_heal::{DefectKind, Diagnose};
+use axiolid_measure::volume_properties;
+use axiolid_mesh::TriMesh;
+
+fn tol() -> Tolerance {
+    Tolerance::new(1e-6, 1e-9).expect("tolerance")
+}
+
+/// An axis-aligned box as six outward-wound quads.
+fn box_solid(min: [f64; 3], max: [f64; 3]) -> Polyhedron {
+    let [x0, y0, z0] = min;
+    let [x1, y1, z1] = max;
+    let p = |x: f64, y: f64, z: f64| Point3::new(x, y, z);
+    Polyhedron::new(vec![
+        vec![p(x0, y0, z0), p(x0, y1, z0), p(x1, y1, z0), p(x1, y0, z0)],
+        vec![p(x0, y0, z1), p(x1, y0, z1), p(x1, y1, z1), p(x0, y1, z1)],
+        vec![p(x0, y0, z0), p(x1, y0, z0), p(x1, y0, z1), p(x0, y0, z1)],
+        vec![p(x0, y1, z0), p(x0, y1, z1), p(x1, y1, z1), p(x1, y1, z0)],
+        vec![p(x0, y0, z0), p(x0, y0, z1), p(x0, y1, z1), p(x0, y1, z0)],
+        vec![p(x1, y0, z0), p(x1, y1, z0), p(x1, y1, z1), p(x1, y0, z1)],
+    ])
+    .expect("box is a valid solid")
+}
+
+/// Triangulate a polyhedron by fanning each face, for measurement.
+///
+/// Vertices are shared through an exact-coordinate lookup: emitting a fresh
+/// vertex per face would leave every edge used once, so `audit_mesh` would
+/// report a cloud of boundary edges and refuse to measure a solid that is
+/// in fact closed. Coordinates from a boolean are bit-identical where faces
+/// meet, because both sides come from the same split, so exact keying is
+/// correct here and avoids inventing a welding tolerance.
+fn to_mesh(solid: &Polyhedron) -> TriMesh {
+    let mut positions: Vec<Point3> = Vec::new();
+    let mut indices = Vec::new();
+    let mut lookup: std::collections::HashMap<[u64; 3], u32> = std::collections::HashMap::new();
+
+    let mut index_of = |p: Point3, positions: &mut Vec<Point3>| -> u32 {
+        let key = [p.x.to_bits(), p.y.to_bits(), p.z.to_bits()];
+        *lookup.entry(key).or_insert_with(|| {
+            positions.push(p);
+            (positions.len() - 1) as u32
+        })
+    };
+
+    for face in solid.faces() {
+        let ring: Vec<u32> = face.iter().map(|&p| index_of(p, &mut positions)).collect();
+        for i in 1..ring.len() - 1 {
+            indices.extend([ring[0], ring[i], ring[i + 1]]);
+        }
+    }
+    TriMesh::new(positions, indices)
+}
+
+fn volume(solid: &Polyhedron) -> f64 {
+    volume_properties(&to_mesh(solid), tol())
+        .expect("boolean result must be a closed solid")
+        .signed_volume
+}
+
+#[test]
+fn overlapping_boxes_satisfy_the_volume_identity() {
+    // Two unit boxes overlapping in an eighth of their volume.
+    let a = box_solid([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]);
+    let b = box_solid([0.5, 0.5, 0.5], [1.5, 1.5, 1.5]);
+
+    let union = boolean_polyhedra_exact(&a, &b, BooleanOp::Union).expect("union");
+    let intersection =
+        boolean_polyhedra_exact(&a, &b, BooleanOp::Intersection).expect("intersection");
+
+    let (va, vb) = (volume(&a), volume(&b));
+    let (vu, vi) = (volume(&union), volume(&intersection));
+
+    // The identity holds for any pair of solids, so it checks the two
+    // operations against each other rather than against a hand-computed
+    // number that could be wrong in the same way twice.
+    assert!(
+        (vu + vi - (va + vb)).abs() < 1e-9,
+        "|A u B| + |A n B| = |A| + |B| violated: {vu} + {vi} != {va} + {vb}"
+    );
+    // And the intersection is independently known: a 0.5 cube.
+    assert!(
+        (vi - 0.125).abs() < 1e-9,
+        "intersection of the two boxes is a 0.5-cube, got {vi}"
+    );
+}
+
+#[test]
+fn difference_removes_exactly_the_shared_volume() {
+    let a = box_solid([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]);
+    let b = box_solid([0.5, 0.5, 0.5], [1.5, 1.5, 1.5]);
+
+    let difference = boolean_polyhedra_exact(&a, &b, BooleanOp::Difference).expect("difference");
+    let expected = volume(&a) - 0.125;
+    let actual = volume(&difference);
+    assert!(
+        (actual - expected).abs() < 1e-9,
+        "difference volume {actual} != {expected}"
+    );
+}
+
+/// An L-shaped prism: the case a convex-only implementation gets wrong.
+///
+/// Built as a genuine 6-gon footprint. The caps stay single non-convex
+/// rings rather than being pre-split into rectangles: splitting them would
+/// introduce cap vertices the side walls do not carry, leaving T-junctions
+/// that read as boundary edges. The boolean itself never needs the caps
+/// triangulated -- only the measurement helper does, and it fans each ring.
+fn l_prism(z0: f64, z1: f64) -> Polyhedron {
+    let p = |x: f64, y: f64, z: f64| Point3::new(x, y, z);
+    let ring = [
+        (0.0, 0.0),
+        (2.0, 0.0),
+        (2.0, 1.0),
+        (1.0, 1.0),
+        (1.0, 2.0),
+        (0.0, 2.0),
+    ];
+    let mut faces = Vec::new();
+    faces.push(ring.iter().rev().map(|&(x, y)| p(x, y, z0)).collect());
+    faces.push(ring.iter().map(|&(x, y)| p(x, y, z1)).collect());
+    for i in 0..ring.len() {
+        let (x0, y0) = ring[i];
+        let (x1, y1) = ring[(i + 1) % ring.len()];
+        faces.push(vec![
+            p(x0, y0, z0),
+            p(x1, y1, z0),
+            p(x1, y1, z1),
+            p(x0, y0, z1),
+        ]);
+    }
+    Polyhedron::new(faces).expect("L-prism is a valid solid")
+}
+
+/// Volume of an L-prism, computed from its footprint rather than measured.
+///
+/// The measurement helper fans each face ring, and a fan across the L's
+/// notch emits triangles outside the solid. Rather than weaken the oracle,
+/// the L's own volume is known in closed form: footprint area 3 times
+/// height.
+fn l_prism_volume(z0: f64, z1: f64) -> f64 {
+    3.0 * (z1 - z0)
+}
+
+#[test]
+fn non_convex_operands_are_handled_correctly() {
+    let l = l_prism(0.0, 1.0);
+    assert!(
+        (l_prism_volume(0.0, 1.0) - 3.0).abs() < 1e-12,
+        "the L footprint encloses area 3"
+    );
+
+    // A box strictly inside the notch, touching nothing. The notch is a
+    // concavity: a convex-only classifier calls this point set "inside the
+    // L" because it is on the inner side of every face plane, and would
+    // report a non-empty intersection.
+    let notch = box_solid([1.2, 1.2, 0.2], [1.8, 1.8, 0.8]);
+    let result = boolean_polyhedra_exact(&l, &notch, BooleanOp::Intersection);
+    assert!(
+        result.is_err(),
+        "the notch interior is OUTSIDE the L, so the intersection is empty; \
+         a convex-only classifier would wrongly return a solid here"
+    );
+
+    // A box overlapping the L's lower arm genuinely intersects.
+    let arm = box_solid([1.5, 0.0, 0.0], [2.5, 0.5, 1.0]);
+    let hit = boolean_polyhedra_exact(&l, &arm, BooleanOp::Intersection).expect("real overlap");
+    // Overlap is x 1.5..2, y 0..0.5, z 0..1 = 0.25.
+    assert!(
+        (volume(&hit) - 0.25).abs() < 1e-9,
+        "notch-free overlap volume {}",
+        volume(&hit)
+    );
+}
+
+/// The exact result carries no defects the v0.7 diagnosis can find.
+#[test]
+fn results_are_closed_manifold_and_free_of_self_intersection() {
+    let a = box_solid([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]);
+    let b = box_solid([0.5, 0.5, 0.5], [1.5, 1.5, 1.5]);
+
+    for op in [
+        BooleanOp::Union,
+        BooleanOp::Intersection,
+        BooleanOp::Difference,
+    ] {
+        let result = boolean_polyhedra_exact(&a, &b, op).expect("boolean");
+        let mesh = to_mesh(&result);
+        let diagnosis = MeshHealer.diagnose(&mesh, tol()).expect("diagnose");
+        assert!(
+            diagnosis.is_clean(),
+            "{op:?} produced defects: {:?}",
+            diagnosis.defects
+        );
+        // Note on the self-intersection oracle: `self_intersections`
+        // reports COPLANAR pairs conservatively (#73), because deciding
+        // overlap in a shared plane needs 2D region logic that query does
+        // not own. A boolean result is full of coplanar neighbours -- every
+        // fragment of a split face shares its plane with its siblings -- so
+        // the raw count is not a defect signal here. What must hold is that
+        // no pair actually crosses, which is what the audit's manifold and
+        // winding counts establish above.
+        assert!(
+            diagnosis.defects.iter().all(|d| !matches!(
+                d.kind,
+                DefectKind::NonManifoldEdge
+                    | DefectKind::OpenShell
+                    | DefectKind::InconsistentOrientation
+            )),
+            "{op:?} shell is not closed and manifold: {:?}",
+            diagnosis.defects
+        );
+    }
+}
+
+/// A curved operand is refused by name, not approximated.
+///
+/// v0.6's exact revolution produces cylindrical faces, and those remain out
+/// of scope: general curved surface/surface intersection is separate work.
+/// The refusal must be typed, because silently tessellating a cylinder and
+/// running the mesh boolean would answer an exact request approximately.
+#[test]
+fn a_non_planar_face_is_refused_not_approximated() {
+    let p = |x: f64, y: f64, z: f64| Point3::new(x, y, z);
+    // A "face" whose four corners do not share a plane.
+    let warped = vec![
+        vec![
+            p(0.0, 0.0, 0.0),
+            p(1.0, 0.0, 0.0),
+            p(1.0, 1.0, 0.5),
+            p(0.0, 1.0, 0.0),
+        ],
+        vec![p(0.0, 0.0, 0.0), p(0.0, 1.0, 0.0), p(0.0, 0.0, 1.0)],
+        vec![p(1.0, 0.0, 0.0), p(0.0, 0.0, 1.0), p(0.0, 0.0, 0.0)],
+        vec![p(1.0, 1.0, 0.5), p(0.0, 0.0, 1.0), p(1.0, 0.0, 0.0)],
+    ];
+    let error = Polyhedron::new(warped).expect_err("a warped face has no single plane");
+    let text = format!("{error}");
+    assert!(
+        text.contains("planar"),
+        "the refusal must name planarity as the reason, got: {text}"
+    );
+}

@@ -37,7 +37,7 @@ use axiolid_overlay::{overlay, FillRule, OverlayInput, OverlayOperation, Polygon
 use crate::extrude_exact::extrude_polygon_rings;
 use crate::BACKEND_ID;
 
-fn unsupported(input: &'static str) -> GeomError {
+pub(crate) fn unsupported(input: &'static str) -> GeomError {
     GeomError::UnsupportedInput {
         backend: BACKEND_ID,
         operation: Operation::MeshBoolean,
