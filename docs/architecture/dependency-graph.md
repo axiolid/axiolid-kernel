@@ -22,6 +22,7 @@ graph TD
     axiolid_exact_compile_contract["axiolid-exact-compile-contract\ncontract.operation"]
     axiolid_field["axiolid-field\nrepresentation.sampled"]
     axiolid_field_ops["axiolid-field-ops\nalgorithm.sampled"]
+    axiolid_fixtures["axiolid-fixtures\ntool.fixtures"]
     axiolid_guarantees["axiolid-guarantees\ncontract.guarantees"]
     axiolid_heal["axiolid-heal\nalgorithm.repair"]
     axiolid_linear["axiolid-linear\nrepresentation.atomic"]
@@ -130,6 +131,8 @@ graph TD
     axiolid_field --> axiolid_core
     axiolid_field_ops --> axiolid_core
     axiolid_field_ops --> axiolid_field
+    axiolid_fixtures --> axiolid_core
+    axiolid_fixtures --> axiolid_mesh
     axiolid_heal --> axiolid_core
     axiolid_heal --> axiolid_mesh
     axiolid_linear --> axiolid_core
@@ -143,7 +146,9 @@ graph TD
     axiolid_mesh_boolean_boolmesh --> axiolid_contracts
     axiolid_mesh_boolean_boolmesh --> axiolid_core
     axiolid_mesh_boolean_boolmesh --> axiolid_dispatch
+    axiolid_mesh_boolean_boolmesh --> axiolid_fixtures
     axiolid_mesh_boolean_boolmesh --> axiolid_guarantees
+    axiolid_mesh_boolean_boolmesh --> axiolid_measure
     axiolid_mesh_boolean_boolmesh --> axiolid_mesh
     axiolid_mesh_boolean_boolmesh --> axiolid_mesh_boolean_contract
     axiolid_mesh_boolean_boolmesh --> axiolid_mesh_contracts

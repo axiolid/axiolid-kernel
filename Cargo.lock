@@ -227,6 +227,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "axiolid-fixtures"
+version = "0.4.0"
+dependencies = [
+ "axiolid-core",
+ "axiolid-mesh",
+]
+
+[[package]]
 name = "axiolid-guarantees"
 version = "0.4.0"
 
@@ -278,7 +286,9 @@ dependencies = [
  "axiolid-contracts",
  "axiolid-core",
  "axiolid-dispatch",
+ "axiolid-fixtures",
  "axiolid-guarantees",
+ "axiolid-measure",
  "axiolid-mesh",
  "axiolid-mesh-boolean-contract",
  "axiolid-mesh-contracts",

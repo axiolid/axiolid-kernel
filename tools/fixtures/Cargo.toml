@@ -1,0 +1,24 @@
+[package]
+name = "axiolid-fixtures"
+description = "Shared adversarial and degenerate geometry fixtures with provenance"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+publish = false
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-mesh.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "tools"
+role = "tool.fixtures"
+domain = "testing.fixtures"
+public = false
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core", "axiolid-mesh"]
