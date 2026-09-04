@@ -165,7 +165,7 @@ pub fn millimetre_column() -> Fixture {
         name: "millimetre_column",
         mesh: column_mesh(),
         provenance: Provenance {
-            source: "ADR 0014, upstream issue 1155 (IfcOpenShell halfspace flyaway).",
+            source: "ADR 0014, upstream issue 1155: a half-space clip flyaway.",
             licence: "Original reconstruction from the published bug description.",
             expectation: "Clipped output stays within the column bounds, or refuses.",
         },

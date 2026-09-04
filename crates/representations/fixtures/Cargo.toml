@@ -15,8 +15,8 @@ axiolid-mesh.workspace = true
 
 [package.metadata.axiolid]
 architecture-version = 1
-layer = "tools"
-role = "tool.fixtures"
+layer = "representations"
+role = "representation.fixtures"
 domain = "testing.fixtures"
 public = true
 format-neutral = true

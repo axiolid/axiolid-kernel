@@ -8,6 +8,7 @@ members = [
     "crates/representations/analytic/primitive",
     "crates/representations/region/profile",
     "crates/representations/topology",
+    "crates/representations/fixtures",
     "crates/representations/brep",
     "crates/representations/discrete/mesh",
     "crates/representations/sampled/field",
@@ -41,7 +42,6 @@ members = [
     "crates/execution/gpu",
     "crates/facade/axiolid",
     "crates/facade/axiolid-capi",
-    "tools/fixtures",
     "tools/oracle",
     "tools/xtask",
 ]
@@ -76,7 +76,7 @@ axiolid-brep = { path = "crates/representations/brep", version = "0.4.0" }
 axiolid-tessellation-contract = { path = "crates/contracts/operations/tessellate", version = "0.4.0" }
 axiolid-spatial = { path = "crates/algorithms/query/spatial", version = "0.4.0" }
 axiolid-measure = { path = "crates/algorithms/query/measure", version = "0.4.0" }
-axiolid-fixtures = { path = "tools/fixtures", version = "0.4.0" }
+axiolid-fixtures = { path = "crates/representations/fixtures", version = "0.4.0" }
 axiolid-overlay = { path = "crates/algorithms/planar/overlay", version = "0.4.0" }
 axiolid-project = { path = "crates/algorithms/planar/project", version = "0.4.0" }
 axiolid-route = { path = "crates/algorithms/planar/route", version = "0.4.0" }

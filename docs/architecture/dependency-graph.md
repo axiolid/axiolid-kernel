@@ -22,7 +22,7 @@ graph TD
     axiolid_exact_compile_contract["axiolid-exact-compile-contract\ncontract.operation"]
     axiolid_field["axiolid-field\nrepresentation.sampled"]
     axiolid_field_ops["axiolid-field-ops\nalgorithm.sampled"]
-    axiolid_fixtures["axiolid-fixtures\ntool.fixtures"]
+    axiolid_fixtures["axiolid-fixtures\nrepresentation.fixtures"]
     axiolid_guarantees["axiolid-guarantees\ncontract.guarantees"]
     axiolid_heal["axiolid-heal\nalgorithm.repair"]
     axiolid_linear["axiolid-linear\nrepresentation.atomic"]
