@@ -11,8 +11,8 @@ Each profile is a compatibility promise verified by `cargo xtask architecture cl
 | `2d-curves` | 3 | A 2D plan-geometry application: curves, affine transforms, and application-owned unit conversion without solids or CSG. |
 | `parametric-curves` | 7 | A parametric application: curve/surface values plus scalar evaluation, without the reference umbrella. |
 | `cad-exact` | 11 | A CAD application: analytic curves/surfaces, topology, exact B-rep results, and NURBS. |
-| `rust-facade-application` | 28 | Supported facade boundary with portable providers for the v0.4 reference workflows. |
-| `c-abi-profile` | 29 | Versioned native boundary over the supported portable application provider bundle. |
+| `rust-facade-application` | 29 | Supported facade boundary with portable providers for the v0.4 reference workflows. |
+| `c-abi-profile` | 30 | Versioned native boundary over the supported portable application provider bundle. |
 
 ## linear-intersection-minimal
 
@@ -126,6 +126,7 @@ Compiles exactly these internal packages:
 - `axiolid-mesh-section-contract`
 - `axiolid-model`
 - `axiolid-nurbs`
+- `axiolid-overlay`
 - `axiolid-predicates`
 - `axiolid-primitive`
 - `axiolid-profile`
@@ -166,6 +167,7 @@ Compiles exactly these internal packages:
 - `axiolid-mesh-section-contract`
 - `axiolid-model`
 - `axiolid-nurbs`
+- `axiolid-overlay`
 - `axiolid-predicates`
 - `axiolid-primitive`
 - `axiolid-profile`
