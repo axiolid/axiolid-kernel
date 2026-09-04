@@ -5,6 +5,7 @@ All notable changes to Axiolid are documented in this file.
 ## [Unreleased]
 
 ### Added
+- Added `decompose` and `compose` to `axiolid-mesh`, splitting a mesh into connected components and recombining them. Two providers previously counted components and discarded the partition; `component_count` is now a caller of the shared implementation and `boolmesh`'s private union-find is removed. Component order follows first appearance in the input, and a single-body mesh is returned unchanged rather than reindexed.
 - Added `offset_solid` and `shell_solid`: constant-distance miter offset and hollowing of planar-faced solids. Offsetting vertices rather than faces handles concave edges, and an offset that closes the gap between opposing walls is refused rather than emitted as a collapsed solid.
 - Added `fillet_extruded_profile`: a constant-radius fillet on one straight prism edge, producing a genuine cylindrical blend face tangent to both neighbours. v0.6 refused this by name rather than approximate it with a segmented chamfer.
 - Added `boolean_polyhedra_exact`, an exact boolean over general planar-faced solids. v0.6 handled coaxial prisms only; this accepts convex and non-convex operands in any orientation. Containment is exact ray-crossing parity rather than a convex-only plane test, and coplanar contact is resolved by normal agreement so a shared face is kept exactly once. Curved operands are refused by name rather than approximated.
