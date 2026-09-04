@@ -467,10 +467,21 @@ fn skips_are_reported_separately_from_passes() {
     }
 
     let report = conformance::run(&Refuses);
-    assert_eq!(
-        report.exercised(),
-        0,
-        "a provider that refuses everything proves nothing:\n{report}"
+    // Every check that needs the provider to DO something must skip. The one
+    // exception is the determinism declaration, which is a structural property
+    // of the provider rather than of a computed result, so it is answerable
+    // even by a provider that refuses all work.
+    let exercised_by_work: Vec<_> = report
+        .checks
+        .iter()
+        .filter(|check| matches!(check.outcome, Outcome::Passed))
+        .filter(|check| check.name != "determinism_declaration_is_verifiable")
+        .map(|check| check.name)
+        .collect();
+    assert!(
+        exercised_by_work.is_empty(),
+        "a provider that refuses everything proves nothing, but these passed: \
+         {exercised_by_work:?}\n{report}"
     );
     assert!(report.skipped() > 0, "{report}");
     // It is not "failing", but the exercised count is what stops it being

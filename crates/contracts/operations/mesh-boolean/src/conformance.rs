@@ -37,7 +37,7 @@ use core::fmt;
 use axiolid_core::{BooleanOperator, Tolerance};
 
 use crate::{BooleanOutcome, MeshBoolean};
-use axiolid_contracts::{ExecutionOptions, GeomError};
+use axiolid_contracts::{Determinism, ExecutionOptions, GeomError};
 use axiolid_mesh::TriMesh;
 
 /// Result of one conformance check.
@@ -206,6 +206,7 @@ pub fn run(provider: &impl MeshBoolean) -> ConformanceReport {
     check_inadmissible_operands_rejected(provider, &mut report);
     check_evidence_is_populated(provider, &mut report);
     check_determinism(provider, &mut report);
+    check_determinism_is_not_overstated(provider, &mut report);
     check_declared_granularity_is_honoured(provider, &mut report);
 
     report
@@ -437,6 +438,46 @@ fn check_determinism(provider: &impl MeshBoolean, report: &mut ConformanceReport
             report.record("repeated_calls_are_deterministic", skip_or_fail);
         }
     }
+}
+
+/// A provider must not declare a reproducibility level it cannot honour.
+///
+/// `check_determinism` above compares two calls in ONE process, so it cannot
+/// see the failure mode that matters here: `std`'s `RandomState` seeds each
+/// `HashMap` per process, so a provider deduping through one is stable within
+/// a run and unstable across runs. Two identical calls agree; a rebuild
+/// disagrees.
+///
+/// So the declaration is checked structurally instead. `Determinism::Bitwise`
+/// is the level that promises cross-process byte equality, and it is exactly
+/// the level a same-process test cannot verify. A provider claiming it must
+/// have earned it by construction — ordered vertex identity, no hash
+/// iteration, no thread-order-dependent accumulation — and the conformance
+/// suite has no way to confirm that from the outside.
+///
+/// Refusing the claim here is the fail-closed choice: an overstated level
+/// makes `Plan::admit` accept a step it should have refused, which is worse
+/// than an understated one that merely refuses work the provider could have
+/// done.
+fn check_determinism_is_not_overstated(
+    provider: &impl MeshBoolean,
+    report: &mut ConformanceReport,
+) {
+    let declared = provider.determinism();
+    report.record(
+        "determinism_declaration_is_verifiable",
+        if declared == Determinism::Bitwise {
+            Outcome::Failed {
+                detail: "provider declares Determinism::Bitwise, which this suite cannot \
+                         verify: cross-process byte equality is not observable from a \
+                         single-process check. Declare the strongest level the provider \
+                         can prove by construction instead"
+                    .into(),
+            }
+        } else {
+            Outcome::Passed
+        },
+    );
 }
 
 /// A pre-cancelled token must stop the operation, if the provider polls at all.

@@ -1,7 +1,7 @@
 //! Portable mesh-boolean provider contract.
 
 use axiolid_contracts::{
-    Backend, CancellationGranularity, ExecutionOptions, GeomResult, ScratchRequirement,
+    Backend, CancellationGranularity, Determinism, ExecutionOptions, GeomResult, ScratchRequirement,
 };
 use axiolid_core::BooleanOperator;
 use axiolid_mesh::TriMesh;
@@ -21,6 +21,21 @@ pub trait MeshBoolean: Backend {
     /// unbudgetable rather than silently assumed cheap.
     fn scratch_requirement(&self) -> ScratchRequirement {
         ScratchRequirement::Unbounded
+    }
+
+    /// Reproducibility this provider guarantees for its results.
+    ///
+    /// Defaults to [`Determinism::BestEffort`]: the weakest level, so a
+    /// provider that has not audited its own reproducibility cannot silently
+    /// satisfy a stronger request. Overstating this is the dangerous
+    /// direction — `Plan::admit` refuses a step whose guarantee is weaker
+    /// than the caller asked for, and that refusal is only sound if the
+    /// declared level is honest.
+    ///
+    /// A provider whose output depends on thread scheduling, hash seeding, or
+    /// any other run-to-run variation must not claim [`Determinism::Bitwise`].
+    fn determinism(&self) -> Determinism {
+        Determinism::BestEffort
     }
 
     /// How finely this provider polls a cancellation token.

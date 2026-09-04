@@ -1,7 +1,7 @@
 //! The `MeshBoolean` implementation.
 
 use axiolid_contracts::{
-    Backend, BackendDescriptor, BackendId, CancellationGranularity, ExecutionOptions,
+    Backend, BackendDescriptor, BackendId, CancellationGranularity, Determinism, ExecutionOptions,
     ExecutionTarget, GeomError, GeomResult, ScratchRequirement,
 };
 use axiolid_core::BooleanOperator;
@@ -140,6 +140,24 @@ fn check_result(result: &TriMesh, operation: BooleanOperator) -> GeomResult<()> 
 }
 
 impl MeshBoolean for BoolmeshBoolean {
+    /// Honest about the general path, which is not byte-reproducible.
+    ///
+    /// Upstream `boolmesh` dedups vertices through a randomly-seeded
+    /// `HashMap`, so its output ordering varies between processes even
+    /// single-threaded. That is the same root cause documented in
+    /// [`Self::subtract_boxes_analytic`], which avoids it with a `BTreeMap`. The general
+    /// path therefore cannot claim [`Determinism::Bitwise`] at any thread
+    /// count, and enabling `parallel` does not make it weaker than it
+    /// already is.
+    ///
+    /// [`Determinism::Topological`] is the honest ceiling: the result's
+    /// connectivity is stable, its vertex ordering is not. Callers needing
+    /// byte reproducibility use [`Self::subtract_boxes_analytic`],
+    /// whose ordered vertex identity makes it reproducible across processes.
+    fn determinism(&self) -> Determinism {
+        Determinism::Topological
+    }
+
     /// Measured, not guessed.
     ///
     /// `boolmesh` builds a Morton collider and intersection tables sized by the

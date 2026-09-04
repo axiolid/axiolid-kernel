@@ -15,7 +15,14 @@ axiolid-mesh.workspace = true
 axiolid-contracts.workspace = true
 axiolid-mesh-contracts.workspace = true
 axiolid-mesh-boolean-contract.workspace = true
-boolmesh = "0.1.9"
+boolmesh = { version = "0.1.9", default-features = false }
+
+[features]
+# Upstream multi-threading. OFF by default: the parallel path has not been
+# audited for run-to-run byte stability, and `determinism()` drops to
+# `BestEffort` when it is on, so `Plan::admit` refuses a stronger request
+# rather than silently returning a schedule-dependent result.
+parallel = ["boolmesh/rayon"]
 
 [[bench]]
 name = "subtract_many"
