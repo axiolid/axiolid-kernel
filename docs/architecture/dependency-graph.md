@@ -105,6 +105,7 @@ graph TD
     axiolid_construct --> axiolid_mesh_boolean_contract
     axiolid_construct --> axiolid_mesh_contracts
     axiolid_construct --> axiolid_nurbs
+    axiolid_construct --> axiolid_overlay
     axiolid_construct --> axiolid_primitive
     axiolid_construct --> axiolid_profile
     axiolid_construct --> axiolid_reference

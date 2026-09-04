@@ -267,3 +267,125 @@ fn an_exact_boolean_over_two_extrusions_compiles() {
         "the cut must appear as a hole loop, got {max_bounds}"
     );
 }
+
+fn rect_ring(cx: f64, cy: f64, w: f64, h: f64) -> Vec<axiolid_core::Point2> {
+    let (hw, hh) = (w / 2.0, h / 2.0);
+    vec![
+        axiolid_core::Point2::new(cx - hw, cy - hh),
+        axiolid_core::Point2::new(cx + hw, cy - hh),
+        axiolid_core::Point2::new(cx + hw, cy + hh),
+        axiolid_core::Point2::new(cx - hw, cy + hh),
+    ]
+}
+
+fn simple_base_area(brep: &axiolid_brep::ExactBRep) -> f64 {
+    let mut points: Vec<(f64, f64)> = brep
+        .topology()
+        .vertices()
+        .iter()
+        .filter(|v| v.position.z.abs() < 1e-9)
+        .map(|v| (v.position.x, v.position.y))
+        .collect();
+    points.dedup_by(|a, b| (a.0 - b.0).abs() < 1e-9 && (a.1 - b.1).abs() < 1e-9);
+    (0..points.len())
+        .map(|i| {
+            let (x0, y0) = points[i];
+            let (x1, y1) = points[(i + 1) % points.len()];
+            x0 * y1 - x1 * y0
+        })
+        .sum::<f64>()
+        .abs()
+        / 2.0
+}
+
+/// Differential: the exact prism boolean agrees with the mesh oracle (#66).
+///
+/// This lives in the compile crate rather than beside the implementation
+/// because axiolid-construct sits in the ALGORITHMS layer and boolmesh is a
+/// PROVIDER: an algorithms crate depending on a provider inverts the
+/// layering, and the architecture gate rejects it even as a dev-dependency.
+/// The compile crate already depends on both, so the differential belongs
+/// here.
+///
+/// The two paths share no code -- boolmesh works on triangles, the exact
+/// path on the planar overlay -- so agreement is evidence, not tautology.
+#[test]
+fn the_exact_prism_boolean_agrees_with_the_mesh_oracle() {
+    use axiolid_construct::boolean_exact::{boolean_prisms_exact, Prism};
+    use axiolid_construct::extrude::extrude_profile;
+    use axiolid_construct::profile::Rings;
+    use axiolid_contracts::ExecutionOptions;
+    use axiolid_core::Point2;
+    use axiolid_core::Vec3;
+    use axiolid_mesh_boolean_boolmesh::BoolmeshBoolean;
+    use axiolid_mesh_boolean_contract::MeshBoolean;
+
+    let subject_ring = rect_ring(0.0, 0.0, 4.0, 4.0);
+    let tool_ring = rect_ring(2.0, 0.0, 4.0, 4.0);
+    let height = 3.0;
+
+    // Exact path.
+    let exact = boolean_prisms_exact(
+        &Prism {
+            rings: vec![subject_ring.clone()],
+            bottom: 0.0,
+            top: height,
+        },
+        &Prism {
+            rings: vec![tool_ring.clone()],
+            bottom: 0.0,
+            top: height,
+        },
+        axiolid_core::BooleanOperator::Intersection,
+        axiolid_core::Tolerance::METRE,
+    )
+    .expect("exact intersection");
+    let exact_volume = simple_base_area(&exact) * height;
+
+    // Mesh path: build both prisms as meshes and intersect with boolmesh.
+    let to_mesh = |ring: &[Point2]| {
+        extrude_profile(
+            &Rings {
+                outer: ring.to_vec(),
+                holes: Vec::new(),
+            },
+            Vec3::Z,
+            height,
+            axiolid_core::Tolerance::METRE,
+        )
+        .expect("a rectangle extrudes")
+    };
+    let mesh_result = BoolmeshBoolean::new()
+        .boolean(
+            &to_mesh(&subject_ring),
+            &to_mesh(&tool_ring),
+            axiolid_core::BooleanOperator::Intersection,
+            &ExecutionOptions::new(Tolerance::METRE),
+        )
+        .expect("the mesh oracle intersects")
+        .mesh;
+
+    // Divergence-theorem volume: triangulation-invariant.
+    let mesh_volume: f64 = mesh_result
+        .indices
+        .chunks_exact(3)
+        .map(|t| {
+            let a = mesh_result.positions[t[0] as usize];
+            let b = mesh_result.positions[t[1] as usize];
+            let c = mesh_result.positions[t[2] as usize];
+            a.dot(b.cross(c))
+        })
+        .sum::<f64>()
+        / 6.0;
+
+    assert!(
+        (exact_volume - mesh_volume.abs()).abs() < 1e-6,
+        "exact and mesh paths disagree: {exact_volume} vs {}",
+        mesh_volume.abs()
+    );
+    // And both must equal the hand-computed 2x4x3.
+    assert!(
+        (exact_volume - 24.0).abs() < 1e-9,
+        "expected 24, got {exact_volume}"
+    );
+}

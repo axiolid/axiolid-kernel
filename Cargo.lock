@@ -144,7 +144,6 @@ dependencies = [
  "axiolid-guarantees",
  "axiolid-measure",
  "axiolid-mesh",
- "axiolid-mesh-boolean-boolmesh",
  "axiolid-mesh-boolean-contract",
  "axiolid-mesh-contracts",
  "axiolid-nurbs",
