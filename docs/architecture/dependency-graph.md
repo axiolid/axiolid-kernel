@@ -141,8 +141,11 @@ graph TD
     axiolid_linear_intersection --> axiolid_guarantees
     axiolid_linear_intersection --> axiolid_linear
     axiolid_linear_intersection --> axiolid_predicates
+    axiolid_measure --> axiolid_brep
     axiolid_measure --> axiolid_core
     axiolid_measure --> axiolid_mesh
+    axiolid_measure --> axiolid_surface
+    axiolid_measure --> axiolid_topology
     axiolid_mesh --> axiolid_core
     axiolid_mesh_boolean_boolmesh --> axiolid_contracts
     axiolid_mesh_boolean_boolmesh --> axiolid_core

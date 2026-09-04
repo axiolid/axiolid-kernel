@@ -10,6 +10,7 @@
 use axiolid_construct::feature::{chamfer_extruded_profile, EdgeSelector, FeatureSize};
 use axiolid_contracts::GeomError;
 use axiolid_core::{Point2, Tolerance, Vec3};
+use axiolid_measure::exact_properties;
 use axiolid_profile::{Profile, RectangleProfile};
 
 fn rect(x: f64, y: f64) -> Profile {
@@ -90,29 +91,22 @@ fn the_chamfered_cross_section_loses_the_triangle() {
         "a chamfered rectangle is a pentagon: {base:?}"
     );
 
-    // Shoelace area of the built cross-section.
-    let area: f64 = (0..base.len())
-        .map(|i| {
-            let (x0, y0) = base[i];
-            let (x1, y1) = base[(i + 1) % base.len()];
-            x0 * y1 - x1 * y0
-        })
-        .sum::<f64>()
-        .abs()
-        / 2.0;
+    // Volume comes from the measurement provider, not a local sum. The
+    // cross-section count above already pins the topology; this pins the
+    // magnitude against an oracle derived from the inputs.
+    let measured = exact_properties(&chamfered, Tolerance::METRE)
+        .expect("a chamfered prism is a closed planar solid");
 
     // Oracle from the inputs: full rectangle minus the right triangle of
-    // legs `distance` that the cut removes.
-    let expected = x * y - distance * distance / 2.0;
+    // legs `distance` that the cut removes, extruded through `depth`.
+    let expected_area = x * y - distance * distance / 2.0;
+    let expected_volume = expected_area * depth;
     assert!(
-        (area - expected).abs() < 1e-9,
-        "expected area {expected}, built {area} (a no-op chamfer would give {})",
-        x * y
+        (measured.signed_volume - expected_volume).abs() < 1e-9,
+        "expected volume {expected_volume}, measured {} (a no-op chamfer would give {})",
+        measured.signed_volume,
+        x * y * depth
     );
-
-    // And the volume follows, since the chamfer keeps it a prism.
-    let volume = area * depth;
-    assert!((volume - expected * depth).abs() < 1e-9);
 }
 
 /// A fillet is refused, not approximated by a many-segment chamfer.

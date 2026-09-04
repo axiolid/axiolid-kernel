@@ -269,8 +269,11 @@ dependencies = [
 name = "axiolid-measure"
 version = "0.4.0"
 dependencies = [
+ "axiolid-brep",
  "axiolid-core",
  "axiolid-mesh",
+ "axiolid-surface",
+ "axiolid-topology",
 ]
 
 [[package]]

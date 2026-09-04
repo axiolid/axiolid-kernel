@@ -5,17 +5,24 @@
 //! Algorithms are generic over representation and return structured failures;
 //! an open shell must not silently report a plausible volume.
 
+#[cfg(feature = "exact")]
+pub mod exact;
 pub mod measure;
 pub mod mesh;
+pub mod mesh_measure;
 pub mod mesh_proximity;
 pub mod properties;
 pub mod proximity;
 pub mod winding;
 
+#[cfg(feature = "exact")]
+pub use exact::{exact_properties, ExactMeasureError};
 pub use measure::Measure;
 pub use mesh::{
-    surface_properties, volume_properties, MeshMeasureError, SurfaceProperties, VolumeProperties,
+    second_moments, surface_properties, volume_properties, MeshMeasureError, SurfaceProperties,
+    VolumeProperties,
 };
+pub use mesh_measure::MeshMeasure;
 pub use mesh_proximity::{
     mesh_distance, proximity_components, MeshDistance, MeshProximityError, ProximityComponent,
 };

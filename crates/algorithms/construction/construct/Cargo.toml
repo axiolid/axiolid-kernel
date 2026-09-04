@@ -32,7 +32,7 @@ earcut = "0.4"
 # before it integrates, so using it makes the generation tests assert
 # watertightness and volume in one call instead of trusting a hand-rolled
 # divergence sum that would happily integrate a broken mesh.
-axiolid-measure.workspace = true
+axiolid-measure = { workspace = true, features = ["exact"] }
 axiolid-evaluate.workspace = true
 
 [package.metadata.axiolid]
