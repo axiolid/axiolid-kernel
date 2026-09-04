@@ -1,6 +1,6 @@
 # axiolid-heal implementation plan
 
-Status: architecture scaffold; algorithms incomplete. This is planning context,
+Status: diagnosis implemented; repair not started. This is planning context,
 not standing agent instruction.
 
 ## Established
@@ -8,9 +8,25 @@ not standing agent instruction.
 - Crate boundary and dependency direction are executable in the layering gate.
 - Public data/contracts compile. Behavior remains scaffold unless a test names it.
 
+## Implemented
+
+- `diagnose` produces a `Diagnosis` from a mesh: non-manifold edges,
+  inconsistent winding, boundary edges, degenerate triangles, and
+  self-intersecting triangle pairs.
+- `self_intersections` decides triangle-triangle crossing exactly, through
+  certified `orient3d` with a BVH broad phase. `self_intersections_brute_force`
+  is the exhaustive reference the accelerated path is checked against.
+- `Diagnosis::blocks_boolean` answers from measured defects rather than from
+  vocabulary.
+
 ## Next implementation wave
 
-Implement mesh diagnostics before any repairs; add topology mode only when its dependency is justified.
+Repair. Every repair must report what it changed, per defect, so a caller can
+audit the difference rather than trust it. Diagnosis landed first deliberately:
+a repair that cannot name what it fixed is not auditable.
+
+Coplanar overlapping triangles are currently reported conservatively as
+intersecting; deciding them needs 2D region logic this crate does not own.
 
 ## Exit evidence
 
