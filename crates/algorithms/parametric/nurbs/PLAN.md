@@ -31,16 +31,26 @@ Status: first general-kernel milestone implemented.
   explicit embedded pcurve on the containing face; dual-boundary ownership remains
   unresolved.
 - Verified closed-curve seam classification and parameter wrapping.
+- Exact degree elevation, in homogeneous coordinates so rational curves keep
+  their weights. Result is in Bezier form and deliberately not knot-minimal.
+- Knot removal and degree reduction, each measured against the original by
+  sampling and refused when the deviation exceeds the caller's tolerance. The
+  measured deviation is returned so a caller can apply its own budget.
+- Chord-length cubic interpolation passing through its points, and lofting
+  that interpolates across sections so interior sections are reproduced
+  exactly rather than merely approached.
 - Optional `axiolid/nurbs` facade feature and `parametric` bundle adoption.
 
 ## Later
 
-- Knot removal and degree operations.
+- Rational knot removal and rational degree reduction: correct handling works
+  in homogeneous coordinates and needs its own weight-consistency proof, so
+  the current operations refuse rational input rather than approximating it.
 - Ownership-aware boundary roots, full-multiplicity internal span joins, general
   tangent/overlap classification, curved surface/surface tracing and multispan
   stitching beyond the affine reference slice, and globally certified surface projection.
 - Surface-periodic seam wrapping.
-- Fitting, interpolation, lofting, and blending operations.
+- Blending operations.
 - Benchmarked optimized providers after scalar differential validation.
 
 No item is a capability claim until its public API, tests, and facade feature land.
