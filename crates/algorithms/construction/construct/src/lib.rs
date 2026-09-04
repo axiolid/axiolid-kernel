@@ -42,6 +42,7 @@ pub const BACKEND_ID: BackendId = BackendId::new("scalar-generate");
 pub mod center_line;
 pub mod extrude;
 mod extrude_exact;
+pub mod feature;
 pub mod half_space;
 pub mod loft;
 pub mod profile;

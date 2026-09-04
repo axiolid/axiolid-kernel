@@ -152,6 +152,16 @@ fn extrude_rectangle(
         ]);
     }
 
+    extrude_polygon_rings(&rings, offset)
+}
+
+/// Extrude closed polygon rings into an exact prism.
+///
+/// The ring-to-B-rep assembly is general over polygon rings, so it is shared
+/// rather than duplicated: a chamfered box is a prism over a pentagon, and a
+/// filleted one differs only in that an edge becomes an arc. Ring 0 is the
+/// outer boundary; any further rings are through-holes.
+pub(crate) fn extrude_polygon_rings(rings: &[Vec<Point2>], offset: Vec3) -> GeomResult<ExactBRep> {
     let ring_count = rings.len();
     let edge_count = ring_count * 12;
     let pcurve_count = ring_count * 24;
@@ -170,7 +180,7 @@ fn extrude_rectangle(
 
     let ring_topology = rings
         .iter()
-        .map(|ring| add_polygon_ring(&mut builder, ring, offset))
+        .map(|ring| add_polygon_ring(&mut builder, ring.as_slice(), offset))
         .collect::<GeomResult<Vec<_>>>()?;
 
     let bottom_surface = builder.add_surface(Surface::Plane(Plane {
