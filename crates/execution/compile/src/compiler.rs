@@ -725,6 +725,7 @@ impl<B: MeshBoolean> MeshCompiler for ReferenceMeshCompiler<B> {
         root: NodeId,
         options: &ExecutionOptions,
     ) -> GeomResult<TriMesh> {
+        self.admit_budget(options)?;
         let mut cache = Cache::new();
         self.evaluate(graph, root, options, &mut cache)
     }
@@ -738,6 +739,7 @@ impl<B: MeshBoolean> MeshCompiler for ReferenceMeshCompiler<B> {
         options: &ExecutionOptions,
         destination: &mut Vec<TriMesh>,
     ) -> GeomResult<()> {
+        self.admit_budget(options)?;
         destination.reserve(roots.len());
         let mut cache = Cache::new();
         for &root in roots {
@@ -748,6 +750,26 @@ impl<B: MeshBoolean> MeshCompiler for ReferenceMeshCompiler<B> {
 }
 
 impl<B: MeshBoolean> ReferenceMeshCompiler<B> {
+    /// Refuse a compilation whose memory budget this compiler cannot honour.
+    ///
+    /// Graph compilation caches every intermediate mesh, and peak size is
+    /// data-dependent, so `scratch_requirement` honestly reports
+    /// [`ScratchRequirement::Unbounded`]. By contract an unbounded requirement
+    /// never fits a DECLARED budget -- admitting it anyway would make the
+    /// budget advisory, which is the failure the type exists to prevent.
+    ///
+    /// Before this check the field was simply ignored here: a caller could set
+    /// a budget and watch the compiler allocate past it without a word. A
+    /// caller that sets no budget is unaffected.
+    fn admit_budget(&self, options: &ExecutionOptions) -> GeomResult<()> {
+        if self.scratch_requirement().fits_budget(options, 0) {
+            return Ok(());
+        }
+        Err(GeomError::BudgetExceeded {
+            resource: "graph compilation intermediate meshes",
+        })
+    }
+
     /// The boolean provider this compiler dispatches to.
     ///
     /// Exposed so an application can apply its own source-format set
