@@ -175,3 +175,224 @@ fn assemble<const N: usize, P: Clone>(
         self_intersect: curve.self_intersect,
     })
 }
+
+/// Remove one interior knot from a planar curve, or refuse.
+///
+/// Removal is lossy in general: a knot can only be dropped if the curve is
+/// already smooth enough there to be represented without it. This computes the
+/// candidate, MEASURES how far it actually moved, and refuses when that
+/// exceeds `tolerance`.
+///
+/// Measuring rather than trusting the recurrence is deliberate. The removal
+/// equations are an inverse of knot insertion and are only valid when the knot
+/// is genuinely removable; applying them to a knot that carries real shape
+/// produces a curve that looks plausible and is wrong. Sampling the result
+/// against the original turns that into a refusal instead.
+pub fn remove_knot2(
+    curve: &BSplineCurve2,
+    parameter: Scalar,
+    tolerance: Scalar,
+) -> GeomResult<BoundedResult<BSplineCurve2>> {
+    bspline_jet2(curve, parameter)?;
+    let candidate = remove(
+        curve,
+        parameter,
+        |p| [p.x, p.y],
+        |c| Point2::new(c[0], c[1]),
+    )?;
+    let deviation = deviation2(curve, &candidate)?;
+    accept(candidate, deviation, tolerance)
+}
+
+/// Remove one interior knot from a spatial curve, or refuse.
+pub fn remove_knot3(
+    curve: &BSplineCurve3,
+    parameter: Scalar,
+    tolerance: Scalar,
+) -> GeomResult<BoundedResult<BSplineCurve3>> {
+    bspline_jet3(curve, parameter)?;
+    let candidate = remove(
+        curve,
+        parameter,
+        |p| [p.x, p.y, p.z],
+        |c| Point3::new(c[0], c[1], c[2]),
+    )?;
+    let deviation = deviation3(curve, &candidate)?;
+    accept(candidate, deviation, tolerance)
+}
+
+/// Accept a lossy result only if it met the caller's tolerance.
+fn accept<C>(curve: C, deviation: Scalar, tolerance: Scalar) -> GeomResult<BoundedResult<C>> {
+    if !tolerance.is_finite() || tolerance < 0.0 {
+        return Err(GeomError::InvalidInput(
+            "tolerance must be finite and non-negative".to_owned(),
+        ));
+    }
+    if deviation > tolerance {
+        return Err(GeomError::Degenerate(format!(
+            "knot is not removable within tolerance: deviation {deviation:.3e} exceeds {tolerance:.3e}"
+        )));
+    }
+    Ok(BoundedResult {
+        curve,
+        deviation_upper_bound: deviation,
+    })
+}
+
+/// Samples used to measure how far a lossy result moved.
+///
+/// Dense enough to catch the local bulge a bad removal introduces, and fixed
+/// so the measurement is reproducible rather than depending on curve size.
+const DEVIATION_SAMPLES: usize = 128;
+
+fn deviation2(original: &BSplineCurve2, candidate: &BSplineCurve2) -> GeomResult<Scalar> {
+    let (lo, hi) = domain(original);
+    let mut worst: Scalar = 0.0;
+    for index in 0..=DEVIATION_SAMPLES {
+        let t = lo + (hi - lo) * (index as Scalar / DEVIATION_SAMPLES as Scalar);
+        let a = bspline_jet2(original, t)?.point;
+        let b = bspline_jet2(candidate, t)?.point;
+        worst = worst.max((a - b).length());
+    }
+    Ok(worst)
+}
+
+fn deviation3(original: &BSplineCurve3, candidate: &BSplineCurve3) -> GeomResult<Scalar> {
+    let (lo, hi) = domain(original);
+    let mut worst: Scalar = 0.0;
+    for index in 0..=DEVIATION_SAMPLES {
+        let t = lo + (hi - lo) * (index as Scalar / DEVIATION_SAMPLES as Scalar);
+        let a = bspline_jet3(original, t)?.point;
+        let b = bspline_jet3(candidate, t)?.point;
+        worst = worst.max((a - b).length());
+    }
+    Ok(worst)
+}
+
+/// Active parameter domain of a clamped curve.
+fn domain<P>(curve: &BSplineCurve<P>) -> (Scalar, Scalar) {
+    let mut expanded = Vec::new();
+    for (&knot, &multiplicity) in curve.knots.iter().zip(&curve.multiplicities) {
+        expanded.extend(core::iter::repeat_n(knot, multiplicity as usize));
+    }
+    let lo = expanded[usize::from(curve.degree)];
+    let hi = expanded[curve.control_points.len()];
+    (lo, hi)
+}
+
+/// Drop one knot by inverting the insertion recurrence.
+///
+/// Insertion computes new control points as convex combinations of old ones;
+/// removal walks that backwards from both ends of the affected span. When the
+/// knot is genuinely removable the two walks meet; when it is not, they
+/// disagree and the resulting curve differs from the original -- which is what
+/// the caller-side deviation check detects.
+fn remove<const N: usize, P: Clone>(
+    curve: &BSplineCurve<P>,
+    parameter: Scalar,
+    coordinates: impl Fn(&P) -> [Scalar; N],
+    point: impl Fn([Scalar; N]) -> P,
+) -> GeomResult<BSplineCurve<P>> {
+    if !parameter.is_finite() {
+        return Err(GeomError::InvalidInput(
+            "knot parameter must be finite".to_owned(),
+        ));
+    }
+    if curve.weights.is_some() {
+        return Err(GeomError::Unsupported {
+            backend: axiolid_contracts::BackendId::new("nurbs"),
+            operation: axiolid_contracts::Operation::CurveEvaluation,
+        });
+    }
+
+    let index = curve
+        .knots
+        .iter()
+        .position(|&k| k == parameter)
+        .ok_or_else(|| GeomError::InvalidInput("knot is not present in the curve".to_owned()))?;
+    if index == 0 || index + 1 == curve.knots.len() {
+        return Err(GeomError::InvalidInput(
+            "endpoint knots bound the domain and cannot be removed".to_owned(),
+        ));
+    }
+
+    let degree = usize::from(curve.degree);
+    let expanded = expand_local(curve);
+    // Last expanded position of this knot value.
+    let span = expanded
+        .iter()
+        .rposition(|&k| k == parameter)
+        .ok_or_else(|| GeomError::InvalidInput("knot vanished during expansion".to_owned()))?;
+    let multiplicity = curve.multiplicities[index] as usize;
+
+    // Piegl & Tiller A5.8. `temp` holds the recomputed run: index 0 and
+    // index `last + 1 - first` are seeded from the untouched neighbours, and
+    // the two walks meet in the middle.
+    let ord = degree + 1;
+    let first = span - degree;
+    let last = span - multiplicity;
+    let points: Vec<[Scalar; N]> = curve.control_points.iter().map(&coordinates).collect();
+
+    let mut temp: Vec<[Scalar; N]> = vec![[0.0; N]; last + 2 - first];
+    temp[0] = points[first - 1];
+    temp[last + 1 - first] = points[last + 1];
+
+    let (mut i, mut j) = (first, last);
+    let (mut ii, mut jj) = (1_usize, last - first);
+    while j > i {
+        let alfi = (parameter - expanded[i]) / (expanded[i + ord] - expanded[i]);
+        let alfj = (parameter - expanded[j]) / (expanded[j + ord] - expanded[j]);
+        for axis in 0..N {
+            temp[ii][axis] = (points[i][axis] - (1.0 - alfi) * temp[ii - 1][axis]) / alfi;
+            temp[jj][axis] = (points[j][axis] - alfj * temp[jj + 1][axis]) / (1.0 - alfj);
+        }
+        i += 1;
+        ii += 1;
+        j -= 1;
+        jj -= 1;
+    }
+
+    // Write the recomputed run back, then drop the surplus point. The
+    // meeting point (j == i) needs its own store: the loop above stops
+    // before writing it, and omitting it leaves one stale control point.
+    let mut result = points.clone();
+    let (mut i, mut j) = (first, last);
+    while j > i {
+        result[i] = temp[i - first + 1];
+        result[j] = temp[j - first + 1];
+        i += 1;
+        j -= 1;
+    }
+    if j == i {
+        result[i] = temp[i - first + 1];
+    }
+    result.remove(last);
+    let points = result;
+
+    let mut knots = curve.knots.clone();
+    let mut multiplicities = curve.multiplicities.clone();
+    multiplicities[index] -= 1;
+    if multiplicities[index] == 0 {
+        knots.remove(index);
+        multiplicities.remove(index);
+    }
+
+    Ok(BSplineCurve {
+        degree: curve.degree,
+        control_points: points.into_iter().map(&point).collect(),
+        knots,
+        multiplicities,
+        weights: None,
+        knot_spec: curve.knot_spec,
+        closed: curve.closed,
+        self_intersect: curve.self_intersect,
+    })
+}
+
+fn expand_local<P>(curve: &BSplineCurve<P>) -> Vec<Scalar> {
+    let mut expanded = Vec::new();
+    for (&knot, &multiplicity) in curve.knots.iter().zip(&curve.multiplicities) {
+        expanded.extend(core::iter::repeat_n(knot, multiplicity as usize));
+    }
+    expanded
+}
