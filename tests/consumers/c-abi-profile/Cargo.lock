@@ -79,6 +79,7 @@ dependencies = [
  "axiolid-mesh-contracts",
  "axiolid-nurbs",
  "axiolid-overlay",
+ "axiolid-predicates",
  "axiolid-primitive",
  "axiolid-profile",
  "axiolid-reference",
