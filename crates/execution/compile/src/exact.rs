@@ -7,6 +7,7 @@ use std::collections::{HashMap, HashSet};
 
 use axiolid_brep::ExactBRep;
 use axiolid_construct::extrude::extrude_profile_exact;
+use axiolid_construct::revolve_exact::revolve_profile_exact;
 use axiolid_contracts::{
     Backend, BackendDescriptor, BackendId, ExecutionOptions, ExecutionTarget, GeomError,
     GeomResult, Operation,
@@ -121,6 +122,29 @@ impl<'a> ExactCompilation<'a> {
                 };
                 extrude_profile_exact(profile, *direction, *depth, self.options.tolerance())
                     .map_err(remap_construction_error)
+            }
+            GeometryNode::SolidOperation(SolidOperation::Revolution {
+                profile,
+                axis_origin,
+                axis_direction,
+                angle,
+            }) => {
+                let profile_node = self.graph.get(*profile).ok_or_else(|| {
+                    GeomError::InvalidInput(format!(
+                        "revolution profile {profile:?} does not belong to this graph"
+                    ))
+                })?;
+                let GeometryNode::Profile(profile) = profile_node else {
+                    return Err(unsupported("revolution profile reference"));
+                };
+                revolve_profile_exact(
+                    profile,
+                    *axis_origin,
+                    *axis_direction,
+                    *angle,
+                    self.options.tolerance(),
+                )
+                .map_err(remap_construction_error)
             }
             _ => Err(unsupported(exact_input_family(node))),
         }

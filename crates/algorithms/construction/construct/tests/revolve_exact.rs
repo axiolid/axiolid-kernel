@@ -120,3 +120,54 @@ fn a_profile_crossing_the_axis_is_refused() {
         "got {error:?}"
     );
 }
+
+/// A straight fixed-reference sweep equals the linear extrusion it is.
+///
+/// The equality is the point: a separate implementation could drift from
+/// extrusion, so the sweep delegates and this pins that they agree.
+#[test]
+fn a_straight_sweep_equals_the_extrusion() {
+    use axiolid_construct::extrude::extrude_profile_exact;
+    use axiolid_construct::revolve_exact::fixed_reference_sweep_exact;
+
+    let profile = rect(2.0, 3.0);
+    let path = [Point3::ZERO, Point3::new(0.0, 0.0, 4.0)];
+
+    let swept = fixed_reference_sweep_exact(&profile, &path, Vec3::X, Tolerance::METRE)
+        .expect("a straight path sweeps exactly");
+    let extruded = extrude_profile_exact(&profile, Vec3::Z, 4.0, Tolerance::METRE)
+        .expect("the same solid as an extrusion");
+
+    assert_eq!(
+        swept.topology().faces().len(),
+        extruded.topology().faces().len(),
+        "a straight sweep must be the extrusion, face for face"
+    );
+    assert_eq!(swept.surfaces().len(), extruded.surfaces().len());
+}
+
+/// A curved directrix is refused: the walls stop being planes and cylinders.
+#[test]
+fn a_curved_sweep_path_is_refused() {
+    use axiolid_construct::revolve_exact::fixed_reference_sweep_exact;
+
+    // The middle point is off the line from first to last.
+    let path = [
+        Point3::ZERO,
+        Point3::new(1.0, 0.0, 2.0),
+        Point3::new(0.0, 0.0, 4.0),
+    ];
+    let error = fixed_reference_sweep_exact(&rect(2.0, 3.0), &path, Vec3::X, Tolerance::METRE)
+        .expect_err("a bent path is not a linear extrusion");
+
+    assert!(
+        matches!(
+            error,
+            GeomError::UnsupportedInput {
+                input: "exact sweep along a curved directrix",
+                ..
+            }
+        ),
+        "got {error:?}"
+    );
+}

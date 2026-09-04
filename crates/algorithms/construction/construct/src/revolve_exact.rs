@@ -34,6 +34,7 @@ use axiolid_topology::{
     Edge, EdgeUse, Face, FaceBound, FaceId, Loop, Orientation, Shell, Solid, Vertex,
 };
 
+use crate::extrude_exact::extrude_profile_exact;
 use crate::BACKEND_ID;
 
 fn unsupported(input: &'static str) -> GeomError {
@@ -415,4 +416,60 @@ fn finish_solid(mut builder: ExactBRepBuilder, faces: Vec<FaceId>) -> GeomResult
         });
     }
     Ok(exact)
+}
+
+/// Sweep a supported profile along a straight path with a fixed reference.
+///
+/// A fixed-reference sweep along a STRAIGHT directrix keeps the profile's
+/// orientation constant, so the swept solid is exactly a linear extrusion
+/// along that segment. Rather than build a second implementation that could
+/// drift from it, this delegates to `extrude_profile_exact`, which is the
+/// same solid by construction.
+///
+/// A curved directrix is refused: the profile then rotates along the path and
+/// the walls become general swept surfaces, not planes and cylinders. That is
+/// the curved-surface work this issue explicitly puts out of scope.
+pub fn fixed_reference_sweep_exact(
+    profile: &Profile,
+    path: &[Point3],
+    reference_direction: Vec3,
+    tolerance: Tolerance,
+) -> GeomResult<ExactBRep> {
+    if path.len() < 2 {
+        return Err(GeomError::InvalidInput(
+            "a sweep path needs at least two points".to_owned(),
+        ));
+    }
+    if !path.iter().all(|p| p.is_finite()) {
+        return Err(GeomError::InvalidInput(
+            "sweep path points must be finite".to_owned(),
+        ));
+    }
+    if !reference_direction.is_finite() || reference_direction.length() <= 0.0 {
+        return Err(GeomError::InvalidInput(
+            "sweep reference direction must be finite and non-zero".to_owned(),
+        ));
+    }
+
+    // Straightness is the precondition, so it is checked rather than assumed:
+    // every interior point must lie on the segment from first to last.
+    let start = path[0];
+    let end = path[path.len() - 1];
+    let span = end - start;
+    let length = span.length();
+    if length <= tolerance.linear() {
+        return Err(GeomError::Degenerate(
+            "sweep path start and end coincide, so the path has no direction".to_owned(),
+        ));
+    }
+    let direction = span / length;
+    for point in &path[1..path.len() - 1] {
+        let offset = *point - start;
+        let perpendicular = offset - direction * direction.dot(offset);
+        if perpendicular.length() > tolerance.linear() {
+            return Err(unsupported("exact sweep along a curved directrix"));
+        }
+    }
+
+    extrude_profile_exact(profile, direction, length, tolerance)
 }

@@ -82,34 +82,47 @@ fn a_revolution_survives_a_round_trip_through_the_model() {
     );
 }
 
-/// Executing that revolution refuses, and the refusal names the family.
+/// Executing a still-unsupported family refuses, naming that family.
 ///
-/// "revolution" is the actionable word: it tells a caller which provider to
-/// register. A bare "unsupported operation" would not.
+/// The named family is the actionable word: it tells a caller which provider
+/// to register. A bare "unsupported operation" would not.
+///
+/// This deliberately uses a family with no exact provider. Exact revolution
+/// landed for the offset full-turn case, so revolution is no longer a valid
+/// example -- a test asserting it is refused would now be asserting the
+/// absence of a capability that exists.
 #[test]
-fn executing_a_revolution_refuses_by_name() {
+fn executing_an_unsupported_family_refuses_by_name() {
     let mut builder = GeometryGraphBuilder::new();
     let profile = builder.push(GeometryNode::Profile(rect())).unwrap();
-    let solid = builder
-        .push(GeometryNode::SolidOperation(SolidOperation::Revolution {
-            profile,
-            axis_origin: Point3::new(2.0, 0.0, 0.0),
-            axis_direction: Vec3::Z,
-            angle: 1.0,
+    let directrix = builder
+        .push_value(Curve3::Polyline(Polyline3 {
+            points: vec![Point3::ZERO, Point3::new(0.0, 0.0, 3.0)],
+            closed: false,
         }))
+        .unwrap();
+    let solid = builder
+        .push(GeometryNode::SolidOperation(
+            SolidOperation::FixedReferenceSweep {
+                profile,
+                directrix,
+                reference_direction: Vec3::X,
+                parameter_range: None,
+            },
+        ))
         .unwrap();
     let graph = builder.finish(vec![solid]).unwrap();
 
     let error = ReferenceExactCompiler::new()
         .compile_exact(&graph, solid, &options())
-        .expect_err("no exact revolution provider exists yet");
+        .expect_err("the exact compiler has no sweep provider wired yet");
 
     assert!(
         matches!(
             error,
             GeomError::UnsupportedInput {
                 operation: Operation::GraphCompilation,
-                input: "revolution",
+                input: "fixed-reference sweep",
                 ..
             }
         ),
@@ -128,14 +141,20 @@ fn different_unsupported_families_are_named_differently() {
     type BuildFamily = Box<dyn Fn(&mut GeometryGraphBuilder) -> axiolid_model::NodeId>;
     let families: Vec<(&str, BuildFamily)> = vec![
         (
-            "revolution",
+            "swept disk",
             Box::new(|b: &mut GeometryGraphBuilder| {
-                let profile = b.push(GeometryNode::Profile(rect())).unwrap();
-                b.push(GeometryNode::SolidOperation(SolidOperation::Revolution {
-                    profile,
-                    axis_origin: Point3::new(2.0, 0.0, 0.0),
-                    axis_direction: Vec3::Z,
-                    angle: 1.0,
+                let directrix = b
+                    .push_value(Curve3::Polyline(Polyline3 {
+                        points: vec![Point3::ZERO, Point3::new(0.0, 0.0, 3.0)],
+                        closed: false,
+                    }))
+                    .unwrap();
+                b.push(GeometryNode::SolidOperation(SolidOperation::SweptDisk {
+                    directrix,
+                    radius: 0.5,
+                    inner_radius: None,
+                    parameter_range: None,
+                    fillet_radius: None,
                 }))
                 .unwrap()
             }),
