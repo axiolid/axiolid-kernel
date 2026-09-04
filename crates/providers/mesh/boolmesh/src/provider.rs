@@ -296,7 +296,7 @@ fn evidence_for(
         .iter()
         .filter(|tool| !subject.bounds().intersects(&tool.bounds()))
         .count();
-    BooleanEvidence::record(
+    let evidence = BooleanEvidence::record(
         subject.triangle_count(),
         tools.iter().map(|t| t.triangle_count()).sum(),
         result.triangle_count(),
@@ -306,7 +306,60 @@ fn evidence_for(
     .with_sub_operations(sub_operations)
     // `boolmesh` does not report coincident-face encounters, so claiming
     // detection would be a lie. Left false until a provider can answer.
-    .with_coincident_faces(false)
+    .with_coincident_faces(false);
+
+    match relative_overlap(subject, tools) {
+        Some(ratio) => evidence.with_relative_overlap(ratio),
+        None => evidence,
+    }
+}
+
+/// Smallest relative overlap between the subject and any tool.
+///
+/// Measured from operand bounds, not from the result: the result cannot show
+/// how thin the sliver that produced it was. For each intersecting tool, the
+/// overlap box's shortest side is divided by the operand size, giving a
+/// scale-free number (ADR 0045).
+///
+/// Disjoint tools are skipped — they contribute no intersection to condition.
+/// `None` when nothing intersects or the operands are degenerate, which is
+/// honest: no intersection was constructed, so none was ill conditioned.
+fn relative_overlap(subject: &TriMesh, tools: &[&TriMesh]) -> Option<f64> {
+    let subject_bounds = subject.bounds();
+    let mut worst: Option<f64> = None;
+
+    for tool in tools {
+        let tool_bounds = tool.bounds();
+        if !subject_bounds.intersects(&tool_bounds) {
+            continue;
+        }
+
+        // The overlap box: componentwise max of mins, min of maxes.
+        let lo = subject_bounds.min.max(tool_bounds.min);
+        let hi = subject_bounds.max.min(tool_bounds.max);
+        let overlap = hi - lo;
+
+        // Scale: the larger operand's diagonal, so the ratio is relative to
+        // the model rather than to whichever operand happens to be smaller.
+        let scale = subject_bounds
+            .diagonal()
+            .length()
+            .max(tool_bounds.diagonal().length());
+        if !scale.is_finite() || scale <= 0.0 {
+            continue;
+        }
+
+        // The shortest overlap side governs: a wide, thin sliver is exactly
+        // as ill conditioned as its thin dimension makes it.
+        let thinnest = overlap.x.min(overlap.y).min(overlap.z);
+        if !thinnest.is_finite() {
+            continue;
+        }
+        let ratio = (thinnest / scale).max(0.0);
+        worst = Some(worst.map_or(ratio, |w: f64| w.min(ratio)));
+    }
+
+    worst
 }
 
 /// Connected components over vertices shared by triangles, via union-find.

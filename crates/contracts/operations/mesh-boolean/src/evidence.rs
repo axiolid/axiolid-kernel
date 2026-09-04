@@ -12,7 +12,7 @@ use axiolid_mesh::TriMesh;
 ///
 /// Every field is a fact about the computation, never a quality verdict. A
 /// caller decides whether a given count is acceptable for its domain.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 #[non_exhaustive]
 pub struct BooleanEvidence {
     /// Triangles in the subject operand as supplied.
@@ -54,6 +54,20 @@ pub struct BooleanEvidence {
     /// [`Self::sub_operations`] distinguishes a composed result from a
     /// primitive one.
     pub analytic_path: bool,
+    /// Relative overlap between operands, when the provider measured it.
+    ///
+    /// The smallest operand-overlap extent divided by the operand size, so it
+    /// is scale-free: two cubes overlapping by 1mm at metre scale and by 1um
+    /// at millimetre scale report the same number. `None` means the provider
+    /// did not measure conditioning, never that the input was well
+    /// conditioned.
+    ///
+    /// Construction is f64 ([ADR 0045](../adr/0045-boolean-construction-arithmetic.md)),
+    /// so accuracy degrades as this approaches zero: invisible above 1e-6,
+    /// smooth between 1e-6 and 1e-12, severe below 1e-12. This is a fact
+    /// about the computation, not a verdict -- a caller decides what its
+    /// domain tolerates.
+    pub relative_overlap: Option<f64>,
 }
 
 impl BooleanEvidence {
@@ -77,7 +91,17 @@ impl BooleanEvidence {
             sub_operations: 1,
             coincident_faces_encountered: false,
             analytic_path: false,
+            relative_overlap: None,
         }
+    }
+
+    /// Record the measured relative overlap between operands.
+    ///
+    /// Only a provider that actually measured conditioning may call this;
+    /// leaving the field `None` is the honest default for one that did not.
+    pub const fn with_relative_overlap(mut self, overlap: f64) -> Self {
+        self.relative_overlap = Some(overlap);
+        self
     }
 
     /// Record that an analytic closed-form path produced this result.
@@ -118,6 +142,14 @@ impl BooleanEvidence {
         // result is not purely a general-solver product and must not claim to
         // be.
         self.analytic_path |= other.analytic_path;
+        // Worst case wins: a composed result is only as well conditioned as
+        // its least well conditioned sub-operation. Taking the last or the
+        // best would let a clean final step mask a degenerate earlier one.
+        self.relative_overlap = match (self.relative_overlap, other.relative_overlap) {
+            (Some(a), Some(b)) => Some(a.min(b)),
+            (Some(a), None) => Some(a),
+            (None, b) => b,
+        };
     }
 }
 
