@@ -232,27 +232,54 @@ pub fn overlay(
         FillRule::Negative => BackendFill::Negative,
     };
     let shapes = backend(&subject.polygons).overlay(&backend(&clip.polygons), rule, fill);
+    let polygons = shapes_to_polygons(shapes);
+    let evidence = OverlayEvidence {
+        subject_rings: subject.polygons.iter().map(|p| 1 + p.holes.len()).sum(),
+        clip_rings: clip.polygons.iter().map(|p| 1 + p.holes.len()).sum(),
+        output_polygons: polygons.len(),
+        output_holes: polygons.iter().map(|polygon| polygon.holes.len()).sum(),
+    };
+    Ok(OverlayResult { polygons, evidence })
+}
+
+/// Union a set of individually-valid rings that may overlap each other.
+///
+/// [`overlay`] rejects a self-intersecting *operand*, which is correct for a
+/// boolean between two shapes but wrong for a union of a triangle soup: a
+/// projected mesh routinely overlaps itself, and mutual overlap is exactly
+/// what a union is for. Each ring is still validated on its own, so malformed
+/// geometry is refused rather than absorbed.
+pub fn union_soup(rings: &[Ring], tolerance: Tolerance) -> Result<Vec<Polygon>, OverlayError> {
+    for ring in rings {
+        validate_ring(ring, tolerance)?;
+    }
+    if rings.is_empty() {
+        return Ok(Vec::new());
+    }
+    // All rings go to the backend as one subject against an empty clip. The
+    // NonZero fill then resolves the mutual overlaps in a single pass, which
+    // is both correct and cheaper than folding pairwise.
+    let subject: Vec<Vec<Vec<[f64; 2]>>> = rings
+        .iter()
+        .map(|ring| vec![ring.points.iter().map(|p| [p.x, p.y]).collect()])
+        .collect();
+    let empty: Vec<Vec<Vec<[f64; 2]>>> = Vec::new();
+    let shapes = subject.overlay(&empty, OverlayRule::Union, BackendFill::NonZero);
+    Ok(shapes_to_polygons(shapes))
+}
+
+/// Convert backend shapes to canonical kernel polygons.
+///
+/// Shared by every operation so ring orientation, rotation and polygon
+/// ordering cannot drift between them.
+fn shapes_to_polygons(shapes: Vec<Vec<Vec<[f64; 2]>>>) -> Vec<Polygon> {
     let mut polygons: Vec<Polygon> = shapes
         .into_iter()
-        .filter_map(|s| {
-            let mut it = s.into_iter();
-            let outer = it.next()?;
-            let outer = canonical(
-                Ring {
-                    points: outer.into_iter().map(|p| Point2::new(p[0], p[1])).collect(),
-                },
-                true,
-            );
-            let holes = it
-                .map(|r| {
-                    canonical(
-                        Ring {
-                            points: r.into_iter().map(|p| Point2::new(p[0], p[1])).collect(),
-                        },
-                        false,
-                    )
-                })
-                .collect();
+        .filter_map(|shape| {
+            let mut rings = shape.into_iter();
+            let outer = rings.next()?;
+            let outer = canonical(to_ring(outer), true);
+            let holes = rings.map(|ring| canonical(to_ring(ring), false)).collect();
             Some(Polygon { outer, holes })
         })
         .collect();
@@ -262,11 +289,14 @@ pub fn overlay(
             .total_cmp(&b.outer.points[0].x)
             .then(a.outer.points[0].y.total_cmp(&b.outer.points[0].y))
     });
-    let evidence = OverlayEvidence {
-        subject_rings: subject.polygons.iter().map(|p| 1 + p.holes.len()).sum(),
-        clip_rings: clip.polygons.iter().map(|p| 1 + p.holes.len()).sum(),
-        output_polygons: polygons.len(),
-        output_holes: polygons.iter().map(|polygon| polygon.holes.len()).sum(),
-    };
-    Ok(OverlayResult { polygons, evidence })
+    polygons
+}
+
+fn to_ring(points: Vec<[f64; 2]>) -> Ring {
+    Ring {
+        points: points
+            .into_iter()
+            .map(|p| Point2::new(p[0], p[1]))
+            .collect(),
+    }
 }

@@ -1,0 +1,24 @@
+[package]
+name = "axiolid-project"
+description = "Projection of triangle meshes onto a plane, and prism intersection"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-mesh.workspace = true
+axiolid-overlay.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "algorithms"
+role = "algorithm.planar"
+domain = "planar.project"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core", "axiolid-mesh", "axiolid-overlay"]
