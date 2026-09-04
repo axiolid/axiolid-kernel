@@ -6,12 +6,14 @@
 //! the compact exchange type for render, spatial, and mesh-kernel algorithms.
 
 pub mod audit;
+pub mod component;
 pub mod error;
 pub mod polygon;
 pub mod triangle;
 pub mod view;
 
 pub use audit::{audit_mesh, audit_mesh_scratch_bytes, try_audit_mesh, MeshAuditError, MeshHealth};
+pub use component::{component_count, compose, decompose};
 pub use error::MeshValidationError;
 pub use polygon::{PolygonFace, PolygonMesh};
 pub use triangle::{NormalAttribute, TriMesh};

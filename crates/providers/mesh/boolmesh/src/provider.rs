@@ -300,7 +300,7 @@ fn evidence_for(
         subject.triangle_count(),
         tools.iter().map(|t| t.triangle_count()).sum(),
         result.triangle_count(),
-        connected_components(result),
+        axiolid_mesh::component_count(result),
     )
     .with_disjoint_tools(disjoint)
     .with_sub_operations(sub_operations)
@@ -360,42 +360,6 @@ fn relative_overlap(subject: &TriMesh, tools: &[&TriMesh]) -> Option<f64> {
     }
 
     worst
-}
-
-/// Connected components over vertices shared by triangles, via union-find.
-fn connected_components(mesh: &TriMesh) -> usize {
-    let count = mesh.positions.len();
-    if count == 0 {
-        return 0;
-    }
-    let mut parent: Vec<usize> = (0..count).collect();
-
-    fn find(parent: &mut [usize], mut node: usize) -> usize {
-        while parent[node] != node {
-            parent[node] = parent[parent[node]];
-            node = parent[node];
-        }
-        node
-    }
-
-    for triangle in mesh.indices.chunks_exact(3) {
-        let a = find(&mut parent, triangle[0] as usize);
-        for corner in &triangle[1..] {
-            let b = find(&mut parent, *corner as usize);
-            if a != b {
-                parent[b] = a;
-            }
-        }
-    }
-
-    // Only vertices actually referenced by a triangle count: an unreferenced
-    // position is not a component, it is unused data.
-    let mut roots = std::collections::BTreeSet::new();
-    for index in &mesh.indices {
-        let root = find(&mut parent, *index as usize);
-        roots.insert(root);
-    }
-    roots.len()
 }
 
 /// Batch difference: fuse mutually disjoint cutters, then subtract per group.
