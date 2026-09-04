@@ -11,6 +11,7 @@ pub mod capability_id;
 pub mod error;
 pub mod execution;
 pub mod integration;
+pub mod plan;
 pub mod profiles;
 
 pub use axiolid_guarantees::{Certified, EscalationLadder, Precision, Sign};
@@ -28,4 +29,5 @@ pub use integration::{
     IntegrationDescriptor, IntegrationProfile, Ownership, Representation, RequirementRefusal,
     ThreadSafety, INTEGRATION_API_VERSION, MINIMUM_RUST_VERSION,
 };
+pub use plan::{Plan, PlanStep};
 pub use profiles::{ProfileContract, V04_PROFILE_CONTRACTS};
