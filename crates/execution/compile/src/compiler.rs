@@ -600,13 +600,17 @@ impl<B: MeshBoolean> ReferenceMeshCompiler<B> {
                     .boolean(subject, tool, *operator, options)
                     .map(|outcome| outcome.mesh)
             }
-            // Every remaining family is a sweep of some kind (revolution,
-            // swept disk, fixed-reference, surface-curve, sectioned spine) or
-            // a bounded half-space. Naming the capability lets a caller
-            // register a provider for it rather than guess.
-            _ => Err(GeomError::Unsupported {
+            // Naming the capability lets a caller register a provider for it
+            // rather than guess. `Unsupported` names only the operation, which
+            // collapses revolution, swept disk, fixed-reference sweep and the
+            // rest into one indistinguishable answer -- a caller learns that
+            // "a sweep" failed but not WHICH provider is missing, so it cannot
+            // act. `UnsupportedInput` carries the family, matching what the
+            // exact path already reports.
+            other => Err(GeomError::UnsupportedInput {
                 backend: self.descriptor().id,
                 operation: Operation::Sweep,
+                input: crate::exact::solid_operation_family(other),
             }),
         }
     }

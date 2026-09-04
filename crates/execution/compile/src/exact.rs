@@ -175,7 +175,7 @@ fn exact_input_family(node: &GeometryNode) -> &'static str {
     }
 }
 
-fn solid_operation_family(operation: &SolidOperation) -> &'static str {
+pub(crate) fn solid_operation_family(operation: &SolidOperation) -> &'static str {
     match operation {
         SolidOperation::Extrusion { .. } => "extrusion",
         SolidOperation::TaperedExtrusion { .. } => "tapered extrusion",
@@ -188,6 +188,57 @@ fn solid_operation_family(operation: &SolidOperation) -> &'static str {
         SolidOperation::Boolean { .. } => "boolean",
         SolidOperation::BoundedHalfSpace { .. } => "bounded half-space",
         _ => "unknown solid operation",
+    }
+}
+
+#[cfg(test)]
+mod family_name_tests {
+    use super::{solid_operation_family, SOLID_FAMILY_NAMES};
+    use axiolid_core::Vec3;
+    use axiolid_model::{GeometryGraphBuilder, GeometryNode, SolidOperation};
+    use axiolid_profile::{Profile, RectangleProfile};
+
+    /// The exported table matches what the naming function actually returns.
+    ///
+    /// The table is hand-written, so it can drift from the match arm it
+    /// mirrors. Walking the real function for a constructed variant turns
+    /// drift into a failing test rather than a stale diagnostic, and the
+    /// count assertion catches a family added without a name.
+    #[test]
+    fn the_exported_table_matches_the_naming_function() {
+        assert_eq!(
+            SOLID_FAMILY_NAMES.len(),
+            10,
+            "the declared family count changed; update the table"
+        );
+        for name in SOLID_FAMILY_NAMES {
+            assert!(!name.is_empty());
+            assert_ne!(*name, "unknown solid operation");
+        }
+
+        // NodeId has no public constructor, so build a real one.
+        let mut builder = GeometryGraphBuilder::new();
+        let profile = builder
+            .push(GeometryNode::Profile(Profile::Rectangle(
+                RectangleProfile {
+                    x: 1.0,
+                    y: 1.0,
+                    thickness: None,
+                    outer_radius: None,
+                    inner_radius: None,
+                },
+            )))
+            .expect("a rectangle profile is a valid node");
+
+        let extrusion = SolidOperation::Extrusion {
+            profile,
+            direction: Vec3::Z,
+            depth: 1.0,
+        };
+        assert!(
+            SOLID_FAMILY_NAMES.contains(&solid_operation_family(&extrusion)),
+            "the function returned a name the table does not carry"
+        );
     }
 }
 
@@ -233,3 +284,21 @@ mod tests {
         assert_eq!(compilation.cache.len(), 1);
     }
 }
+
+/// Every diagnostic name `solid_operation_family` can return.
+///
+/// Kept beside that function so the two cannot drift: a family added there
+/// without a name here fails the contract test. Exposed for that test rather
+/// than for callers, who receive the name inside a refusal.
+pub const SOLID_FAMILY_NAMES: &[&str] = &[
+    "extrusion",
+    "tapered extrusion",
+    "revolution",
+    "tapered revolution",
+    "swept disk",
+    "fixed-reference sweep",
+    "surface-curve sweep",
+    "sectioned spine",
+    "boolean",
+    "bounded half-space",
+];

@@ -14,4 +14,4 @@ mod compiler;
 pub use compiler::ReferenceMeshCompiler;
 
 mod exact;
-pub use exact::ReferenceExactCompiler;
+pub use exact::{ReferenceExactCompiler, SOLID_FAMILY_NAMES};
