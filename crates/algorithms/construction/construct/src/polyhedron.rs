@@ -16,7 +16,9 @@ use crate::boolean_exact::unsupported;
 use axiolid_contracts::{GeomError, GeomResult};
 use axiolid_core::{Point2, Point3, Vec3};
 use axiolid_guarantees::Sign;
+use axiolid_mesh::TriMesh;
 use axiolid_predicates::{orient2d, orient3d};
+use std::collections::BTreeMap;
 
 /// A closed solid bounded by planar polygonal faces.
 ///
@@ -506,4 +508,40 @@ fn centroid_of(polygon: &[Point3]) -> Point3 {
 /// attempts it took.
 fn probe_direction(_subject: &Polyhedron, _tool: &Polyhedron) -> Vec3 {
     Vec3::new(0.577_215_664_9, 0.313_724_518_3, 0.144_729_885_8)
+}
+
+/// Triangulate a polyhedron for measurement and diagnosis.
+///
+/// Vertices are shared through exact-coordinate keying: emitting a fresh
+/// vertex per face would leave every edge used once, so an audit would
+/// report a cloud of boundary edges for a solid that is in fact closed.
+/// Coordinates that meet do so bit-identically, because they come from the
+/// same literal or the same split, so exact keying is correct and no welding
+/// tolerance is invented.
+///
+/// Fanning assumes convex rings. A non-convex face fans into triangles that
+/// leave the footprint, so callers measuring such a solid must supply a
+/// closed-form oracle instead.
+#[must_use]
+pub fn triangulate(solid: &Polyhedron) -> TriMesh {
+    let mut positions: Vec<Point3> = Vec::new();
+    let mut indices = Vec::new();
+    let mut lookup: BTreeMap<[u64; 3], u32> = BTreeMap::new();
+    for face in solid.faces() {
+        let ring: Vec<u32> = face
+            .iter()
+            .map(|&p| {
+                let key = [p.x.to_bits(), p.y.to_bits(), p.z.to_bits()];
+                let next = u32::try_from(positions.len()).unwrap_or(u32::MAX);
+                *lookup.entry(key).or_insert_with(|| {
+                    positions.push(p);
+                    next
+                })
+            })
+            .collect();
+        for i in 1..ring.len() - 1 {
+            indices.extend([ring[0], ring[i], ring[i + 1]]);
+        }
+    }
+    TriMesh::new(positions, indices)
 }
