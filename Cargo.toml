@@ -35,6 +35,7 @@ members = [
     "crates/algorithms/query/measure",
     "crates/algorithms/sampled/field",
     "crates/algorithms/repair/heal",
+    "crates/algorithms/discrete/decimate",
     "crates/providers/mesh/boolmesh",
     "crates/execution/compile",
     "crates/execution/dispatch",
@@ -64,6 +65,7 @@ axiolid-mesh = { path = "crates/representations/discrete/mesh", version = "0.4.0
 axiolid-model = { path = "crates/representations/modeling/graph", version = "0.4.0" }
 axiolid-primitive = { path = "crates/representations/analytic/primitive", version = "0.4.0" }
 axiolid-heal = { path = "crates/algorithms/repair/heal", version = "0.4.0" }
+axiolid-decimate = { path = "crates/algorithms/discrete/decimate", version = "0.4.0" }
 axiolid-evaluate = { path = "crates/algorithms/parametric/evaluate", version = "0.4.0" }
 axiolid-nurbs = { path = "crates/algorithms/parametric/nurbs", version = "0.4.0" }
 axiolid-construct = { path = "crates/algorithms/construction/construct", version = "0.4.0" }

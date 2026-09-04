@@ -1,0 +1,28 @@
+[package]
+name = "axiolid-decimate"
+description = "Edge-collapse mesh decimation with a bounded, reported deviation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-mesh.workspace = true
+axiolid-measure.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+axiolid-heal.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "algorithms"
+role = "algorithm.discrete"
+domain = "discrete.decimate"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core", "axiolid-heal", "axiolid-measure", "axiolid-mesh"]

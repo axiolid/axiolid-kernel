@@ -183,6 +183,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "axiolid-decimate"
+version = "0.4.0"
+dependencies = [
+ "axiolid-core",
+ "axiolid-heal",
+ "axiolid-measure",
+ "axiolid-mesh",
+ "thiserror",
+]
+
+[[package]]
 name = "axiolid-dispatch"
 version = "0.4.0"
 dependencies = [
