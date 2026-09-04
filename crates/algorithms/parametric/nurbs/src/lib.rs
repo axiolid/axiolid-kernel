@@ -63,7 +63,10 @@ pub use certified_surface_surface_intersection::{
 };
 pub use curve_analysis::{analyze_curve2, analyze_curve3, CurveDifferential2, CurveDifferential3};
 pub use curve_projection::{project_curve2, project_curve3};
-pub use degree::{elevate_degree2, elevate_degree3, remove_knot2, remove_knot3, BoundedResult};
+pub use degree::{
+    elevate_degree2, elevate_degree3, reduce_degree2, reduce_degree3, remove_knot2, remove_knot3,
+    BoundedResult,
+};
 pub use intersection_curve::{
     construct_curve_surface_points, construct_surface_surface_curves,
     ConstructedCurveSurfacePoint3, ConstructedIntersectionCurve3, IntersectionCurveRefusal,

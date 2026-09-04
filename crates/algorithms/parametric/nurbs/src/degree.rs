@@ -396,3 +396,151 @@ fn expand_local<P>(curve: &BSplineCurve<P>) -> Vec<Scalar> {
     }
     expanded
 }
+
+/// Lower a planar curve's degree by one, or refuse.
+///
+/// Lossy in general: only a curve that was already representable at the lower
+/// degree reduces cleanly. An elevated curve is the clean case, and reduction
+/// recovers what it started from.
+///
+/// Same discipline as knot removal: compute, measure, and refuse when the
+/// deviation exceeds `tolerance`, rather than trusting the reduction formula
+/// on a curve that genuinely needs its degree.
+pub fn reduce_degree2(
+    curve: &BSplineCurve2,
+    tolerance: Scalar,
+) -> GeomResult<BoundedResult<BSplineCurve2>> {
+    bspline_jet2(curve, 0.0)?;
+    let segments = crate::transform::bezier_segments2(curve)?;
+    let candidate = reduce(
+        curve,
+        &segments,
+        |p: &Point2| [p.x, p.y],
+        |c: [Scalar; 2]| Point2::new(c[0], c[1]),
+    )?;
+    let deviation = deviation2(curve, &candidate)?;
+    accept(candidate, deviation, tolerance)
+}
+
+/// Lower a spatial curve's degree by one, or refuse.
+pub fn reduce_degree3(
+    curve: &BSplineCurve3,
+    tolerance: Scalar,
+) -> GeomResult<BoundedResult<BSplineCurve3>> {
+    bspline_jet3(curve, 0.0)?;
+    let segments = crate::transform::bezier_segments3(curve)?;
+    let candidate = reduce(
+        curve,
+        &segments,
+        |p: &Point3| [p.x, p.y, p.z],
+        |c: [Scalar; 3]| Point3::new(c[0], c[1], c[2]),
+    )?;
+    let deviation = deviation3(curve, &candidate)?;
+    accept(candidate, deviation, tolerance)
+}
+
+/// Degree reduction for one Bezier segment.
+///
+/// Forward and backward recurrences each reconstruct the lower-degree control
+/// points; averaging them distributes the error instead of piling it at one
+/// end, which is what a one-directional recurrence does.
+fn reduce_bezier<const N: usize>(points: &[[Scalar; N]]) -> Vec<[Scalar; N]> {
+    let p = points.len() - 1;
+    let reduced = p;
+    let mut forward: Vec<[Scalar; N]> = vec![[0.0; N]; reduced];
+    let mut backward: Vec<[Scalar; N]> = vec![[0.0; N]; reduced];
+
+    forward[0] = points[0];
+    for i in 1..reduced {
+        let alpha = i as Scalar / p as Scalar;
+        for axis in 0..N {
+            forward[i][axis] = (points[i][axis] - alpha * forward[i - 1][axis]) / (1.0 - alpha);
+        }
+    }
+
+    backward[reduced - 1] = points[p];
+    for i in (0..reduced - 1).rev() {
+        let alpha = (i + 1) as Scalar / p as Scalar;
+        for axis in 0..N {
+            backward[i][axis] =
+                (points[i + 1][axis] - (1.0 - alpha) * backward[i + 1][axis]) / alpha;
+        }
+    }
+
+    (0..reduced)
+        .map(|i| {
+            let mut blended = [0.0; N];
+            for (axis, value) in blended.iter_mut().enumerate() {
+                *value = 0.5 * (forward[i][axis] + backward[i][axis]);
+            }
+            blended
+        })
+        .collect()
+}
+
+/// Reduce each Bezier segment and rejoin, mirroring `assemble`.
+fn reduce<const N: usize, P: Clone>(
+    curve: &BSplineCurve<P>,
+    segments: &[BSplineCurve<P>],
+    coordinates: impl Fn(&P) -> [Scalar; N],
+    point: impl Fn([Scalar; N]) -> P,
+) -> GeomResult<BSplineCurve<P>> {
+    if curve.degree < 2 {
+        return Err(GeomError::InvalidInput(
+            "degree 1 cannot be reduced further and stay a curve".to_owned(),
+        ));
+    }
+    if curve.weights.is_some() {
+        return Err(GeomError::Unsupported {
+            backend: axiolid_contracts::BackendId::new("nurbs"),
+            operation: axiolid_contracts::Operation::CurveEvaluation,
+        });
+    }
+    let reduced_degree = curve.degree - 1;
+
+    let mut control_points: Vec<P> = Vec::new();
+    for (index, segment) in segments.iter().enumerate() {
+        let points: Vec<[Scalar; N]> = segment.control_points.iter().map(&coordinates).collect();
+        let lowered = reduce_bezier(&points);
+        let skip = usize::from(index > 0);
+        for coordinate in lowered.into_iter().skip(skip) {
+            control_points.push(point(coordinate));
+        }
+    }
+
+    let clamped = u32::from(reduced_degree) + 1;
+    let internal = u32::from(reduced_degree);
+    let mut knots: Vec<Scalar> = Vec::with_capacity(segments.len() + 1);
+    let mut multiplicities: Vec<u32> = Vec::with_capacity(segments.len() + 1);
+    for (index, segment) in segments.iter().enumerate() {
+        let first = *segment
+            .knots
+            .first()
+            .ok_or_else(|| GeomError::InvalidInput("bezier segment has no knots".to_owned()))?;
+        if index == 0 {
+            knots.push(first);
+            multiplicities.push(clamped);
+        }
+        let last = *segment
+            .knots
+            .last()
+            .ok_or_else(|| GeomError::InvalidInput("bezier segment has no knots".to_owned()))?;
+        knots.push(last);
+        multiplicities.push(if index + 1 == segments.len() {
+            clamped
+        } else {
+            internal
+        });
+    }
+
+    Ok(BSplineCurve {
+        degree: reduced_degree,
+        control_points,
+        knots,
+        multiplicities,
+        weights: None,
+        knot_spec: curve.knot_spec,
+        closed: curve.closed,
+        self_intersect: curve.self_intersect,
+    })
+}
