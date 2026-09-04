@@ -28,6 +28,74 @@ impl BoolmeshBoolean {
     pub const fn new() -> Self {
         Self
     }
+
+    /// Subtract axis-aligned box cutters from an axis-aligned box subject using
+    /// an exact closed-form construction, bypassing the general solver.
+    ///
+    /// Returns `Ok(None)` when the operands are outside this path's competence,
+    /// so the caller falls back to [`MeshBoolean::subtract_many`] rather than
+    /// receiving an approximate answer. Declining cases:
+    ///
+    /// * subject or any tool is not an axis-aligned box (recognised
+    ///   structurally -- triangle count, corner lattice, and face planes -- not
+    ///   by bounding box, since every mesh has one of those)
+    /// * no tools, or no tool overlapping the subject
+    /// * the induced grid would exceed `max_cells`
+    ///
+    /// # Why opt-in rather than automatic
+    ///
+    /// Dispatching on shape automatically would make output topology depend on
+    /// input in a way the caller cannot predict: the same wall would produce
+    /// different triangle counts depending on whether its openings happened to
+    /// be axis-aligned. Callers that want the speed ask for it and handle the
+    /// `None`; callers that want one predictable code path never see this.
+    ///
+    /// # Guarantees
+    ///
+    /// The result is watertight by construction (adjacent cells address shared
+    /// grid vertices by integer index) and deterministic across processes
+    /// (vertex identity is an ordered map, not a randomly-seeded hash map).
+    ///
+    /// The returned evidence has [`BooleanEvidence::analytic_path`] set, so a
+    /// caller can tell this result apart from a general-solver result.
+    pub fn subtract_boxes_analytic(
+        &self,
+        subject: &TriMesh,
+        tools: &[TriMesh],
+        options: &ExecutionOptions,
+        max_cells: usize,
+    ) -> GeomResult<Option<BooleanOutcome>> {
+        options.check_cancelled()?;
+
+        // Tolerance is scale-relative: an absolute epsilon would reject a
+        // building-scale box and accept a millimetre-scale non-box.
+        let d = subject.bounds().diagonal();
+        let eps = d.x.max(d.y).max(d.z) * 1e-9;
+
+        let Some(host) = crate::box_detect::recognise(subject, eps) else {
+            return Ok(None);
+        };
+        let mut cutters = Vec::with_capacity(tools.len());
+        for tool in tools {
+            let Some(b) = crate::box_detect::recognise(tool, eps) else {
+                return Ok(None);
+            };
+            cutters.push(b);
+        }
+
+        let Some(result) = crate::cellular::subtract_boxes(&host, &cutters, max_cells) else {
+            return Ok(None);
+        };
+
+        // The analytic path is exact, but it is still a provider result: hold it
+        // to the same orientation contract as the general path rather than
+        // trusting the construction.
+        check_result(&result, BooleanOperator::Difference)?;
+
+        let tool_refs: Vec<&TriMesh> = tools.iter().collect();
+        let evidence = evidence_for(subject, &tool_refs, &result, 1).with_analytic_path(true);
+        Ok(Some(BooleanOutcome::new(result, evidence)))
+    }
 }
 
 impl Backend for BoolmeshBoolean {

@@ -44,6 +44,16 @@ pub struct BooleanEvidence {
     /// Reporting the encounter lets a caller treat those results with more
     /// care without Axiolid choosing a policy on its behalf.
     pub coincident_faces_encountered: bool,
+    /// Whether an analytic closed-form path produced this result instead of the
+    /// general boolean solver.
+    ///
+    /// An analytic path is exact only for the operand shapes it recognises, and
+    /// it produces a different (though equally valid) triangulation from the
+    /// general solver. A caller comparing results across runs, or reproducing a
+    /// result elsewhere, needs to know which machinery ran -- the same reason
+    /// [`Self::sub_operations`] distinguishes a composed result from a
+    /// primitive one.
+    pub analytic_path: bool,
 }
 
 impl BooleanEvidence {
@@ -66,7 +76,14 @@ impl BooleanEvidence {
             disjoint_tools: 0,
             sub_operations: 1,
             coincident_faces_encountered: false,
+            analytic_path: false,
         }
+    }
+
+    /// Record that an analytic closed-form path produced this result.
+    pub const fn with_analytic_path(mut self, analytic: bool) -> Self {
+        self.analytic_path = analytic;
+        self
     }
 
     /// Set the count of tools that did not meet the subject.
@@ -97,6 +114,10 @@ impl BooleanEvidence {
         self.disjoint_tools += other.disjoint_tools;
         self.sub_operations += other.sub_operations;
         self.coincident_faces_encountered |= other.coincident_faces_encountered;
+        // Sticky: if any sub-operation took the analytic path, the composed
+        // result is not purely a general-solver product and must not claim to
+        // be.
+        self.analytic_path |= other.analytic_path;
     }
 }
 

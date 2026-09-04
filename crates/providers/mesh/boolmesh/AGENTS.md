@@ -6,7 +6,8 @@ This crate owns conversion and contract enforcement; the algorithm is upstream's
 ## Module ownership
 
 convert.rs (TriMesh <-> Manifold, orientation gate); provider.rs (the trait impl,
-result contract). Split before unrelated concerns grow together.
+result contract); box_detect.rs (axis-aligned box recognition); cellular.rs (the
+analytic subtraction construction). Split before unrelated concerns grow together.
 
 ## Invariants
 
@@ -54,3 +55,39 @@ Invariants, each mutation-proven in `tests/batch.rs`:
 Volume comparisons between the grouped and sequential paths use a RELATIVE
 tolerance: the two sum a differently ordered triangle list, so the last bits
 legitimately differ. Bitwise equality fails spuriously.
+
+## Analytic box path (opt-in)
+
+`subtract_boxes_analytic` cuts axis-aligned boxes out of an axis-aligned box in
+closed form. ~25x faster than the general solver at n=64 openings.
+
+**Opt-in, never auto-dispatched.** Unlike the batch override above (unconditional
+because its worst case is 0.99x), this path changes the OUTPUT TOPOLOGY, not just
+the schedule. Dispatching on shape would make triangle counts depend on whether a
+wall's openings happened to be axis-aligned. The caller asks, and handles
+`Ok(None)`.
+
+Invariants, each mutation-proven in `tests/analytic_boxes.rs`:
+
+- **Recognition is structural, never by bounding box.** Every mesh has a bounding
+  box; a sphere and its enclosing cube share one. Acceptance requires an exact
+  index count, all corners on the min/max lattice, and exactly 2 triangles per
+  face plane.
+- **The index-count check is not redundant with the plane check.** `chunks_exact(3)`
+  silently drops a trailing partial triangle, so a malformed 38-index buffer
+  presents a perfect box to the plane loop. Only the length check sees it.
+- **The lattice check is not redundant either**, for one reason: it walks ALL
+  positions, while the plane check only sees REFERENCED ones. An unused
+  off-lattice vertex is invisible to the latter.
+- **Refusal must stay a refusal.** Returning a wrong solid is worse than
+  returning nothing; every decline case has a test.
+
+Three independent oracles are needed, because each is blind to a different
+defect:
+
+- signed volume misses cancelling errors (an inverted face pair sums to zero);
+- edge pairing misses coincident duplicate faces (each edge still balances);
+- duplicate-face detection is the only one that catches an emitted interior face.
+
+The interior-face mutant produced 96 triangles instead of 64 with IDENTICAL
+volume and ZERO edge-pairing defects. Volume alone would have passed it.
