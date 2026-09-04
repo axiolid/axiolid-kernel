@@ -24,6 +24,7 @@ All notable changes to Axiolid are documented in this file.
 - Widened exact boolean coverage (`boolean_prisms_exact`) from half-space-bounded difference and intersection to arbitrary coaxial prisms with equal z-spans, including non-convex and multi-ring operands. Two prisms sharing a z-span reduce exactly to a 2D cross-section overlay, which `axiolid-overlay` already decides with certified predicates, so no new numerical machinery was introduced. Verified differentially against the `boolmesh` mesh oracle, which shares no code with this path.
 
 ### Changed
+- Coplanar triangle pairs in `self_intersections` are now decided by exact 2D region logic rather than reported conservatively. Both triangles are projected onto their dominant plane and overlap is decided by `orient2d`: a proper edge crossing, or a strictly-interior vertex. Triangles that only touch -- shared edge, shared vertex, or a vertex resting exactly on an edge -- share boundary and no area, and are no longer reported. This makes the query usable on exact boolean output, where every split face is coplanar with its siblings.
 - Compile refusals now name the missing *family* rather than only the operation. The mesh path previously answered every unresolvable solid with one `Unsupported { operation: Sweep }`, making revolution, swept disk, fixed-reference sweep, and sectioned spine indistinguishable — its own comment claimed naming the capability lets a caller register a provider, but naming only `Sweep` tells a caller a sweep failed, not which provider is missing.
 
 ### Fixed
