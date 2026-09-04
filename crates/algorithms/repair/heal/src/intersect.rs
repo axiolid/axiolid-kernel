@@ -19,10 +19,10 @@
 //! checking every pair, and the two must agree on every input. If they ever
 //! disagree, the index is wrong -- that is a bug, not a tuning parameter.
 
-use axiolid_core::{Aabb, Point3, Vec3};
+use axiolid_core::{Aabb, Point2, Point3, Vec3};
 use axiolid_guarantees::Sign;
 use axiolid_mesh::TriangleMeshView;
-use axiolid_predicates::orient3d;
+use axiolid_predicates::{orient2d, orient3d};
 use axiolid_spatial::{Bvh, SpatialIndex, SpatialItem};
 use std::ops::ControlFlow;
 
@@ -82,20 +82,20 @@ fn side(a: Point3, b: Point3, c: Point3, d: Point3) -> Option<i32> {
 /// signed plane distances rather than by constructing the line, so no
 /// intersection point is ever computed in floating point.
 ///
-/// Coplanar configurations are deliberately conservative. A shared plane
-/// collapses the interval test, and deciding overlap there needs 2D region
-/// logic this query does not own. Such a pair is reported as intersecting
-/// rather than silently dropped: over-reporting is visible to a caller, a
-/// missed self-intersection is not.
+/// Coplanar configurations are decided by exact 2D region logic rather than
+/// assumed to intersect: the pair is projected onto its dominant plane and
+/// tested for shared interior area with `orient2d`. Triangles that merely
+/// touch along a shared edge or vertex have no common area and are not
+/// reported.
 fn triangles_intersect(p: [Point3; 3], q: [Point3; 3]) -> bool {
     let Some(p_sides) = plane_sides(q, p) else {
-        return true; // coplanar or degenerate: conservative
+        return coplanar_triangles_overlap(p, q);
     };
     if separated(p_sides) {
         return false;
     }
     let Some(q_sides) = plane_sides(p, q) else {
-        return true;
+        return coplanar_triangles_overlap(p, q);
     };
     if separated(q_sides) {
         return false;
@@ -285,4 +285,108 @@ pub fn self_intersections_brute_force<M: TriangleMeshView + ?Sized>(
     found.sort_unstable();
     found.dedup();
     found
+}
+
+/// Whether two coplanar triangles share interior area, decided exactly.
+///
+/// Both are projected onto the coordinate plane where their shared normal is
+/// largest, so no projected triangle degenerates to a segment. Every test
+/// below is `orient2d`, so this stays as exact as the non-coplanar path it
+/// replaces -- no tolerance, no constructed intersection point.
+///
+/// Touching is not overlapping: triangles sharing only an edge or a vertex
+/// have no interior area in common and are NOT reported.
+fn coplanar_triangles_overlap(p: [Point3; 3], q: [Point3; 3]) -> bool {
+    let normal = (p[1] - p[0]).cross(p[2] - p[0]);
+    let axis = dominant_axis(normal);
+    let pp = project_triangle(p, axis);
+    let qq = project_triangle(q, axis);
+
+    // Edge-crossing: any proper crossing of a p edge with a q edge means the
+    // boundaries pass through each other, which requires shared area.
+    for i in 0..3 {
+        for j in 0..3 {
+            if segments_properly_cross(pp[i], pp[(i + 1) % 3], qq[j], qq[(j + 1) % 3]) {
+                return true;
+            }
+        }
+    }
+
+    // Containment: no crossing but one triangle strictly inside the other.
+    pp.iter().any(|&v| strictly_inside(v, qq)) || qq.iter().any(|&v| strictly_inside(v, pp))
+}
+
+/// Index of the largest-magnitude normal component.
+fn dominant_axis(normal: Vec3) -> usize {
+    let (x, y, z) = (normal.x.abs(), normal.y.abs(), normal.z.abs());
+    if x >= y && x >= z {
+        0
+    } else if y >= z {
+        1
+    } else {
+        2
+    }
+}
+
+/// Drop the dominant axis, keeping the projection non-degenerate.
+fn project_triangle(t: [Point3; 3], axis: usize) -> [Point2; 3] {
+    [
+        project_point(t[0], axis),
+        project_point(t[1], axis),
+        project_point(t[2], axis),
+    ]
+}
+
+fn project_point(p: Point3, axis: usize) -> Point2 {
+    match axis {
+        0 => Point2::new(p.y, p.z),
+        1 => Point2::new(p.z, p.x),
+        _ => Point2::new(p.x, p.y),
+    }
+}
+
+/// Whether segments `a`-`b` and `c`-`d` cross at an interior point of both.
+///
+/// Requires all four orientations to be strictly non-zero and opposite in
+/// pairs. Collinear or touching-at-an-endpoint configurations are rejected:
+/// they share boundary, not area.
+fn segments_properly_cross(a: Point2, b: Point2, c: Point2, d: Point2) -> bool {
+    let (Some(o1), Some(o2), Some(o3), Some(o4)) = (
+        sign2(a, b, c),
+        sign2(a, b, d),
+        sign2(c, d, a),
+        sign2(c, d, b),
+    ) else {
+        return false;
+    };
+    o1 != o2 && o3 != o4
+}
+
+/// Strict `orient2d` sign, or `None` when the three points are collinear.
+fn sign2(a: Point2, b: Point2, c: Point2) -> Option<i32> {
+    match orient2d(a, b, c).sign() {
+        Some(Sign::Positive) => Some(1),
+        Some(Sign::Negative) => Some(-1),
+        _ => None,
+    }
+}
+
+/// Whether `point` lies strictly inside triangle `t`.
+///
+/// A point on an edge is NOT inside: two triangles meeting along a shared
+/// edge touch without overlapping, and reporting that as a self-intersection
+/// is the false positive this whole function exists to remove.
+fn strictly_inside(point: Point2, t: [Point2; 3]) -> bool {
+    let mut seen: Option<i32> = None;
+    for i in 0..3 {
+        let Some(s) = sign2(t[i], t[(i + 1) % 3], point) else {
+            return false; // on an edge line: boundary, not interior
+        };
+        match seen {
+            None => seen = Some(s),
+            Some(previous) if previous == s => {}
+            Some(_) => return false,
+        }
+    }
+    true
 }

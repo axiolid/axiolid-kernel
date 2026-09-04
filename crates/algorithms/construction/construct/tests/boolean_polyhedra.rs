@@ -7,7 +7,8 @@
 use axiolid_construct::polyhedron::{boolean_polyhedra_exact, BooleanOp, Polyhedron};
 use axiolid_core::{Point3, Tolerance};
 use axiolid_heal::mesh::MeshHealer;
-use axiolid_heal::{DefectKind, Diagnose};
+use axiolid_heal::self_intersections;
+use axiolid_heal::Diagnose;
 use axiolid_measure::volume_properties;
 use axiolid_mesh::TriMesh;
 
@@ -201,23 +202,12 @@ fn results_are_closed_manifold_and_free_of_self_intersection() {
             "{op:?} produced defects: {:?}",
             diagnosis.defects
         );
-        // Note on the self-intersection oracle: `self_intersections`
-        // reports COPLANAR pairs conservatively (#73), because deciding
-        // overlap in a shared plane needs 2D region logic that query does
-        // not own. A boolean result is full of coplanar neighbours -- every
-        // fragment of a split face shares its plane with its siblings -- so
-        // the raw count is not a defect signal here. What must hold is that
-        // no pair actually crosses, which is what the audit's manifold and
-        // winding counts establish above.
+        // With #73's coplanar branch now deciding shared area exactly, a
+        // boolean result's sibling fragments no longer register as false
+        // positives, so this can assert the real property directly.
         assert!(
-            diagnosis.defects.iter().all(|d| !matches!(
-                d.kind,
-                DefectKind::NonManifoldEdge
-                    | DefectKind::OpenShell
-                    | DefectKind::InconsistentOrientation
-            )),
-            "{op:?} shell is not closed and manifold: {:?}",
-            diagnosis.defects
+            self_intersections(&mesh).is_empty(),
+            "{op:?} produced a self-intersecting shell"
         );
     }
 }

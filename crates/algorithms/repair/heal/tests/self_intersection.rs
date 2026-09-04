@@ -195,3 +195,142 @@ fn a_shared_edge_is_not_an_intersection_even_when_geometry_touches() {
         "both paths must apply the same adjacency rule"
     );
 }
+
+/// Coplanar neighbours that only touch are no longer reported.
+///
+/// Two triangles tiling a square share an edge and lie in one plane. The
+/// earlier conservative rule reported every coplanar pair, so any split
+/// face's siblings looked self-intersecting. They share boundary, not area.
+#[test]
+fn coplanar_triangles_sharing_an_edge_do_not_overlap() {
+    let mesh = TriMesh::new(
+        vec![
+            [0.0, 0.0, 0.0].into(),
+            [1.0, 0.0, 0.0].into(),
+            [1.0, 1.0, 0.0].into(),
+            [0.0, 1.0, 0.0].into(),
+        ],
+        vec![0, 1, 2, 0, 2, 3],
+    );
+    assert!(
+        self_intersections_brute_force(&mesh).is_empty(),
+        "coplanar triangles meeting along a shared edge only touch"
+    );
+}
+
+/// Disjoint coplanar triangles are not reported.
+///
+/// Same plane, no shared vertex, no shared area. This is the case that made
+/// every pair of sibling fragments in an exact boolean result look like a
+/// defect.
+#[test]
+fn disjoint_coplanar_triangles_do_not_overlap() {
+    let mesh = TriMesh::new(
+        vec![
+            [0.0, 0.0, 0.0].into(),
+            [1.0, 0.0, 0.0].into(),
+            [0.0, 1.0, 0.0].into(),
+            [5.0, 5.0, 0.0].into(),
+            [6.0, 5.0, 0.0].into(),
+            [5.0, 6.0, 0.0].into(),
+        ],
+        vec![0, 1, 2, 3, 4, 5],
+    );
+    assert!(
+        self_intersections_brute_force(&mesh).is_empty(),
+        "coplanar triangles far apart share no area"
+    );
+}
+
+/// Genuinely overlapping coplanar triangles ARE still reported.
+///
+/// The tightening must not turn into blanket silence: two triangles in one
+/// plane whose interiors intersect are a real defect.
+#[test]
+fn overlapping_coplanar_triangles_are_reported() {
+    let mesh = TriMesh::new(
+        vec![
+            [0.0, 0.0, 0.0].into(),
+            [4.0, 0.0, 0.0].into(),
+            [0.0, 4.0, 0.0].into(),
+            [1.0, 1.0, 0.0].into(),
+            [5.0, 1.0, 0.0].into(),
+            [1.0, 5.0, 0.0].into(),
+        ],
+        vec![0, 1, 2, 3, 4, 5],
+    );
+    assert_eq!(
+        self_intersections_brute_force(&mesh).len(),
+        1,
+        "coplanar triangles with shared interior area must still be found"
+    );
+}
+
+/// One coplanar triangle strictly inside another is reported.
+///
+/// No edges cross here, so edge-crossing alone would miss it. Containment is
+/// the second half of the test for a reason.
+#[test]
+fn a_coplanar_triangle_contained_in_another_is_reported() {
+    let mesh = TriMesh::new(
+        vec![
+            [0.0, 0.0, 0.0].into(),
+            [10.0, 0.0, 0.0].into(),
+            [0.0, 10.0, 0.0].into(),
+            [1.0, 1.0, 0.0].into(),
+            [2.0, 1.0, 0.0].into(),
+            [1.0, 2.0, 0.0].into(),
+        ],
+        vec![0, 1, 2, 3, 4, 5],
+    );
+    assert_eq!(
+        self_intersections_brute_force(&mesh).len(),
+        1,
+        "a coplanar triangle inside another shares its whole area"
+    );
+}
+
+/// Coplanar triangles meeting at a single vertex only touch.
+#[test]
+fn coplanar_triangles_sharing_one_vertex_do_not_overlap() {
+    let mesh = TriMesh::new(
+        vec![
+            [0.0, 0.0, 0.0].into(),
+            [1.0, 0.0, 0.0].into(),
+            [0.0, 1.0, 0.0].into(),
+            [-1.0, 0.0, 0.0].into(),
+            [0.0, -1.0, 0.0].into(),
+        ],
+        vec![0, 1, 2, 0, 3, 4],
+    );
+    assert!(
+        self_intersections_brute_force(&mesh).is_empty(),
+        "a shared corner is boundary contact, not overlap"
+    );
+}
+
+/// A coplanar vertex lying exactly ON another triangle's edge is contact.
+///
+/// This is the T-junction an exact boolean produces whenever one face is
+/// split and its neighbour is not. The apex of the second triangle sits
+/// exactly on the first's hypotenuse, so the two share boundary and no area.
+/// Treating an on-edge point as interior would report every such junction.
+#[test]
+fn a_coplanar_vertex_on_an_edge_is_contact_not_overlap() {
+    let mesh = TriMesh::new(
+        vec![
+            [0.0, 0.0, 0.0].into(),
+            [4.0, 0.0, 0.0].into(),
+            [0.0, 4.0, 0.0].into(),
+            // Apex sits exactly on the hypotenuse x + y = 4, at (2, 2).
+            [2.0, 2.0, 0.0].into(),
+            [4.0, 4.0, 0.0].into(),
+            [1.0, 5.0, 0.0].into(),
+        ],
+        vec![0, 1, 2, 3, 4, 5],
+    );
+    assert!(
+        self_intersections_brute_force(&mesh).is_empty(),
+        "a vertex resting on an edge touches without sharing area"
+    );
+}
