@@ -211,3 +211,59 @@ fn an_offset_revolution_compiles_to_an_exact_annular_tube() {
         .count();
     assert_eq!(cylinders, 2, "an annular tube has two cylindrical walls");
 }
+
+/// A general exact boolean is now reachable through the compiler (#66).
+///
+/// Previously every exact boolean over two extrusions was a typed refusal.
+/// The capability existing in axiolid-construct is not enough -- it has to be
+/// reachable through the compiler, which is the flaw #37 was opened for.
+#[test]
+fn an_exact_boolean_over_two_extrusions_compiles() {
+    let mut builder = GeometryGraphBuilder::new();
+    let make = |b: &mut GeometryGraphBuilder, x: f64, y: f64| {
+        let profile = b
+            .push(GeometryNode::Profile(Profile::Rectangle(
+                RectangleProfile {
+                    x,
+                    y,
+                    thickness: None,
+                    outer_radius: None,
+                    inner_radius: None,
+                },
+            )))
+            .unwrap();
+        b.push(GeometryNode::SolidOperation(SolidOperation::Extrusion {
+            profile,
+            direction: Vec3::Z,
+            depth: 3.0,
+        }))
+        .unwrap()
+    };
+    let subject = make(&mut builder, 4.0, 4.0);
+    let tool = make(&mut builder, 2.0, 2.0);
+    let cut = builder
+        .push(GeometryNode::SolidOperation(SolidOperation::Boolean {
+            left: subject,
+            right: tool,
+            operator: axiolid_core::BooleanOperator::Difference,
+        }))
+        .unwrap();
+    let graph = builder.finish(vec![cut]).unwrap();
+
+    let exact = ReferenceExactCompiler::new()
+        .compile_exact(&graph, cut, &options())
+        .expect("a full-height coaxial difference is exactly constructible");
+
+    // The opening is interior, so the cap gains a hole loop.
+    let max_bounds = exact
+        .topology()
+        .faces()
+        .iter()
+        .map(|f| f.bounds.len())
+        .max()
+        .expect("the solid has faces");
+    assert!(
+        max_bounds >= 2,
+        "the cut must appear as a hole loop, got {max_bounds}"
+    );
+}

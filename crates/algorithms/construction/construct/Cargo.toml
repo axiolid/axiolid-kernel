@@ -20,6 +20,7 @@ axiolid-mesh-boolean-contract.workspace = true
 axiolid-mesh.workspace = true
 axiolid-nurbs.workspace = true
 axiolid-primitive.workspace = true
+axiolid-overlay.workspace = true
 axiolid-profile.workspace = true
 axiolid-reference.workspace = true
 axiolid-surface.workspace = true
@@ -27,6 +28,8 @@ axiolid-topology.workspace = true
 axiolid-tessellation-contract.workspace = true
 earcut = "0.4"
 [dev-dependencies]
+axiolid-mesh-boolean-boolmesh.workspace = true
+axiolid-mesh-boolean-contract.workspace = true
 # The measurement oracle. `volume_properties` audits closed-two-manifoldness
 # before it integrates, so using it makes the generation tests assert
 # watertightness and volume in one call instead of trusting a hand-rolled

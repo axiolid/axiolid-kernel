@@ -1,0 +1,211 @@
+//! Exact boolean over axis-aligned prisms (#66).
+//!
+//! # Why this family, and why it is genuinely exact
+//!
+//! Exact boolean support previously reached only half-space-bounded
+//! difference and intersection. Widening it to arbitrary solids needs a
+//! general polyhedral boolean, which is a large algorithm in its own right.
+//!
+//! But there is a family where the general problem collapses to one the
+//! kernel already solves EXACTLY: two prisms sharing an extrusion axis. Their
+//! boolean is the 2D boolean of their cross-sections crossed with the boolean
+//! of their height intervals. `axiolid-overlay` computes the planar part
+//! exactly, so the result is exact -- not a tessellated approximation.
+//!
+//! That family is not a toy. A wall with a rectangular opening is exactly
+//! this shape, and it is the dominant pattern in building models.
+//!
+//! # When the answer is NOT a prism
+//!
+//! The reduction only holds when the result is itself a prism:
+//!
+//! - Intersection: always. The heights intersect to one interval.
+//! - Union: only when both operands span the same height. Otherwise the
+//!   result is stepped -- two different cross-sections at two heights -- and
+//!   a single prism cannot represent it.
+//! - Difference: only when the tool spans at least the subject's full height.
+//!   A tool ending mid-way leaves a stepped solid for the same reason.
+//!
+//! Those cases are refused rather than approximated by the nearest prism,
+//! which would silently change the geometry.
+
+use axiolid_brep::ExactBRep;
+use axiolid_contracts::{GeomError, GeomResult, Operation};
+use axiolid_core::{BooleanOperator, Frame2, Point2, Scalar, Tolerance, Vec2, Vec3};
+use axiolid_overlay::{overlay, FillRule, OverlayInput, OverlayOperation, Polygon, Ring};
+
+use crate::extrude_exact::extrude_polygon_rings;
+use crate::BACKEND_ID;
+
+fn unsupported(input: &'static str) -> GeomError {
+    GeomError::UnsupportedInput {
+        backend: BACKEND_ID,
+        operation: Operation::MeshBoolean,
+        input,
+    }
+}
+
+/// A prism: a closed planar cross-section swept along +z.
+///
+/// Deliberately explicit rather than recovered from an `ExactBRep`. Reading a
+/// prism back out of a general B-rep is its own inference problem, and
+/// getting it wrong would silently mis-identify the operand.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Prism {
+    /// Outer boundary, counter-clockwise; further rings are holes.
+    pub rings: Vec<Vec<Point2>>,
+    /// Base height along z.
+    pub bottom: Scalar,
+    /// Top height along z.
+    pub top: Scalar,
+}
+
+/// Exact boolean of two coaxial prisms.
+///
+/// Returns an exact B-rep, or a typed refusal naming why the result is not
+/// itself a prism. Never falls back to a mesh.
+pub fn boolean_prisms_exact(
+    subject: &Prism,
+    tool: &Prism,
+    operator: BooleanOperator,
+    tolerance: Tolerance,
+) -> GeomResult<ExactBRep> {
+    validate(subject, "subject")?;
+    validate(tool, "tool")?;
+
+    // Height logic decides whether a prism can represent the answer at all,
+    // so it is settled before any planar work.
+    let (bottom, top) = match operator {
+        BooleanOperator::Intersection => {
+            let bottom = subject.bottom.max(tool.bottom);
+            let top = subject.top.min(tool.top);
+            if top - bottom <= tolerance.linear() {
+                return Err(GeomError::Degenerate(
+                    "prism intersection is empty along the extrusion axis".to_owned(),
+                ));
+            }
+            (bottom, top)
+        }
+        BooleanOperator::Union => {
+            // Differing spans give a stepped solid, which is not a prism.
+            if !tolerance.eq(subject.bottom, tool.bottom) || !tolerance.eq(subject.top, tool.top) {
+                return Err(unsupported(
+                    "exact prism union with differing extrusion spans",
+                ));
+            }
+            (subject.bottom, subject.top)
+        }
+        BooleanOperator::Difference => {
+            // A tool that stops inside the subject leaves a step.
+            if tool.bottom > subject.bottom + tolerance.linear()
+                || tool.top < subject.top - tolerance.linear()
+            {
+                return Err(unsupported(
+                    "exact prism difference with a tool shorter than the subject",
+                ));
+            }
+            (subject.bottom, subject.top)
+        }
+        _ => return Err(unsupported("unknown exact prism boolean operator")),
+    };
+
+    let operation = match operator {
+        BooleanOperator::Intersection => OverlayOperation::Intersection,
+        BooleanOperator::Union => OverlayOperation::Union,
+        BooleanOperator::Difference => OverlayOperation::Difference,
+        _ => return Err(unsupported("unknown exact prism boolean operator")),
+    };
+
+    let frame = Frame2 {
+        origin: Vec2::ZERO,
+        x: Vec2::X,
+        y: Vec2::Y,
+    };
+    let result = overlay(
+        &OverlayInput {
+            frame,
+            polygons: to_polygons(subject),
+        },
+        &OverlayInput {
+            frame,
+            polygons: to_polygons(tool),
+        },
+        operation,
+        FillRule::NonZero,
+        tolerance,
+    )
+    .map_err(|error| GeomError::BackendContractViolation {
+        backend: BACKEND_ID,
+        detail: format!("exact prism cross-section overlay failed: {error:?}"),
+    })?;
+
+    if result.polygons.is_empty() {
+        return Err(GeomError::Degenerate(
+            "prism boolean produced an empty cross-section".to_owned(),
+        ));
+    }
+    // A disconnected result is several solids, and one ExactBRep is one
+    // solid. Returning just the first would silently discard material.
+    if result.polygons.len() > 1 {
+        return Err(unsupported(
+            "exact prism boolean producing disconnected components",
+        ));
+    }
+
+    let polygon = &result.polygons[0];
+    let mut rings = Vec::with_capacity(1 + polygon.holes.len());
+    rings.push(polygon.outer.points.clone());
+    for hole in &polygon.holes {
+        rings.push(hole.points.clone());
+    }
+
+    // `extrude_polygon_rings` builds from z = 0, so a band that does not start
+    // there is not representable by it. Refusing is correct rather than
+    // silently dropping the offset and returning a solid at the wrong height.
+    if bottom.abs() > tolerance.linear() {
+        return Err(unsupported(
+            "exact prism boolean whose result does not start at z = 0",
+        ));
+    }
+    extrude_polygon_rings(&rings, Vec3::Z * (top - bottom))
+}
+
+fn validate(prism: &Prism, role: &'static str) -> GeomResult<()> {
+    if prism.rings.is_empty() {
+        return Err(GeomError::InvalidInput(format!(
+            "{role} prism has no cross-section rings"
+        )));
+    }
+    for ring in &prism.rings {
+        if ring.len() < 3 {
+            return Err(GeomError::InvalidInput(format!(
+                "{role} prism ring needs at least three points"
+            )));
+        }
+        if !ring.iter().all(|p| p.x.is_finite() && p.y.is_finite()) {
+            return Err(GeomError::InvalidInput(format!(
+                "{role} prism ring has a non-finite point"
+            )));
+        }
+    }
+    if !prism.bottom.is_finite() || !prism.top.is_finite() {
+        return Err(GeomError::InvalidInput(format!(
+            "{role} prism heights must be finite"
+        )));
+    }
+    if prism.top <= prism.bottom {
+        return Err(GeomError::InvalidInput(format!(
+            "{role} prism top must lie above its bottom"
+        )));
+    }
+    Ok(())
+}
+
+fn to_polygons(prism: &Prism) -> Vec<Polygon> {
+    let mut rings = prism.rings.iter();
+    let outer = Ring {
+        points: rings.next().cloned().unwrap_or_default(),
+    };
+    let holes = rings.map(|r| Ring { points: r.clone() }).collect();
+    vec![Polygon { outer, holes }]
+}
