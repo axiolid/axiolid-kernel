@@ -7,6 +7,7 @@
 
 pub mod measure;
 pub mod mesh;
+pub mod mesh_proximity;
 pub mod properties;
 pub mod proximity;
 pub mod winding;
@@ -14,6 +15,9 @@ pub mod winding;
 pub use measure::Measure;
 pub use mesh::{
     surface_properties, volume_properties, MeshMeasureError, SurfaceProperties, VolumeProperties,
+};
+pub use mesh_proximity::{
+    mesh_distance, proximity_components, MeshDistance, MeshProximityError, ProximityComponent,
 };
 pub use properties::MassProperties;
 pub use proximity::{
