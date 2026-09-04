@@ -627,3 +627,182 @@ fn unsupported(input: &'static str) -> GeomError {
         input,
     }
 }
+
+/// Extrude a ring where one side is a cylindrical blend instead of a plane.
+///
+/// Mirrors `extrude_polygon_rings` for the planar walls and caps, then adds
+/// the blend as a single face whose surface is `Surface::Cylinder`. The two
+/// vertical edges bounding it are shared with the neighbouring planar walls,
+/// which is what makes the shell closed and the blend tangent: same edges,
+/// same vertices, no seam.
+pub(crate) use crate::feature::BlendCorner;
+
+pub(crate) fn extrude_with_cylindrical_blend(
+    ring: &[Point2],
+    offset: Vec3,
+    blend_index: usize,
+    blend: &BlendCorner,
+    radius: Scalar,
+) -> GeomResult<ExactBRep> {
+    let mut builder = ExactBRepBuilder::default();
+    let n = ring.len();
+    reserve(
+        &mut builder,
+        n * 2,
+        n * 3,
+        2 + n,
+        2 + n,
+        n * 3,
+        n * 6,
+        2 + n,
+    )?;
+
+    let topology = add_polygon_ring(&mut builder, ring, offset)?;
+
+    let bottom_surface = builder.add_surface(Surface::Plane(Plane {
+        frame: identity_frame3(Vec3::ZERO),
+    }));
+    let top_surface = builder.add_surface(Surface::Plane(Plane {
+        frame: identity_frame3(offset),
+    }));
+    let bottom_loop = add_cap_loop(
+        &mut builder,
+        &topology.bottom_edges,
+        &topology.bottom_points,
+    );
+    let top_loop = add_cap_loop(&mut builder, &topology.top_edges, &topology.bottom_points);
+
+    let bottom_face = builder.topology_mut().add_face(Face {
+        surface: Some(bottom_surface),
+        bounds: vec![FaceBound {
+            loop_id: bottom_loop,
+            orientation: Orientation::Forward,
+            outer: true,
+        }],
+        orientation: Orientation::Reversed,
+    });
+    let top_face = builder.topology_mut().add_face(Face {
+        surface: Some(top_surface),
+        bounds: vec![FaceBound {
+            loop_id: top_loop,
+            orientation: Orientation::Forward,
+            outer: true,
+        }],
+        orientation: Orientation::Forward,
+    });
+
+    let mut faces = vec![bottom_face, top_face];
+    for edge_index in 0..topology.bottom_edges.len() {
+        if edge_index == blend_index {
+            faces.push(add_cylindrical_blend(
+                &mut builder,
+                &topology,
+                edge_index,
+                offset,
+                blend,
+                radius,
+            )?);
+        } else {
+            faces.push(add_planar_side(
+                &mut builder,
+                &topology,
+                edge_index,
+                offset,
+            )?);
+        }
+    }
+    finish_closed(builder, faces)
+}
+
+/// The blend face: a cylinder tangent to both neighbouring walls.
+///
+/// The cylinder's axis is the blend centre extruded along the offset, and its
+/// radius is the fillet radius. Tangency holds because the centre was placed
+/// at the perpendicular distance `radius` from each adjacent wall -- it is a
+/// property of the construction, not something verified here.
+///
+/// The face is bounded by the same four edges a planar wall would use, so the
+/// blend shares vertices and edges with its neighbours and the shell closes.
+fn add_cylindrical_blend(
+    builder: &mut ExactBRepBuilder,
+    ring: &RingTopology,
+    index: usize,
+    offset: Vec3,
+    blend: &BlendCorner,
+    radius: Scalar,
+) -> GeomResult<FaceId> {
+    let next = (index + 1) % ring.bottom_edges.len();
+    let centre = Point3::new(blend.centre.x, blend.centre.y, 0.0);
+    // Frame x-axis points at the arc start, so the surface parameter u is the
+    // angle measured from there and the pcurve intervals are the sweep.
+    let start = ring.bottom_points[index];
+    let x = (start - centre).normalize();
+    let z = offset.normalize();
+    let y = z.cross(x);
+    if !(x.is_finite() && y.is_finite() && z.is_finite()) {
+        return Err(GeomError::Degenerate(
+            "fillet blend produced a degenerate cylinder frame".to_owned(),
+        ));
+    }
+    let surface = builder.add_surface(Surface::Cylinder(Cylinder {
+        frame: Frame3 {
+            origin: centre,
+            x,
+            y,
+            z,
+        },
+        radius,
+    }));
+
+    let height = offset.length();
+    let pcurves = [
+        // Bottom arc: u sweeps the blend angle at v = 0.
+        Curve2::Line(Line2 {
+            origin: Vec2::ZERO,
+            direction: Vec2::new(blend.sweep, 0.0),
+        }),
+        Curve2::Line(Line2 {
+            origin: Vec2::new(blend.sweep, 0.0),
+            direction: Vec2::new(0.0, height),
+        }),
+        Curve2::Line(Line2 {
+            origin: Vec2::new(0.0, height),
+            direction: Vec2::new(blend.sweep, 0.0),
+        }),
+        Curve2::Line(Line2 {
+            origin: Vec2::ZERO,
+            direction: Vec2::new(0.0, height),
+        }),
+    ];
+    let edge_uses = [
+        (ring.bottom_edges[index], Orientation::Forward),
+        (ring.vertical_edges[next], Orientation::Forward),
+        (ring.top_edges[index], Orientation::Reversed),
+        (ring.vertical_edges[index], Orientation::Reversed),
+    ];
+
+    let mut uses = Vec::with_capacity(4);
+    let mut intervals = Vec::with_capacity(4);
+    for ((edge, orientation), pcurve) in edge_uses.into_iter().zip(pcurves) {
+        let pcurve = builder.add_curve2(pcurve);
+        uses.push(EdgeUse {
+            edge,
+            orientation,
+            pcurve: Some(pcurve),
+        });
+        intervals.push(match orientation {
+            Orientation::Forward => Interval::UNIT,
+            Orientation::Reversed => Interval::new(1.0, 0.0),
+        });
+    }
+    let loop_id = add_loop(builder, uses, intervals);
+    Ok(builder.topology_mut().add_face(Face {
+        surface: Some(surface),
+        bounds: vec![FaceBound {
+            loop_id,
+            orientation: Orientation::Forward,
+            outer: true,
+        }],
+        orientation: Orientation::Forward,
+    }))
+}
