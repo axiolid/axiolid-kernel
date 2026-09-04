@@ -44,6 +44,7 @@ graph TD
     axiolid_project["axiolid-project\nalgorithm.planar"]
     axiolid_ray_mesh["axiolid-ray-mesh\nalgorithm.query"]
     axiolid_reference["axiolid-reference\nalgorithm.reference"]
+    axiolid_route["axiolid-route\nalgorithm.planar"]
     axiolid_spatial["axiolid-spatial\nalgorithm.query"]
     axiolid_surface["axiolid-surface\nrepresentation.atomic"]
     axiolid_tessellation_contract["axiolid-tessellation-contract\ncontract.operation"]
@@ -232,6 +233,11 @@ graph TD
     axiolid_reference --> axiolid_primitive
     axiolid_reference --> axiolid_spatial
     axiolid_reference --> axiolid_surface
+    axiolid_route --> axiolid_contracts
+    axiolid_route --> axiolid_core
+    axiolid_route --> axiolid_guarantees
+    axiolid_route --> axiolid_overlay
+    axiolid_route --> axiolid_predicates
     axiolid_spatial --> axiolid_core
     axiolid_surface --> axiolid_core
     axiolid_surface --> axiolid_curve

@@ -1,0 +1,26 @@
+[package]
+name = "axiolid-route"
+description = "Exact planar shortest path over a visibility graph"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[dependencies]
+axiolid-contracts.workspace = true
+axiolid-core.workspace = true
+axiolid-guarantees.workspace = true
+axiolid-overlay.workspace = true
+axiolid-predicates.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "algorithms"
+role = "algorithm.planar"
+domain = "planar.route"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-contracts", "axiolid-core", "axiolid-guarantees", "axiolid-overlay", "axiolid-predicates"]

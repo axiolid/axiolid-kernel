@@ -465,6 +465,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "axiolid-route"
+version = "0.4.0"
+dependencies = [
+ "axiolid-contracts",
+ "axiolid-core",
+ "axiolid-guarantees",
+ "axiolid-overlay",
+ "axiolid-predicates",
+]
+
+[[package]]
 name = "axiolid-spatial"
 version = "0.4.0"
 dependencies = [
