@@ -245,6 +245,7 @@ version = "0.4.0"
 dependencies = [
  "axiolid-core",
  "axiolid-guarantees",
+ "axiolid-measure",
  "axiolid-mesh",
  "axiolid-predicates",
  "axiolid-spatial",

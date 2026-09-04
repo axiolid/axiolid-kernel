@@ -9,6 +9,7 @@
 use std::collections::{BTreeMap, HashMap, VecDeque};
 
 use axiolid_core::{Scalar, Tolerance};
+use axiolid_measure::volume_properties;
 use axiolid_mesh::TriMesh;
 
 use crate::diagnosis::{Defect, DefectKind, Diagnosis};
@@ -228,6 +229,7 @@ impl Repair<TriMesh> for MeshHealer {
                 RepairAction::WeldVertices => weld(&mut out, tolerance),
                 RepairAction::DropDegenerateElements => drop_degenerate(&mut out, tolerance),
                 RepairAction::UnifyOrientation => unify_orientation(&mut out),
+                RepairAction::OrientOutward => orient_outward(&mut out, tolerance),
             };
             if changed {
                 report.applied.push(action);
@@ -357,4 +359,32 @@ fn area(mesh: &TriMesh, t: usize) -> Option<Scalar> {
     let p = |k: usize| mesh.positions.get(i[k] as usize).copied();
     let (a, b, c) = (p(0)?, p(1)?, p(2)?);
     Some((b - a).cross(c - a).length() * 0.5)
+}
+
+/// Flip a closed shell whose faces point inward.
+///
+/// `unify_orientation` makes neighbours agree but leaves the absolute
+/// sense as the seed found it, because choosing outward needs a volume
+/// convention it does not own. `axiolid-measure` owns that convention
+/// now, so this repair completes the pair: unify makes the shell
+/// consistent, this makes it consistent the RIGHT WAY ROUND.
+///
+/// An inside-out shell is structurally perfect -- closed, two-manifold,
+/// consistently wound -- so no topological audit finds it. The boolmesh
+/// provider records the consequence: `Difference` behaves as `Union` and
+/// returns a LARGER mesh with no error.
+///
+/// Only closed shells are eligible. An open surface has no enclosed
+/// volume, so `inward` is not defined for it and it is left untouched.
+fn orient_outward(mesh: &mut TriMesh, tolerance: Tolerance) -> bool {
+    let Ok(properties) = volume_properties(&*mesh, tolerance) else {
+        return false;
+    };
+    if properties.signed_volume >= 0.0 {
+        return false;
+    }
+    for triangle in mesh.indices.chunks_exact_mut(3) {
+        triangle.swap(1, 2);
+    }
+    true
 }

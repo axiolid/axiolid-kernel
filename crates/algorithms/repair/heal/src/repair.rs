@@ -10,6 +10,11 @@ pub enum RepairAction {
     UnifyOrientation,
     /// Remove degenerate elements.
     DropDegenerateElements,
+    /// Flip a closed shell that encloses negative volume.
+    ///
+    /// Separate from [`Self::UnifyOrientation`]: that one makes neighbours
+    /// agree, this one decides which way round the agreed shell faces.
+    OrientOutward,
 }
 
 /// Ordered caller-approved repair plan.

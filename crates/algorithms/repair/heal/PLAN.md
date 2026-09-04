@@ -32,3 +32,16 @@ intersecting; deciding them needs 2D region logic this crate does not own.
 
 Targeted tests, feature-isolated compile where applicable, mutation-verified
 architecture/validation gates, and benchmarks before performance claims.
+
+## Repair status (#74)
+
+- Implemented, all opt-in via `RepairPlan`: `WeldVertices`,
+  `DropDegenerateElements`, `UnifyOrientation`, `OrientOutward`.
+- `OrientOutward` closes the gap `unify_orientation` left open: unify makes
+  neighbours agree, `OrientOutward` decides which way round the agreed shell
+  faces, using `axiolid-measure` for the volume convention.
+- NOT implemented: stitching coincident boundary edges into shared edges,
+  and self-intersection removal. Detection of the latter exists; removal
+  changes topology and is deliberately deferred.
+- No repair runs implicitly. Nothing in compilation or dispatch calls into
+  this crate.

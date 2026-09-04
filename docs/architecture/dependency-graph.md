@@ -136,6 +136,7 @@ graph TD
     axiolid_fixtures --> axiolid_mesh
     axiolid_heal --> axiolid_core
     axiolid_heal --> axiolid_guarantees
+    axiolid_heal --> axiolid_measure
     axiolid_heal --> axiolid_mesh
     axiolid_heal --> axiolid_predicates
     axiolid_heal --> axiolid_spatial

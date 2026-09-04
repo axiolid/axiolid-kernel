@@ -12,6 +12,7 @@ readme.workspace = true
 [dependencies]
 axiolid-core.workspace = true
 axiolid-mesh.workspace = true
+axiolid-measure.workspace = true
 axiolid-guarantees.workspace = true
 axiolid-predicates.workspace = true
 axiolid-spatial.workspace = true
@@ -24,4 +25,4 @@ role = "algorithm.repair"
 domain = "repair.mesh"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-core", "axiolid-mesh", "axiolid-guarantees", "axiolid-predicates", "axiolid-spatial"]
+allowed-internal-dependencies = ["axiolid-core", "axiolid-measure", "axiolid-mesh", "axiolid-guarantees", "axiolid-predicates", "axiolid-spatial"]
