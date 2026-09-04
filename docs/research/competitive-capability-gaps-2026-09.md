@@ -118,6 +118,47 @@ v0.6 landed constant-distance chamfer on a single straight edge. Constant-
 radius fillet — which needs a cylindrical blend surface and tangent trimming
 — refuses by name. Variable radius and edge networks are untouched.
 
+### G10. Production boolean constructs in f64; exactness is verification-only
+
+Every gap above is about *which shapes* an operation accepts. This one is
+about the *arithmetic*, and it cuts across all of them.
+
+`axiolid-predicates` provides certified filtered `orient3d` (static filter,
+then exact expansion, then dyadic fallback). In
+`crates/providers/mesh/boolmesh/Cargo.toml` it is a **dev-dependency**: it
+re-decides orientation in tests, and never runs in production dispatch.
+Intersection coordinates are constructed and stored as f64. A reader who
+finds certified predicates in the tree can reasonably infer an exactness the
+production path does not provide.
+
+Measured against CGAL (`Exact_predicates_exact_constructions_kernel`), OCCT
+and Manifold on identical operands (`axiolid/benchmarks`):
+
+- **Well-conditioned input costs nothing.** Chaining 64 rotated subtractions,
+  axiolid's relative error against derived ground truth is 5.62e-16 — flat in
+  chain length, and better than CGAL (1.12e-15) and OCCT (3.71e-15). f64
+  construction is not a liability here.
+- **Near-degenerate input does cost.** Intersecting two unit cubes overlapping
+  by `d`, axiolid tracks CGAL down to `d = 1e-12` (4.73e-5 vs 3.34e-5) and
+  never collapses, but at `d = 1e-15` CGAL is ~8x more accurate (1.12e-1 vs
+  8.52e-1). That difference is exact rational constructions.
+- OCCT collapses **earliest** (zero volume at `d = 1e-9`) because
+  `BRepBuilderAPI_Sewing` runs at a fixed 1e-9 tolerance. An exact kernel is
+  not automatically the robust one.
+- CGAL's runtime cost is the price of that robustness, not slack: rebuilding
+  the shim with `Exact_predicates_inexact_constructions_kernel` made it ~20%
+  faster at n=1 and then abort at n=4.
+
+The gap is not that f64 is wrong — it is a deliberate contract, like the `f32`
+row below — but that the choice is undocumented, its conditioning threshold
+unpublished, and its failure silent: at 1e-15 the boolean returns a badly
+wrong volume with no evidence flag, which contradicts the fail-closed stance
+of #16.
+
+- Tracked as #81, milestone v0.7.
+- Not #77: that widens operand *shapes* for the exact boolean; this is about
+  construction arithmetic on the general path.
+
 ## Explicitly NOT proposed
 
 `docs/ROADMAP.md` records standing refusals; none of the following belong in
@@ -136,9 +177,11 @@ them as "gaps":
 
 The ordering is a dependency chain, not a ranking:
 
-1. **v0.7 — Measurement and validity.** G1, G3, and the diagnosis half of
-   G2. Measurement is the oracle everything else is checked against, and
-   diagnosis must exist before repair.
+1. **v0.7 — Measurement and validity.** G1, G3, G10, and the diagnosis half
+   of G2. Measurement is the oracle everything else is checked against, and
+   diagnosis must exist before repair. G10 belongs here because it is
+   measured, not built: quantifying the f64 floor is a measurement task, and
+   the answer decides whether an exact tier is ever warranted.
 2. **v0.8 — Mesh processing breadth.** G4, G5, the repair half of G2.
    Repair depends on v0.7's diagnosis; simplification needs measurement to
    prove it preserved volume within a stated bound.
