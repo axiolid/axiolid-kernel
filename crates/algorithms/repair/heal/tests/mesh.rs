@@ -45,6 +45,7 @@ fn cube() -> TriMesh {
         positions: p.to_vec(),
         indices: f.concat(),
         normals: None,
+        attributes: Vec::new(),
     }
 }
 
@@ -134,6 +135,7 @@ fn welding_merges_split_vertices_and_closes_the_shell() {
         positions: Vec::new(),
         indices: Vec::new(),
         normals: None,
+        attributes: Vec::new(),
     };
     for &i in &cube.indices {
         split.indices.push(split.positions.len() as u32);
@@ -225,6 +227,7 @@ fn a_sphere_with_split_poles_welds_to_a_closed_shell() {
         positions: Vec::new(),
         indices: Vec::new(),
         normals: None,
+        attributes: Vec::new(),
     };
     let ring = |k: usize, lat: f64| {
         let phi = std::f64::consts::TAU * (k % bands) as f64 / bands as f64;

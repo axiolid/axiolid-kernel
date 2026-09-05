@@ -5,7 +5,7 @@ use axiolid_contracts::{
     ExecutionTarget, GeomError, GeomResult, ScratchRequirement,
 };
 use axiolid_core::BooleanOperator;
-use axiolid_mesh::TriMesh;
+use axiolid_mesh::{AttributeFate, TriMesh};
 use axiolid_mesh_boolean_contract::{
     symmetric_difference_via_composition, BooleanEvidence, BooleanOutcome, MeshBoolean,
 };
@@ -306,7 +306,23 @@ fn evidence_for(
     .with_sub_operations(sub_operations)
     // `boolmesh` does not report coincident-face encounters, so claiming
     // detection would be a lie. Left false until a provider can answer.
-    .with_coincident_faces(false);
+    .with_coincident_faces(false)
+    // A cut creates vertices with no preimage in either operand, and
+    // `boolmesh` returns positions and indices only. Naming each channel
+    // as dropped is what makes the loss an answer rather than a silence.
+    .with_attribute_fates(
+        subject
+            .attributes
+            .iter()
+            .map(|channel| {
+                let reason = match channel.blend {
+                    axiolid_mesh::Blend::None => axiolid_mesh::DropReason::NotBlendable,
+                    _ => axiolid_mesh::DropReason::ProviderLimitation,
+                };
+                (channel.name.clone(), AttributeFate::Dropped(reason))
+            })
+            .collect(),
+    );
 
     match relative_overlap(subject, tools) {
         Some(ratio) => evidence.with_relative_overlap(ratio),

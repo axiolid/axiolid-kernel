@@ -16,6 +16,25 @@ pub enum MeshValidationError {
     NormalIndexCount { expected: usize, actual: usize },
     /// Normal index does not exist.
     NormalIndexOutOfRange { index: u32, normal_count: usize },
+    /// A channel does not carry one tuple per vertex.
+    AttributeCount {
+        /// Channel name.
+        name: String,
+        /// Vertices in the mesh.
+        expected: usize,
+        /// Vertices the channel covers.
+        actual: usize,
+    },
+    /// A channel declares a zero tuple width, which covers no vertices.
+    AttributeZeroWidth {
+        /// Channel name.
+        name: String,
+    },
+    /// Two channels share a name, so a lookup would be ambiguous.
+    AttributeDuplicateName {
+        /// The repeated name.
+        name: String,
+    },
 }
 
 impl fmt::Display for MeshValidationError {
@@ -41,6 +60,20 @@ impl fmt::Display for MeshValidationError {
                 index,
                 normal_count,
             } => write!(f, "normal index {index} exceeds {normal_count} normals"),
+            Self::AttributeCount {
+                name,
+                expected,
+                actual,
+            } => write!(
+                f,
+                "attribute channel {name} covers {actual} vertices, mesh has {expected}"
+            ),
+            Self::AttributeZeroWidth { name } => {
+                write!(f, "attribute channel {name} declares a zero tuple width")
+            }
+            Self::AttributeDuplicateName { name } => {
+                write!(f, "attribute channel name {name} is used more than once")
+            }
         }
     }
 }

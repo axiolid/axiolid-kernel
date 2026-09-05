@@ -2,6 +2,7 @@
 
 use axiolid_core::{Aabb, Point3, Vec3};
 
+use crate::attribute::AttributeChannel;
 use crate::MeshValidationError;
 
 /// Optional independently indexed vertex normals.
@@ -25,6 +26,10 @@ pub struct TriMesh {
     pub indices: Vec<u32>,
     /// Optional normals preserved from the source.
     pub normals: Option<NormalAttribute>,
+    /// Named per-vertex channels carried alongside positions.
+    ///
+    /// Empty by default: a mesh with no extra data pays nothing for this.
+    pub attributes: Vec<AttributeChannel>,
 }
 
 impl TriMesh {
@@ -34,6 +39,7 @@ impl TriMesh {
             positions,
             indices,
             normals: None,
+            attributes: Vec::new(),
         }
     }
 
@@ -89,6 +95,32 @@ impl TriMesh {
                 return Err(MeshValidationError::NormalCount {
                     expected: self.positions.len(),
                     actual: normals.values.len(),
+                });
+            }
+        }
+        for (position, channel) in self.attributes.iter().enumerate() {
+            if channel.width == 0 {
+                return Err(MeshValidationError::AttributeZeroWidth {
+                    name: channel.name.clone(),
+                });
+            }
+            // Checked before the count so a duplicate is named as such
+            // rather than as whichever length happens to disagree first.
+            if self.attributes[..position]
+                .iter()
+                .any(|earlier| earlier.name == channel.name)
+            {
+                return Err(MeshValidationError::AttributeDuplicateName {
+                    name: channel.name.clone(),
+                });
+            }
+            if channel.vertex_count() != self.positions.len()
+                || channel.values.len() % channel.width != 0
+            {
+                return Err(MeshValidationError::AttributeCount {
+                    name: channel.name.clone(),
+                    expected: self.positions.len(),
+                    actual: channel.vertex_count(),
                 });
             }
         }

@@ -1701,6 +1701,7 @@ mod tests {
                 .collect(),
             indices: Vec::new(),
             normals: None,
+            attributes: Vec::new(),
         };
         let mut welded = WeldedVertices::new();
         let mut edge_samples = EdgeSamples::new();
@@ -1811,6 +1812,7 @@ mod tests {
             positions: vec![Point3::ZERO, Point3::new(1.0, 1.0, 1.0)],
             indices: Vec::new(),
             normals: None,
+            attributes: Vec::new(),
         };
         let mut welded = WeldedVertices::new();
         let mut edge_samples = EdgeSamples::new();
@@ -1902,6 +1904,7 @@ mod tests {
             positions: vec![Point3::new(1.0, 2.0, 3.0)],
             indices: vec![0],
             normals: None,
+            attributes: Vec::new(),
         };
         let before_positions = mesh.positions.clone();
         let before_indices = mesh.indices.clone();
@@ -1972,6 +1975,7 @@ mod tests {
             positions: vec![Point3::ZERO; MAX_CURVED_FACE_VERTICES + 1],
             indices: Vec::new(),
             normals: None,
+            attributes: Vec::new(),
         };
         let mut welded = WeldedVertices::new();
         let mut edge_samples = EdgeSamples::new();

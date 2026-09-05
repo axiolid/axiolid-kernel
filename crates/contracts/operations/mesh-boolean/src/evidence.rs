@@ -6,13 +6,13 @@
 //! This module closes that gap with the same mental model: *what did the kernel
 //! actually do to my geometry?*
 
-use axiolid_mesh::TriMesh;
+use axiolid_mesh::{AttributeFate, TriMesh};
 
 /// Counters describing one boolean evaluation.
 ///
 /// Every field is a fact about the computation, never a quality verdict. A
 /// caller decides whether a given count is acceptable for its domain.
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[non_exhaustive]
 pub struct BooleanEvidence {
     /// Triangles in the subject operand as supplied.
@@ -38,6 +38,14 @@ pub struct BooleanEvidence {
     /// reports `3`; a native implementation reports `1`. This is how a caller
     /// tells a composed path from a primitive one.
     pub sub_operations: usize,
+    /// What happened to each named attribute channel on the subject.
+    ///
+    /// A boolean creates vertices along the cut that have no preimage in
+    /// either operand, so a channel cannot always survive. Reporting the
+    /// fate per channel is what turns a silent loss into an answer: the
+    /// caller learns the data is gone AND why, instead of comparing the
+    /// mesh before and after to find out.
+    pub attribute_fates: Vec<(String, AttributeFate)>,
     /// Whether the provider detected coincident faces between operands.
     ///
     /// Coincident faces are the dominant source of cross-kernel disagreement.
@@ -92,7 +100,19 @@ impl BooleanEvidence {
             coincident_faces_encountered: false,
             analytic_path: false,
             relative_overlap: None,
+            attribute_fates: Vec::new(),
         }
+    }
+
+    /// Record what happened to the subject's attribute channels.
+    ///
+    /// A provider that carries no attributes still calls this, reporting
+    /// every channel as dropped: an empty list would be indistinguishable
+    /// from a subject that had no channels to begin with.
+    #[must_use]
+    pub fn with_attribute_fates(mut self, fates: Vec<(String, AttributeFate)>) -> Self {
+        self.attribute_fates = fates;
+        self
     }
 
     /// Record the measured relative overlap between operands.

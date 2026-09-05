@@ -4,6 +4,13 @@ All notable changes to Axiolid are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Added `AttributeChannel` to `axiolid-mesh`: named per-vertex data (`name`, `values`, `width`, `blend`) carried on `TriMesh::attributes`, with a `Blend` policy (`Linear`, `Nearest`, `None`) that is a property of the DATA rather than of any operation. `validate_structure` refuses a channel that does not cover every vertex, declares a zero tuple width, or repeats a name.
+
+### Changed
+- `BooleanEvidence` now reports `attribute_fates`: one `AttributeFate` per named channel on the subject (`Preserved`, `Interpolated`, or `Dropped(DropReason)`). A boolean creates vertices along the cut with no preimage in either operand, so attributes could not always survive -- but they were being dropped SILENTLY, leaving a caller to compare the mesh before and after to discover the loss and with no reason for it. `DropReason` separates `NotBlendable` (the data forbids derivation) from `ProviderLimitation` (this backend does not carry it), so a capability gap does not read as a property of the data. `BooleanEvidence` is no longer `Copy` as a result; it remains `Clone`.
+
+
 ## [0.11.0] - 2026-09-05
 
 ### Added
