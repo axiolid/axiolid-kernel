@@ -4,6 +4,8 @@ All notable changes to Axiolid are documented in this file.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-05
+
 ### Added
 - `SurfaceCurve` now records which p-curve belongs to which surface. `associated_geometry: Vec<NodeId>` was an unordered list that accepted a single entry, a swapped pair, or three unrelated nodes equally; it is replaced by `SurfaceSides`, which pairs each surface with its own p-curve and keeps a single-sided curve expressible.
 - `MasterRepresentation::ParameterCurve` is split into `ParameterCurveS1` and `ParameterCurveS2`, so a surface curve can name which parametric side governs. Formats that state the pairing explicitly (such as IFC `PCURVE_S1`/`PCURVE_S2`) no longer have that information discarded at the boundary.
