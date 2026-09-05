@@ -8,7 +8,7 @@ use axiolid_contracts::{
     Backend, BackendDescriptor, BackendId, ExecutionOptions, ExecutionTarget, GeomError,
     GeomResult, Operation, ScratchRequirement,
 };
-use axiolid_core::{Point3, Scalar, Tolerance, Transform3};
+use axiolid_core::{PlaneFrame, Point3, Scalar, Tolerance, Transform3};
 use axiolid_mesh::TriMesh;
 use axiolid_mesh_boolean_contract::MeshBoolean;
 use axiolid_mesh_compile_contract::MeshCompiler;
@@ -561,14 +561,32 @@ impl<B: MeshBoolean> ReferenceMeshCompiler<B> {
                 // an unbounded half-space extends before it can be meshed.
                 let margin = axiolid_primitive::ClipMargin::new(2.0)
                     .expect("2.0 is a valid positive clip margin");
-                let mesh = axiolid_construct::half_space::bounded_half_space(
+                // `placement` is the boundary's OWN frame, independent of the
+                // clip plane: the profile is authored in it, so it has to
+                // orient the profile before the slab is built. Applying it
+                // only to the finished mesh cannot express an in-plane
+                // rotation, because by then the boundary has already been
+                // framed against the plane normal.
+                let frame = PlaneFrame::new(
+                    placement.translation,
+                    placement.matrix3.x_axis.normalize_or_zero(),
+                    placement.matrix3.y_axis.normalize_or_zero(),
+                    options.tolerance(),
+                )
+                .map_err(|error| {
+                    GeomError::InvalidInput(format!(
+                        "bounded half-space placement is not a usable boundary frame: {error}"
+                    ))
+                })?;
+                let mesh = axiolid_construct::half_space::bounded_half_space_in_frame(
                     &rings,
                     hs.boundary,
+                    frame,
                     hs.agreement,
                     margin,
                     options.tolerance(),
                 )?;
-                Ok(transform_mesh(&mesh, *placement))
+                Ok(mesh)
             }
             SolidOperation::Boolean {
                 left,

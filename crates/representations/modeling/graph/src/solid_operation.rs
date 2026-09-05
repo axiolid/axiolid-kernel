@@ -94,6 +94,15 @@ pub enum SolidOperation {
     BoundedHalfSpace {
         half_space: NodeId,
         boundary: NodeId,
+        /// The boundary's own frame, independent of the clip plane.
+        ///
+        /// The boundary profile is authored in this frame, so its rotation
+        /// orients the profile itself rather than the finished solid. A
+        /// source format may place the boundary independently of the base
+        /// surface, and only the rotation about the clip normal is
+        /// meaningful: the compiler projects this frame's axes into the
+        /// plane, so a component along the normal is dropped rather than
+        /// tilting the profile out of its own plane.
         placement: Transform3,
     },
 }
