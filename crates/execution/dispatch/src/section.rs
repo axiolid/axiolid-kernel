@@ -6,7 +6,7 @@ use axiolid_contracts::{
     BackendId, DevicePreference, ExecutionOptions, ExecutionTarget, GeomError, GeomResult,
     Operation, ScratchRequirement,
 };
-use axiolid_core::Frame3;
+use axiolid_core::{Frame3, SpaceFrame, Tolerance};
 use axiolid_mesh::{audit_mesh_scratch_bytes, try_audit_mesh, TriMesh};
 use axiolid_mesh_contracts::SolidRequirements;
 use axiolid_mesh_section_contract::{
@@ -201,32 +201,16 @@ fn section_scratch_fits(
 }
 
 fn validate_frame(frame: Frame3, angular_tolerance: f64) -> GeomResult<()> {
-    let values = [frame.origin, frame.x, frame.y, frame.z];
-    if !values.iter().all(|value| value.is_finite()) {
-        return Err(GeomError::InvalidInput(
-            "section frame components must be finite".into(),
-        ));
-    }
     // Structural frame validity cannot be relaxed into zero/scaled axes by a
-    // coarse geometric tolerance. Tighter caller tolerances still apply.
+    // coarse geometric tolerance, so the caller's angular tolerance is capped
+    // here before it reaches the shared validator. Tighter caller tolerances
+    // still apply; looser ones do not.
     let limit = angular_tolerance.clamp(128.0 * f64::EPSILON, 1.0e-6);
-    for (name, axis) in [("x", frame.x), ("y", frame.y), ("z", frame.z)] {
-        if (axis.length() - 1.0).abs() > limit {
-            return Err(GeomError::InvalidInput(format!(
-                "section frame {name} axis must be unit length"
-            )));
-        }
-    }
-    if frame.x.dot(frame.y).abs() > limit
-        || frame.x.dot(frame.z).abs() > limit
-        || frame.y.dot(frame.z).abs() > limit
-        || (frame.x.cross(frame.y).dot(frame.z) - 1.0).abs() > limit
-    {
-        return Err(GeomError::InvalidInput(
-            "section frame must be right-handed and orthonormal".into(),
-        ));
-    }
-    Ok(())
+    let tolerance = Tolerance::new(limit, limit)
+        .map_err(|_| GeomError::InvalidInput("section frame tolerance is invalid".into()))?;
+    SpaceFrame::new(frame.origin, frame.x, frame.y, frame.z, tolerance)
+        .map(|_| ())
+        .map_err(|error| GeomError::InvalidInput(format!("section frame is invalid: {error}")))
 }
 
 fn validate_outcome(

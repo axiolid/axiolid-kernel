@@ -5,9 +5,12 @@ All notable changes to Axiolid are documented in this file.
 ## [Unreleased]
 
 ### Added
+- Added `SpaceFrame` to `axiolid-core`: a validated right-handed orthonormal 3D frame owning `to_local`/`to_world`. Surface evaluation, sampled-field config, and section dispatch each carried their own orthonormality rule under a different tolerance policy; all three now delegate to it.
 - Added `PlaneFrame` to `axiolid-core`: an in-plane coordinate frame that validates its basis on construction and owns both directions of the map (`project`, `lift`, `signed_distance`, `normal`). `Frame2` and `Frame3` are inert storage, so every consumer previously re-derived the same two mappings and its own validity rule -- four orthonormality checks existed under three different tolerance policies. Fields are private, so a skewed basis is unrepresentable rather than merely rejected, and the normal is derived from the axes rather than stored alongside them where the two could disagree. `from_normal` covers the case where the caller cares about the plane but not which in-plane direction is x.
 
 ### Fixed
+- `axiolid-evaluate` now refuses a left-handed surface frame. `invert` checked unit length and perpendicularity but never handedness, so a mirrored basis passed validation and silently produced reflected parameters that still round-tripped through their own bad frame.
+- `axiolid-evaluate` now validates surface frames against the caller's tolerance instead of a hardcoded `1e-9`.
 - `axiolid-project` decided plane orthonormality with the LINEAR tolerance. Orthonormality is a dot product of unit vectors and therefore dimensionless, so the check scaled with the model length unit: under `Tolerance::MILLIMETRE` a basis skewed by up to 0.5 milliradians passed as orthonormal and every projected coordinate was silently wrong, while the same basis was correctly refused under `Tolerance::METRE`. `Plane` is now an alias for `PlaneFrame`, which decides validity with the ANGULAR tolerance. `ProjectionError::InvalidPlane` is no longer produced and is retained only because removing a public variant is breaking.
 
 ## [0.9.1] - 2026-09-05

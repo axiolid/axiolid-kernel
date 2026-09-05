@@ -3,7 +3,7 @@
 //! Expected areas are computed from the geometry by hand, never recorded from
 //! a previous run: a test that records its own output cannot detect a change.
 
-use axiolid_core::{PlaneFrameError, Point2, Point3, Tolerance, Vec3};
+use axiolid_core::{FrameError, Point2, Point3, Tolerance, Vec3};
 use axiolid_mesh::TriMesh;
 use axiolid_overlay::{total_area, Polygon, Ring};
 use axiolid_project::{intersect_prism, project_mesh, Plane, ProjectionError};
@@ -206,7 +206,7 @@ fn a_degenerate_basis_cannot_construct_a_plane() {
         tol(),
     )
     .expect_err("two identical axes span a line, not a plane");
-    assert_eq!(error, PlaneFrameError::Degenerate);
+    assert_eq!(error, FrameError::Degenerate);
 }
 
 #[test]

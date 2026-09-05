@@ -240,3 +240,44 @@ fn a_skewed_frame_is_refused() {
     });
     assert!(invert(&clean, Point3::new(1.0, 0.0, 0.0), Tolerance::MILLIMETRE).is_ok());
 }
+
+/// A LEFT-handed frame must not pass as a valid surface frame.
+///
+/// The unit-length and perpendicularity checks in to_local both pass on a
+/// mirrored basis, so handedness has to be tested separately. A mirrored
+/// frame flips the sign of one parameter and silently produces a reflected
+/// surface that still round-trips through its own bad frame.
+#[test]
+fn a_left_handed_surface_frame_is_refused() {
+    let mirrored = Frame3 {
+        origin: Point3::new(1.0, -2.0, 0.5),
+        x: Vec3::X,
+        y: Vec3::Y,
+        z: -Vec3::Z,
+    };
+    let surface = Surface::Plane(Plane { frame: mirrored });
+    assert!(
+        invert(&surface, Point3::new(2.0, -1.0, 0.5), Tolerance::METRE).is_err(),
+        "a mirrored basis is not a right-handed frame"
+    );
+}
+
+/// A non-finite frame axis must be refused rather than producing NaN.
+///
+/// The length check is `(length - 1.0).abs() > 1e-9`. With a NaN axis that
+/// comparison is false, so the guard passes and every dot product below
+/// yields NaN -- a parameter that is not a number but reports success.
+#[test]
+fn a_non_finite_surface_frame_axis_is_refused() {
+    let broken = Frame3 {
+        origin: Point3::new(0.0, 0.0, 0.0),
+        x: Vec3::new(f64::NAN, 0.0, 0.0),
+        y: Vec3::Y,
+        z: Vec3::Z,
+    };
+    let surface = Surface::Plane(Plane { frame: broken });
+    assert!(
+        invert(&surface, Point3::new(1.0, 1.0, 0.0), Tolerance::METRE).is_err(),
+        "a NaN axis must be refused, not silently produce NaN parameters"
+    );
+}

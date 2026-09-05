@@ -11,12 +11,14 @@ pub mod operation;
 pub mod plane_frame;
 pub mod primitives;
 pub mod scalar;
+pub mod space_frame;
 
 pub use bounds::Aabb;
 pub use operation::BooleanOperator;
-pub use plane_frame::{PlaneFrame, PlaneFrameError};
+pub use plane_frame::{FrameError, PlaneFrame};
 pub use primitives::{
     Frame2, Frame3, Interval, Mat3, Mat4, Plane3, Point2, Point3, Ray3, Transform2, Transform3,
     Vec2, Vec3,
 };
 pub use scalar::{Scalar, Tolerance, ToleranceError};
+pub use space_frame::SpaceFrame;

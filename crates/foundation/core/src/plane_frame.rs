@@ -20,7 +20,7 @@ use crate::scalar::{Scalar, Tolerance};
 /// Why a basis could not form an in-plane frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
-pub enum PlaneFrameError {
+pub enum FrameError {
     /// An origin or axis component was NaN or infinite.
     NonFiniteInput,
     /// An axis was not unit length within the angular tolerance.
@@ -29,20 +29,23 @@ pub enum PlaneFrameError {
     NotPerpendicular,
     /// The axes were parallel, so they span a line rather than a plane.
     Degenerate,
+    /// The basis is mirrored: orthonormal, but left-handed.
+    NotRightHanded,
 }
 
-impl core::fmt::Display for PlaneFrameError {
+impl core::fmt::Display for FrameError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str(match self {
-            Self::NonFiniteInput => "plane frame origin and axes must be finite",
-            Self::NotUnitLength => "plane frame axes must be unit length",
-            Self::NotPerpendicular => "plane frame axes must be perpendicular",
+            Self::NonFiniteInput => "frame origin and axes must be finite",
+            Self::NotUnitLength => "frame axes must be unit length",
+            Self::NotPerpendicular => "frame axes must be perpendicular",
             Self::Degenerate => "plane frame axes must span a plane, not a line",
+            Self::NotRightHanded => "frame axes must form a right-handed basis",
         })
     }
 }
 
-impl std::error::Error for PlaneFrameError {}
+impl std::error::Error for FrameError {}
 
 /// An origin and a right-handed orthonormal pair of in-plane axes.
 ///
@@ -82,29 +85,24 @@ impl PlaneFrame {
     ///
     /// # Errors
     ///
-    /// Returns [`PlaneFrameError`] naming which property failed, so a caller
+    /// Returns [`FrameError`] naming which property failed, so a caller
     /// can report the cause rather than a bare rejection.
-    pub fn new(
-        origin: Point3,
-        x: Vec3,
-        y: Vec3,
-        tolerance: Tolerance,
-    ) -> Result<Self, PlaneFrameError> {
+    pub fn new(origin: Point3, x: Vec3, y: Vec3, tolerance: Tolerance) -> Result<Self, FrameError> {
         if !origin.is_finite() || !x.is_finite() || !y.is_finite() {
-            return Err(PlaneFrameError::NonFiniteInput);
+            return Err(FrameError::NonFiniteInput);
         }
         // Floor the tolerance at a few ulps: a caller passing Tolerance::ZERO
         // means "exact", but demanding a bit-exact unit length would reject
         // bases that are correct to the limit of f64.
         let unit = tolerance.angular().max(Scalar::EPSILON * 8.0);
         if (x.length_squared() - 1.0).abs() > unit || (y.length_squared() - 1.0).abs() > unit {
-            return Err(PlaneFrameError::NotUnitLength);
+            return Err(FrameError::NotUnitLength);
         }
         if x.cross(y).length_squared() <= unit {
-            return Err(PlaneFrameError::Degenerate);
+            return Err(FrameError::Degenerate);
         }
         if x.dot(y).abs() > unit {
-            return Err(PlaneFrameError::NotPerpendicular);
+            return Err(FrameError::NotPerpendicular);
         }
         Ok(Self { origin, x, y })
     }
@@ -151,19 +149,19 @@ impl PlaneFrame {
     ///
     /// # Errors
     ///
-    /// Returns [`PlaneFrameError`] when the normal is non-finite or too short
+    /// Returns [`FrameError`] when the normal is non-finite or too short
     /// to normalize.
     pub fn from_normal(
         origin: Point3,
         normal: Vec3,
         tolerance: Tolerance,
-    ) -> Result<Self, PlaneFrameError> {
+    ) -> Result<Self, FrameError> {
         if !origin.is_finite() || !normal.is_finite() {
-            return Err(PlaneFrameError::NonFiniteInput);
+            return Err(FrameError::NonFiniteInput);
         }
         let unit = tolerance.angular().max(Scalar::EPSILON * 8.0);
         if normal.length_squared() <= unit {
-            return Err(PlaneFrameError::Degenerate);
+            return Err(FrameError::Degenerate);
         }
         let z = normal.normalize();
         // Seed against the world axis the normal is LEAST aligned with, so the

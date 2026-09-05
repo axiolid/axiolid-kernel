@@ -1,4 +1,4 @@
-use axiolid_core::{PlaneFrame, PlaneFrameError, Point2, Point3, Tolerance, Vec3};
+use axiolid_core::{FrameError, PlaneFrame, Point2, Point3, Tolerance, Vec3};
 
 /// The property that makes the type worth having: a frame that exists maps
 /// coordinates reversibly.
@@ -41,7 +41,7 @@ fn a_skewed_basis_is_refused_in_every_unit_system() {
             Vec3::new(skew, (1.0 - skew * skew).sqrt(), 0.0),
             tolerance,
         );
-        assert_eq!(result, Err(PlaneFrameError::NotPerpendicular));
+        assert_eq!(result, Err(FrameError::NotPerpendicular));
     }
 }
 
@@ -54,15 +54,15 @@ fn each_invalid_basis_is_refused_by_name() {
 
     assert_eq!(
         PlaneFrame::new(Point3::ZERO, x * 2.0, y, t),
-        Err(PlaneFrameError::NotUnitLength)
+        Err(FrameError::NotUnitLength)
     );
     assert_eq!(
         PlaneFrame::new(Point3::ZERO, x, x, t),
-        Err(PlaneFrameError::Degenerate)
+        Err(FrameError::Degenerate)
     );
     assert_eq!(
         PlaneFrame::new(Point3::new(f64::NAN, 0.0, 0.0), x, y, t),
-        Err(PlaneFrameError::NonFiniteInput)
+        Err(FrameError::NonFiniteInput)
     );
 }
 

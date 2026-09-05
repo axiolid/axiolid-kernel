@@ -36,7 +36,7 @@
 
 use axiolid_contracts::BackendId;
 use axiolid_contracts::{GeomError, GeomResult};
-use axiolid_core::{Frame3, Point3, Scalar, Vec3};
+use axiolid_core::{Frame3, Point3, Scalar, SpaceFrame, Tolerance, Vec3};
 use axiolid_surface::{BSplineSurface, Cone, Cylinder, Plane, Sphere, Surface, Torus};
 
 use crate::curve::{de_boor_recurrence, eval_homogeneous, span_in};
@@ -1020,18 +1020,18 @@ pub fn invert(
 ) -> GeomResult<(Scalar, Scalar)> {
     let (u, v) = match surface {
         Surface::Plane(p) => {
-            let local = to_local(&p.frame, point)?;
+            let local = to_local(&p.frame, point, tolerance)?;
             (local.x, local.y)
         }
         Surface::Cylinder(c) => {
             positive(c.radius, "cylinder radius")?;
-            let local = to_local(&c.frame, point)?;
+            let local = to_local(&c.frame, point, tolerance)?;
             (angle_about_axis(local, "cylinder")?, local.z)
         }
         Surface::Cone(c) => {
             finite(c.radius, "cone radius")?;
             finite(c.semi_angle, "cone semi-angle")?;
-            let local = to_local(&c.frame, point)?;
+            let local = to_local(&c.frame, point, tolerance)?;
             // At the apex the radius vanishes and every u names the same
             // point, so the angle is unrecoverable rather than merely
             // imprecise.
@@ -1039,7 +1039,7 @@ pub fn invert(
         }
         Surface::Sphere(s) => {
             positive(s.radius, "sphere radius")?;
-            let local = to_local(&s.frame, point)?;
+            let local = to_local(&s.frame, point, tolerance)?;
             // Latitude first: it is well defined even at the poles, which
             // the angle lookup then rejects.
             let sin_v = (local.z / s.radius).clamp(-1.0, 1.0);
@@ -1048,7 +1048,7 @@ pub fn invert(
         Surface::Torus(t) => {
             positive(t.major_radius, "torus major radius")?;
             positive(t.minor_radius, "torus minor radius")?;
-            let local = to_local(&t.frame, point)?;
+            let local = to_local(&t.frame, point, tolerance)?;
             let ring = (local.x * local.x + local.y * local.y).sqrt();
             (
                 angle_about_axis(local, "torus")?,
@@ -1090,34 +1090,15 @@ pub fn invert(
 /// than assumes: on a skewed or scaled frame a dot-product projection is
 /// silently wrong, and every parameter derived from it would be wrong by
 /// an amount that still round-trips through the same bad frame.
-fn to_local(frame: &Frame3, point: Point3) -> GeomResult<Vec3> {
-    let axes = [frame.x, frame.y, frame.z];
-    for (axis, name) in axes.iter().zip(["x", "y", "z"]) {
-        let length = axis.length();
-        if (length - 1.0).abs() > 1e-9 {
-            return Err(GeomError::Degenerate(format!(
-                "surface frame {name} axis has length {length}, expected 1"
-            )));
-        }
-    }
-    for (a, b, pair) in [
-        (frame.x, frame.y, "x/y"),
-        (frame.y, frame.z, "y/z"),
-        (frame.z, frame.x, "z/x"),
-    ] {
-        let dot = a.dot(b);
-        if dot.abs() > 1e-9 {
-            return Err(GeomError::Degenerate(format!(
-                "surface frame {pair} axes are not perpendicular: dot {dot}"
-            )));
-        }
-    }
-    let offset = point - frame.origin;
-    Ok(Vec3::new(
-        offset.dot(frame.x),
-        offset.dot(frame.y),
-        offset.dot(frame.z),
-    ))
+fn to_local(frame: &Frame3, point: Point3, tolerance: Tolerance) -> GeomResult<Vec3> {
+    // Validation lives in the core SpaceFrame so surface evaluation, sampled
+    // fields, and sectioning cannot drift apart on what a valid frame is.
+    // Handedness matters here and was previously unchecked: a mirrored basis
+    // passes every unit-length and perpendicularity test while reflecting the
+    // surface it parameterises.
+    let validated = SpaceFrame::new(frame.origin, frame.x, frame.y, frame.z, tolerance)
+        .map_err(|error| GeomError::Degenerate(format!("surface frame is invalid: {error}")))?;
+    Ok(validated.to_local(point))
 }
 
 /// Angle of a local point about the frame's z axis.

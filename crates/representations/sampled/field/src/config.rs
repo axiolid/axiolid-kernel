@@ -4,7 +4,7 @@
 //! axis; `x` and `y` address cells. A caller that wants world Z-up passes the
 //! identity frame explicitly, and a caller slicing a wall passes its own frame.
 
-use axiolid_core::{Frame3, Interval, Point3, Scalar, Tolerance};
+use axiolid_core::{Frame3, Interval, Point3, Scalar, SpaceFrame, Tolerance};
 
 use crate::LayeredFieldError;
 
@@ -169,17 +169,11 @@ fn ceil_cells(span: Scalar, cell_size: Scalar) -> Result<usize, LayeredFieldErro
     Ok(count as usize)
 }
 
+/// Whether a frame is a valid orthonormal right-handed basis.
+///
+/// Delegates to the core `SpaceFrame`, which owns the single definition of
+/// frame validity. Keeping a second copy here let this crate and surface
+/// evaluation disagree about what a valid frame was.
 fn frame_is_orthonormal(frame: Frame3, tolerance: Tolerance) -> bool {
-    let unit = tolerance.angular().max(Scalar::EPSILON * 8.0);
-    frame.origin.is_finite()
-        && frame.x.is_finite()
-        && frame.y.is_finite()
-        && frame.z.is_finite()
-        && (frame.x.length_squared() - 1.0).abs() <= unit
-        && (frame.y.length_squared() - 1.0).abs() <= unit
-        && (frame.z.length_squared() - 1.0).abs() <= unit
-        && frame.x.dot(frame.y).abs() <= unit
-        && frame.y.dot(frame.z).abs() <= unit
-        && frame.z.dot(frame.x).abs() <= unit
-        && frame.x.cross(frame.y).dot(frame.z) > 0.0
+    SpaceFrame::new(frame.origin, frame.x, frame.y, frame.z, tolerance).is_ok()
 }
