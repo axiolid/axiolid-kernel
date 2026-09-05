@@ -1,0 +1,27 @@
+[package]
+name = "axiolid-levelset"
+description = "Level-set extraction: a closed manifold mesh from a sampled scalar field"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-mesh.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+axiolid-measure.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "algorithms"
+role = "algorithm.sampled"
+domain = "sampled.levelset"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core", "axiolid-measure", "axiolid-mesh"]

@@ -281,6 +281,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "axiolid-levelset"
+version = "0.11.0"
+dependencies = [
+ "axiolid-core",
+ "axiolid-measure",
+ "axiolid-mesh",
+ "thiserror",
+]
+
+[[package]]
 name = "axiolid-linear"
 version = "0.11.0"
 dependencies = [

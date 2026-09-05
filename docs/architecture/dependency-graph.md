@@ -27,6 +27,7 @@ graph TD
     axiolid_guarantees["axiolid-guarantees\ncontract.guarantees"]
     axiolid_heal["axiolid-heal\nalgorithm.repair"]
     axiolid_inspect["axiolid-inspect\nalgorithm.query"]
+    axiolid_levelset["axiolid-levelset\nalgorithm.sampled"]
     axiolid_linear["axiolid-linear\nrepresentation.atomic"]
     axiolid_linear_intersection["axiolid-linear-intersection\nalgorithm.query"]
     axiolid_measure["axiolid-measure\nalgorithm.query"]
@@ -157,6 +158,9 @@ graph TD
     axiolid_inspect --> axiolid_mesh
     axiolid_inspect --> axiolid_predicates
     axiolid_inspect --> axiolid_spatial
+    axiolid_levelset --> axiolid_core
+    axiolid_levelset --> axiolid_measure
+    axiolid_levelset --> axiolid_mesh
     axiolid_linear --> axiolid_core
     axiolid_linear_intersection --> axiolid_core
     axiolid_linear_intersection --> axiolid_guarantees
