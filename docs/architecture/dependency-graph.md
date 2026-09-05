@@ -80,8 +80,10 @@ graph TD
     axiolid --> axiolid_predicates
     axiolid --> axiolid_primitive
     axiolid --> axiolid_profile
+    axiolid --> axiolid_project
     axiolid --> axiolid_ray_mesh
     axiolid --> axiolid_reference
+    axiolid --> axiolid_route
     axiolid --> axiolid_spatial
     axiolid --> axiolid_surface
     axiolid --> axiolid_tessellation_contract

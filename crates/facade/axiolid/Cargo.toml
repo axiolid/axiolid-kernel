@@ -45,6 +45,8 @@ spatial = ["mesh", "dep:axiolid-spatial"]
 ray-mesh = ["mesh", "predicates", "dep:axiolid-ray-mesh"]
 measure = ["mesh", "dep:axiolid-measure"]
 overlay = ["dep:axiolid-overlay"]
+project = ["mesh", "overlay", "dep:axiolid-project"]
+route = ["overlay", "predicates", "dep:axiolid-route"]
 field = ["dep:axiolid-field"]
 field-ops = ["field", "dep:axiolid-field-ops"]
 field-navigation = ["field-ops", "axiolid-field-ops/navigation"]
@@ -107,6 +109,8 @@ axiolid-spatial = { workspace = true, optional = true }
 axiolid-ray-mesh = { workspace = true, optional = true }
 axiolid-measure = { workspace = true, optional = true }
 axiolid-overlay = { workspace = true, optional = true }
+axiolid-project = { workspace = true, optional = true }
+axiolid-route = { workspace = true, optional = true }
 axiolid-field = { workspace = true, optional = true }
 axiolid-field-ops = { workspace = true, optional = true }
 axiolid-heal = { workspace = true, optional = true }
@@ -129,4 +133,4 @@ role = "facade"
 domain = "public"
 public = true
 format-neutral = true
-allowed-internal-dependencies = ["axiolid-backend-cpu", "axiolid-backend-gpu", "axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-linear", "axiolid-linear-intersection", "axiolid-predicates", "axiolid-field", "axiolid-field-ops", "axiolid-construct", "axiolid-heal", "axiolid-contracts", "axiolid-dispatch", "axiolid-evaluate", "axiolid-mesh-boolean-boolmesh", "axiolid-mesh-boolean-contract", "axiolid-mesh-compile-contract", "axiolid-mesh-contracts", "axiolid-mesh-section-contract", "axiolid-measure", "axiolid-mesh", "axiolid-model", "axiolid-nurbs", "axiolid-overlay", "axiolid-primitive", "axiolid-profile", "axiolid-ray-mesh", "axiolid-reference", "axiolid-spatial", "axiolid-surface", "axiolid-tessellation-contract", "axiolid-topology"]
+allowed-internal-dependencies = ["axiolid-backend-cpu", "axiolid-backend-gpu", "axiolid-brep", "axiolid-core", "axiolid-curve", "axiolid-linear", "axiolid-linear-intersection", "axiolid-predicates", "axiolid-project", "axiolid-route", "axiolid-field", "axiolid-field-ops", "axiolid-construct", "axiolid-heal", "axiolid-contracts", "axiolid-dispatch", "axiolid-evaluate", "axiolid-mesh-boolean-boolmesh", "axiolid-mesh-boolean-contract", "axiolid-mesh-compile-contract", "axiolid-mesh-contracts", "axiolid-mesh-section-contract", "axiolid-measure", "axiolid-mesh", "axiolid-model", "axiolid-nurbs", "axiolid-overlay", "axiolid-primitive", "axiolid-profile", "axiolid-ray-mesh", "axiolid-reference", "axiolid-spatial", "axiolid-surface", "axiolid-tessellation-contract", "axiolid-topology"]

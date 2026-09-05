@@ -125,6 +125,24 @@ pub mod overlay {
     pub use axiolid_overlay::*;
 }
 
+/// Planar projection of meshes: projected outlines and vertical prism
+/// intersection.
+#[cfg(feature = "project")]
+pub mod project {
+    pub use axiolid_project::*;
+}
+
+/// Exact planar shortest paths over a visibility graph, with typed
+/// unreachable reasons.
+///
+/// The kernel reports that no route exists under a given envelope. It never
+/// reports that a design is non-compliant: that reading belongs to the
+/// consumer, not to geometry.
+#[cfg(feature = "route")]
+pub mod route {
+    pub use axiolid_route::*;
+}
+
 /// Geometry generation: discrete sweeps plus focused certified trimmed arrangements.
 ///
 /// Broad profile/path generators still return explicit meshes. The certified affine
