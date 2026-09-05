@@ -4,6 +4,11 @@ All notable changes to Axiolid are documented in this file.
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-09-05
+
+### Fixed
+- `mesh_distance` and `proximity_components` now report zero separation for transverse triangle crossings. The pairwise scan sampled vertex/triangle and edge/edge candidates only, so two surfaces crossing edge-through-face reported their nearest non-intersecting feature instead of zero: a genuine interpenetration read as a real gap, which is fail-open for any consumer asking whether two bodies clash. Coplanar overlap was already caught by the edge/edge family, which is why the existing crossing test did not detect this. A segment/triangle family now runs last, so it cannot disturb the documented tie order of the metric candidates and only ever lowers a result to exactly zero.
+
 ## [0.9.0] - 2026-09-05
 
 ### Added
