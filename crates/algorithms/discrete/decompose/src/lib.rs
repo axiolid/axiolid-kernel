@@ -30,10 +30,38 @@
 //! notch barely changes volume but is exactly what breaks a convexity
 //! assumption downstream.
 //!
-//! The split plane is chosen through the deepest concave vertex, oriented
-//! along the part's widest axis. Deterministic by construction: the vertex
-//! is chosen by depth then by index, so equal candidates break ties the
-//! same way on every run.
+//! The split plane is the plane of the face the reflex vertex sticks out
+//! past. Extending an existing face makes progress by definition, whereas
+//! a bounding-box axis through the same point need not separate the notch.
+//!
+//! # Status: the cap is not yet watertight
+//!
+//! Clipping produces the correct SIDES. Closing the cut with a cap does
+//! not yet work in general, and the failure is instructive enough to
+//! record so the next attempt does not repeat it.
+//!
+//! Reconstructing the cut cross-section from per-triangle predicates
+//! oscillates between two defects, measured on an L-shaped solid:
+//!
+//! | rule | boundary edges | non-manifold edges |
+//! |---|---|---|
+//! | strict sign changes only | 5 | 0 |
+//! | plus vertices lying on the plane | 0 | 3 |
+//! | plus a straddling filter | 3 | 0 |
+//! | plus the two-vertices-on-plane case | 1 | 3 |
+//!
+//! Every rule fixes one defect and reintroduces the other, which is the
+//! signature of the wrong decomposition rather than a missing case. The
+//! reason: whether a wall face standing ON the cut plane belongs to THIS
+//! part is a global question about which side the material lies on, and a
+//! single triangle cannot answer it. Capping over such a face makes its
+//! edges non-manifold; omitting it leaves the loop open along that wall.
+//!
+//! A boolean solver answers exactly that question, and `boolmesh` already
+//! implements it. Because `algorithms` may not depend on `providers`, the
+//! route is the mesh-boolean CONTRACT, which both layers may depend on:
+//! a caller passes a provider in, the hand-rolled clipper stays the
+//! default, and the two are verified against each other.
 
 use std::collections::BTreeMap;
 
@@ -382,6 +410,35 @@ fn clip(mesh: &TriMesh, normal: Vec3, offset: Scalar, tolerance: Tolerance) -> O
             mesh.positions[chunk[2] as usize],
         ];
 
+        // A face lying IN the clip plane belongs to exactly one side, and
+        // deciding that by its distances alone is impossible: every corner
+        // reads as "on the plane", so both sides would keep it. The face is
+        // then duplicated, its edges match nothing on either part, and the
+        // union double-counts it.
+        //
+        // Its own normal settles it. A coplanar face bounds the material on
+        // the side it faces away from, so it goes to the half-space that
+        // keeps it as an outer wall.
+        let distances = [
+            triangle[0].dot(normal) - offset,
+            triangle[1].dot(normal) - offset,
+            triangle[2].dot(normal) - offset,
+        ];
+        if distances.iter().all(|d| d.abs() <= linear) {
+            let face = (triangle[1] - triangle[0]).cross(triangle[2] - triangle[0]);
+            // Faces pointing along the clip normal bound the material behind
+            // the plane, which is the side this call keeps.
+            if face.dot(normal) > 0.0 {
+                let a = intern(triangle[0], &mut positions, &mut lookup);
+                let b = intern(triangle[1], &mut positions, &mut lookup);
+                let c = intern(triangle[2], &mut positions, &mut lookup);
+                if a != b && b != c && c != a {
+                    indices.extend_from_slice(&[a, b, c]);
+                }
+            }
+            continue;
+        }
+
         // Clip the triangle against the plane, tracking where the boundary
         // of the kept region crosses it.
         let mut kept: Vec<Point3> = Vec::new();
@@ -395,8 +452,15 @@ fn clip(mesh: &TriMesh, normal: Vec3, offset: Scalar, tolerance: Tolerance) -> O
             if d_current <= linear {
                 kept.push(current);
             }
-            // A sign change means the edge crosses; the crossing point is
-            // shared by both parts, which is what makes their union seamless.
+            // A vertex ON the plane is part of the cut boundary even though
+            // no edge through it changes sign. Leaving these out was why the
+            // cap loop stopped short: the cross-section's corners are often
+            // existing vertices, not new crossings.
+            if d_current.abs() <= linear {
+                crossings.push(current);
+            }
+            // A strict sign change produces a new crossing point, shared by
+            // both parts, which is what makes their union seamless.
             if (d_current < -linear && d_next > linear) || (d_current > linear && d_next < -linear)
             {
                 let t = d_current / (d_current - d_next);
@@ -406,8 +470,35 @@ fn clip(mesh: &TriMesh, normal: Vec3, offset: Scalar, tolerance: Tolerance) -> O
             }
         }
 
-        if crossings.len() == 2 {
-            cut_edges.push((crossings[0], crossings[1]));
+        // Only a triangle with material on BOTH sides bounds the cut. One
+        // that merely touches the plane, or lies in it, is already walled by
+        // its own face: capping there would lay a second surface over the
+        // first and make the edge non-manifold.
+        // Two cases bound the cut, and both are needed.
+        //
+        // A triangle with material on both sides is cut through its middle.
+        // A triangle with exactly two vertices ON the plane touches it along
+        // a whole edge -- the wall standing on the cut -- and that edge is
+        // part of the cross-section boundary even though the triangle never
+        // crosses. Without it the loop is left open along every such wall,
+        // which is what stopped the L-shape's cap from closing.
+        //
+        // A triangle lying entirely in the plane is excluded by both, which
+        // is correct: it is already a face of the part, and capping over it
+        // would make its edges non-manifold.
+        let straddles =
+            distances.iter().any(|d| *d < -linear) && distances.iter().any(|d| *d > linear);
+
+        // Deduplicate: a vertex on the plane can be reported by two of the
+        // triangle's edges. Exactly two distinct points bound the segment
+        // where this triangle meets the plane.
+        crossings.dedup_by(|a, b| (*a - *b).length() <= linear);
+        if straddles && crossings.len() >= 2 {
+            let first = crossings[0];
+            let last = *crossings.last().expect("non-empty");
+            if (first - last).length() > linear {
+                cut_edges.push((first, last));
+            }
         }
         if kept.len() < 3 {
             continue;
@@ -432,7 +523,13 @@ fn clip(mesh: &TriMesh, normal: Vec3, offset: Scalar, tolerance: Tolerance) -> O
     // over the edges in the order they happened to be produced only closes
     // the opening when that order is already a fan, which for a general
     // cross-section it is not.
-    for loop_points in stitch_loops(&cut_edges, linear) {
+    let stitched = stitch_loops(&cut_edges, linear);
+    eprintln!(
+        "CAPDIAG cut_edges={} loops={:?}",
+        cut_edges.len(),
+        stitched.iter().map(|l| l.len()).collect::<Vec<_>>()
+    );
+    for loop_points in stitched {
         if loop_points.len() < 3 {
             continue;
         }
@@ -543,6 +640,13 @@ fn stitch_loops(edges: &[(Point3, Point3)], linear: Scalar) -> Vec<Vec<Point3>> 
     };
 
     let mut adjacency: BTreeMap<(u64, u64, u64), Vec<usize>> = BTreeMap::new();
+    eprintln!(
+        "CAPDIAG edges {:?}",
+        edges
+            .iter()
+            .map(|(a, b)| ((a.x, a.z), (b.x, b.z)))
+            .collect::<Vec<_>>()
+    );
     for (index, (from, to)) in edges.iter().enumerate() {
         adjacency.entry(key(from)).or_default().push(index);
         adjacency.entry(key(to)).or_default().push(index);
@@ -593,6 +697,10 @@ fn stitch_loops(edges: &[(Point3, Point3)], linear: Scalar) -> Vec<Vec<Point3>> 
             }
         }
         if ring.len() >= 3 {
+            eprintln!(
+                "CAPDIAG ring {:?}",
+                ring.iter().map(|p| (p.x, p.z)).collect::<Vec<_>>()
+            );
             loops.push(ring);
         }
     }
