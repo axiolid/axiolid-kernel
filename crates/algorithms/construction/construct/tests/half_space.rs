@@ -145,3 +145,66 @@ fn a_degenerate_boundary_is_refused() {
     };
     assert!(bounded_half_space(&sliver, plane_z(), true, margin, tol()).is_err());
 }
+
+/// An asymmetric L-shaped boundary, wound counter-clockwise.
+///
+/// A symmetric profile cannot detect a mirrored footprint: reflecting a
+/// square across its own axis is the identity. The L is deliberately
+/// chiral so a mirror is observable.
+fn l_shape() -> Rings {
+    Rings {
+        outer: vec![
+            Point2::new(0.0, 0.0),
+            Point2::new(4.0, 0.0),
+            Point2::new(4.0, 1.0),
+            Point2::new(1.0, 1.0),
+            Point2::new(1.0, 3.0),
+            Point2::new(0.0, 3.0),
+        ],
+        holes: Vec::new(),
+    }
+}
+
+/// Unique in-plane footprint, rounded so exact vertex order does not matter.
+fn footprint_xy(mesh: &TriMesh) -> Vec<(i64, i64)> {
+    let mut seen: Vec<(i64, i64)> = mesh
+        .positions
+        .iter()
+        .map(|p| ((p.x * 1e6).round() as i64, (p.y * 1e6).round() as i64))
+        .collect();
+    seen.sort_unstable();
+    seen.dedup();
+    seen
+}
+
+#[test]
+fn agreement_moves_the_solid_without_reshaping_the_boundary() {
+    // `agreement` selects which side of the plane is material. It is not a
+    // transform of the boundary, so the in-plane footprint must be identical
+    // for both values; only the swept z extent may differ.
+    let margin = ClipMargin::new(2.0).expect("margin");
+    let up = bounded_half_space(&l_shape(), plane_z(), true, margin, tol()).expect("clip");
+    let down = bounded_half_space(&l_shape(), plane_z(), false, margin, tol()).expect("clip");
+
+    assert_eq!(
+        footprint_xy(&up),
+        footprint_xy(&down),
+        "agreement must not mirror or otherwise reshape the boundary footprint"
+    );
+}
+
+#[test]
+fn both_agreement_values_stay_outward_wound() {
+    // The mirrored-basis workaround kept winding correct by reflecting the
+    // profile. Any replacement must keep the solid outward-facing on its
+    // own, so assert positive volume for both sides.
+    let margin = ClipMargin::new(2.0).expect("margin");
+    for agreement in [true, false] {
+        let mesh =
+            bounded_half_space(&l_shape(), plane_z(), agreement, margin, tol()).expect("clip");
+        assert!(
+            volume(&mesh) > 0.0,
+            "agreement={agreement} produced an inside-out solid"
+        );
+    }
+}

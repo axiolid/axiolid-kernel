@@ -72,29 +72,25 @@ pub fn bounded_half_space(
 
     // Keeping the normal side sweeps from the plane along +normal; the
     // opposite side sweeps the other way.
-    //
-    // Reversing the sweep direction alone would mirror the frame, and a
-    // mirrored frame inverts the handedness `loft` derived its winding
-    // from: the solid comes out correct in shape but inside-out, with a
-    // negative volume. Flipping one in-plane axis restores the handedness,
-    // so `loft` stays the single source of truth for orientation.
     let step = if agreement { normal } else { -normal };
-    let (x, y) = if agreement {
-        (base.x, base.y)
-    } else {
-        (base.x, -base.y)
-    };
     let near = Frame {
         origin: base.origin,
-        x,
-        y,
+        x: base.x,
+        y: base.y,
     };
     let far = Frame {
         origin: base.origin + step * depth,
-        x,
-        y,
+        x: base.x,
+        y: base.y,
     };
-    let stations: Vec<Station> = [near, far]
+    // Order the stations so traversal always runs along +normal. `loft`
+    // derives its winding from station order, and the frame's own handedness
+    // is fixed (x cross y == +normal), so the two must agree or the solid
+    // comes out inside-out. Swapping the order rather than mirroring an
+    // in-plane axis keeps the boundary's footprint untouched: `agreement`
+    // selects a side, it never reshapes the profile.
+    let ordered = if agreement { [near, far] } else { [far, near] };
+    let stations: Vec<Station> = ordered
         .iter()
         .map(|f| loft::place(boundary, |p| loft::at(f, p)))
         .collect();
