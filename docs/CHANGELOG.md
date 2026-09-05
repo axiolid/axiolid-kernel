@@ -4,6 +4,12 @@ All notable changes to Axiolid are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Added `invert2`/`invert3` to `axiolid-evaluate` (re-exported as `axiolid_reference::curve`): the exact point-to-parameter map for lines, circles and ellipses. Curves had `evaluate`, `derivative` and `jet` but no inversion, so a trim stated as a POINT could not be turned into a parameter. Families with no closed-form inversion are refused by name rather than iterated: introducing Newton here would put a tolerance and a convergence failure mode into every consumer of a point trim, and the certified iterative path belongs to a caller that can carry its evidence. A point off the curve is refused with its residual rather than projected onto the nearest parameter.
+
+### Fixed
+- `CurveRelation::Trimmed` with `TrimmingPreference::Cartesian` now resolves. Point selectors were validated and stored but never read: `parameter()` returned `None` for Cartesian, so every point-trimmed curve compiled to `trimmed directrix start needs a finite parameter selector`. Formats that can only stated a trim as endpoints -- a three-point arc knows its endpoints, not their parameters -- were representable but not usable. A basis that is itself a curve relation has no analytic curve to invert against, so a point selector there is still refused, now by a message that says why.
+
 ## [0.10.0] - 2026-09-05
 
 ### Added

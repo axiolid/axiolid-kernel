@@ -1170,3 +1170,202 @@ pub fn flatten3(
     out.push(eval(domain.end)?);
     Ok(out)
 }
+
+/// Refuse a family that has no closed-form inversion.
+///
+/// Named separately from `unsupported_family` so the message can say WHY:
+/// the family is understood, its inversion simply is not algebraic.
+fn no_closed_form_inversion() -> GeomError {
+    GeomError::InvalidInput(
+        "curve family has no closed form inversion; a point trim on this basis \
+         would require iteration, which trim resolution does not perform"
+            .to_owned(),
+    )
+}
+
+/// The point is not on the curve, so no parameter names it.
+fn point_not_on_curve(distance: Scalar, tolerance: Scalar) -> GeomError {
+    GeomError::InvalidInput(format!(
+        "point is {distance} from the curve, outside the {tolerance} tolerance; \
+         refusing rather than projecting it onto the nearest parameter"
+    ))
+}
+
+/// Parameter of `point` on `line`, or a refusal when it is off the line.
+///
+/// The direction need not be unit length, so the projection is normalised by
+/// its squared length: that is what makes the returned value a parameter of
+/// THIS line rather than an arc length.
+fn invert_line(
+    origin: impl Into<[Scalar; 3]>,
+    direction: [Scalar; 3],
+    point: [Scalar; 3],
+    tolerance: Scalar,
+) -> GeomResult<Scalar> {
+    let origin = origin.into();
+    let dd = direction.iter().map(|c| c * c).sum::<Scalar>();
+    if !dd.is_finite() || dd <= Scalar::EPSILON {
+        return Err(GeomError::InvalidInput(
+            "line direction is degenerate, so no parameter names a point".to_owned(),
+        ));
+    }
+    let offset = [
+        point[0] - origin[0],
+        point[1] - origin[1],
+        point[2] - origin[2],
+    ];
+    let t = offset
+        .iter()
+        .zip(direction.iter())
+        .map(|(o, d)| o * d)
+        .sum::<Scalar>()
+        / dd;
+    // Verify rather than assume: the projection always yields a parameter, but
+    // only a point actually ON the line is named by it.
+    let residual = [
+        offset[0] - direction[0] * t,
+        offset[1] - direction[1] * t,
+        offset[2] - direction[2] * t,
+    ];
+    let distance = residual.iter().map(|c| c * c).sum::<Scalar>().sqrt();
+    if distance > tolerance {
+        return Err(point_not_on_curve(distance, tolerance));
+    }
+    Ok(t)
+}
+
+/// Parametric angle of `point` about a conic frame, verified against the curve.
+///
+/// For a circle the parametric angle is the polar angle; for an ellipse it is
+/// not, so the local coordinates are divided by their semi-axes BEFORE the
+/// arctangent. Taking the polar angle directly would be wrong off-axis.
+fn invert_conic(
+    local_x: Scalar,
+    local_y: Scalar,
+    semi_x: Scalar,
+    semi_y: Scalar,
+) -> GeomResult<Scalar> {
+    if !(semi_x.is_finite() && semi_y.is_finite()) || semi_x <= 0.0 || semi_y <= 0.0 {
+        return Err(GeomError::InvalidInput(
+            "conic semi-axes must be finite and positive to invert a point".to_owned(),
+        ));
+    }
+    let angle = (local_y / semi_y).atan2(local_x / semi_x);
+    if !angle.is_finite() {
+        return Err(GeomError::InvalidInput(
+            "conic inversion produced a non-finite angle".to_owned(),
+        ));
+    }
+    // Report on the same domain evaluation uses, so invert then evaluate is a
+    // round trip rather than an off-by-one-turn surprise.
+    Ok(angle.rem_euclid(std::f64::consts::TAU))
+}
+
+/// Parameter naming `point` on a 2D curve, or a refusal.
+///
+/// Exact for the families whose inversion is algebraic. Anything else is
+/// refused by name: introducing iteration here would put a tolerance and a
+/// convergence failure mode into every consumer of a point trim, and the
+/// certified iterative path belongs to a caller that can carry its evidence.
+///
+/// # Errors
+///
+/// Refuses a point further than `tolerance` from the curve rather than
+/// projecting it, and refuses families with no closed-form inversion.
+pub fn invert2(curve: &Curve2, point: Point2, tolerance: Tolerance) -> GeomResult<Scalar> {
+    finite2(point, "inversion point")?;
+    let linear = tolerance.linear();
+    match curve {
+        Curve2::Line(l) => invert_line(
+            [l.origin.x, l.origin.y, 0.0],
+            [l.direction.x, l.direction.y, 0.0],
+            [point.x, point.y, 0.0],
+            linear,
+        ),
+        Curve2::Circle(c) => {
+            let t = invert_conic_in_frame2(&c.frame, point, c.radius, c.radius)?;
+            verify2(curve, t, point, linear)
+        }
+        Curve2::Ellipse(e) => {
+            let t = invert_conic_in_frame2(&e.frame, point, e.semi_axis_x, e.semi_axis_y)?;
+            verify2(curve, t, point, linear)
+        }
+        _ => Err(no_closed_form_inversion()),
+    }
+}
+
+/// Project a point into a 2D conic frame and invert it there.
+fn invert_conic_in_frame2(
+    frame: &axiolid_core::Frame2,
+    point: Point2,
+    semi_x: Scalar,
+    semi_y: Scalar,
+) -> GeomResult<Scalar> {
+    let offset = point - frame.origin;
+    invert_conic(offset.dot(frame.x), offset.dot(frame.y), semi_x, semi_y)
+}
+
+/// Confirm the recovered parameter actually reproduces the point.
+///
+/// The algebra above assumes an orthonormal frame. Imported frames are not
+/// always orthonormal, and this crate deliberately keeps dirty frames
+/// representable, so the claim is checked against the real evaluator instead
+/// of trusted.
+fn verify2(curve: &Curve2, t: Scalar, point: Point2, tolerance: Scalar) -> GeomResult<Scalar> {
+    let found = evaluate2(curve, t)?;
+    let distance = (found - point).length();
+    if distance > tolerance {
+        return Err(point_not_on_curve(distance, tolerance));
+    }
+    Ok(t)
+}
+
+/// Parameter naming `point` on a 3D curve, or a refusal.
+///
+/// See [`invert2`] for the exactness policy.
+///
+/// # Errors
+///
+/// Refuses an off-curve point and any family without a closed-form inversion.
+pub fn invert3(curve: &Curve3, point: Point3, tolerance: Tolerance) -> GeomResult<Scalar> {
+    finite3(point, "inversion point")?;
+    let linear = tolerance.linear();
+    match curve {
+        Curve3::Line(l) => invert_line(
+            [l.origin.x, l.origin.y, l.origin.z],
+            [l.direction.x, l.direction.y, l.direction.z],
+            [point.x, point.y, point.z],
+            linear,
+        ),
+        Curve3::Circle(c) => {
+            let t = invert_conic_in_frame3(&c.frame, point, c.radius, c.radius)?;
+            verify3(curve, t, point, linear)
+        }
+        Curve3::Ellipse(e) => {
+            let t = invert_conic_in_frame3(&e.frame, point, e.semi_axis_x, e.semi_axis_y)?;
+            verify3(curve, t, point, linear)
+        }
+        _ => Err(no_closed_form_inversion()),
+    }
+}
+
+/// Project a point into a 3D conic frame and invert it there.
+fn invert_conic_in_frame3(
+    frame: &axiolid_core::Frame3,
+    point: Point3,
+    semi_x: Scalar,
+    semi_y: Scalar,
+) -> GeomResult<Scalar> {
+    let offset = point - frame.origin;
+    invert_conic(offset.dot(frame.x), offset.dot(frame.y), semi_x, semi_y)
+}
+
+/// Confirm the recovered parameter reproduces the point. See [`verify2`].
+fn verify3(curve: &Curve3, t: Scalar, point: Point3, tolerance: Scalar) -> GeomResult<Scalar> {
+    let found = evaluate3(curve, t)?;
+    let distance = (found - point).length();
+    if distance > tolerance {
+        return Err(point_not_on_curve(distance, tolerance));
+    }
+    Ok(t)
+}

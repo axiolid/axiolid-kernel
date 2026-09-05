@@ -58,8 +58,24 @@ fn resolve(
             sense_agreement,
             preference,
         })) => {
-            let a = parameter(start, *preference, "start")?;
-            let b = parameter(end, *preference, "end")?;
+            // A point selector can only be inverted against a curve, so the
+            // basis is resolved first. A relation basis (trimmed-of-trimmed)
+            // has no single analytic curve to invert against; a parameter
+            // selector still works there, a point selector is refused by name.
+            let basis_curve = match graph.get(*basis) {
+                Some(GeometryNode::Curve3(curve)) => Some(curve),
+                _ => None,
+            };
+            let (a, b) = match basis_curve {
+                Some(curve) => (
+                    parameter(start, *preference, "start", curve, options.tolerance())?,
+                    parameter(end, *preference, "end", curve, options.tolerance())?,
+                ),
+                None => (
+                    parameter_only(start, *preference, "start")?,
+                    parameter_only(end, *preference, "end")?,
+                ),
+            };
             if a == b {
                 return Err(GeomError::Degenerate(
                     "trimmed directrix has an empty interval".into(),
@@ -122,16 +138,64 @@ fn parameter(
     selectors: &[TrimSelector],
     preference: TrimmingPreference,
     label: &str,
+    basis: &axiolid_curve::Curve3,
+    tolerance: axiolid_core::Tolerance,
 ) -> GeomResult<Scalar> {
+    // A Cartesian selector names a POINT. Some formats can only state a trim
+    // that way -- a three-point arc knows its endpoints, not their parameters
+    // -- so the point is inverted against the basis rather than refused.
+    // Inversion is exact or it refuses; it never projects an off-curve point.
     let selected = match preference {
         TrimmingPreference::Parameter => selectors.iter().find_map(as_parameter),
-        TrimmingPreference::Unspecified => selectors.first().and_then(as_parameter),
+        TrimmingPreference::Unspecified => selectors
+            .first()
+            .and_then(as_parameter)
+            .or_else(|| invert_first_point(selectors, basis, tolerance)),
+        TrimmingPreference::Cartesian => invert_first_point(selectors, basis, tolerance)
+            .or_else(|| selectors.iter().find_map(as_parameter)),
+    };
+    selected.filter(|value| value.is_finite()).ok_or_else(|| {
+        GeomError::InvalidInput(format!(
+            "trimmed directrix {label} needs a parameter selector, or a point \
+             selector that lies on the basis curve"
+        ))
+    })
+}
+
+/// Parameter selectors only, for a basis with no invertible analytic curve.
+fn parameter_only(
+    selectors: &[TrimSelector],
+    preference: TrimmingPreference,
+    label: &str,
+) -> GeomResult<Scalar> {
+    let selected = match preference {
+        TrimmingPreference::Parameter | TrimmingPreference::Unspecified => {
+            selectors.iter().find_map(as_parameter)
+        }
+        // The basis is a relation, so there is no analytic curve to invert a
+        // point against. Refusing names that, rather than silently using a
+        // parameter the file did not designate as authoritative.
         TrimmingPreference::Cartesian => None,
     };
     selected.filter(|value| value.is_finite()).ok_or_else(|| {
         GeomError::InvalidInput(format!(
-            "trimmed directrix {label} needs a finite parameter selector"
+            "trimmed directrix {label} needs a finite parameter selector; its \
+             basis is a curve relation, so a point selector cannot be inverted"
         ))
+    })
+}
+
+/// First point selector inverted against the basis, if one resolves.
+fn invert_first_point(
+    selectors: &[TrimSelector],
+    basis: &axiolid_curve::Curve3,
+    tolerance: axiolid_core::Tolerance,
+) -> Option<Scalar> {
+    selectors.iter().find_map(|selector| match selector {
+        TrimSelector::Point3(point) => {
+            axiolid_reference::curve::invert3(basis, *point, tolerance).ok()
+        }
+        _ => None,
     })
 }
 
