@@ -511,6 +511,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "axiolid-refine"
+version = "0.11.0"
+dependencies = [
+ "axiolid-contracts",
+ "axiolid-core",
+ "axiolid-evaluate",
+ "axiolid-heal",
+ "axiolid-measure",
+ "axiolid-mesh",
+ "axiolid-surface",
+ "thiserror",
+]
+
+[[package]]
 name = "axiolid-route"
 version = "0.11.0"
 dependencies = [

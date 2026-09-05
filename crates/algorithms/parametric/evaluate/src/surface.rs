@@ -1081,6 +1081,148 @@ pub fn invert(
     Ok((u, v))
 }
 
+/// Parameters of the closest point on a surface to an arbitrary point.
+///
+/// This is the counterpart to [`invert`], and the distinction matters.
+/// `invert` names a point that is ALREADY on the surface and refuses one
+/// that is not. Projection accepts a point anywhere and answers where the
+/// surface is nearest to it.
+///
+/// Refinement needs projection, not inversion: the midpoint of a chord
+/// across a faceted cylinder lies strictly inside the cylinder, so
+/// inversion correctly refuses it while projection is exactly the question
+/// being asked.
+///
+/// Every arm here is a closed form, so the result is exact rather than the
+/// stopping point of an iteration. Where the closest point is genuinely
+/// ambiguous -- a point on a cylinder's axis is equidistant from every
+/// point of the surface -- this refuses by name instead of returning one
+/// arbitrary member of the tie.
+///
+/// # Errors
+///
+/// Refuses a non-orthonormal frame, a non-finite point, a degenerate
+/// radius, an ambiguous (equidistant) configuration, and any surface with
+/// no closed-form projection.
+pub fn project(
+    surface: &Surface,
+    point: Point3,
+    tolerance: axiolid_core::Tolerance,
+) -> GeomResult<(Scalar, Scalar)> {
+    let ambiguous = |what: &str| {
+        GeomError::Degenerate(format!(
+            "{what}: the closest point is not unique, so no projection names it"
+        ))
+    };
+    let (u, v) = match surface {
+        // A plane's closest point is the orthogonal foot, which the local
+        // frame already gives directly.
+        Surface::Plane(p) => {
+            let local = to_local(&p.frame, point, tolerance)?;
+            (local.x, local.y)
+        }
+        // Radial projection: slide along the axis-perpendicular direction
+        // to the radius. Undefined exactly on the axis.
+        Surface::Cylinder(c) => {
+            positive(c.radius, "cylinder radius")?;
+            let local = to_local(&c.frame, point, tolerance)?;
+            let ring = (local.x * local.x + local.y * local.y).sqrt();
+            if ring <= tolerance.linear() {
+                return Err(ambiguous("point lies on the cylinder axis"));
+            }
+            (local.y.atan2(local.x), local.z)
+        }
+        // Radial projection from the centre. Undefined exactly at it.
+        Surface::Sphere(s) => {
+            positive(s.radius, "sphere radius")?;
+            let local = to_local(&s.frame, point, tolerance)?;
+            let distance = (local.x * local.x + local.y * local.y + local.z * local.z).sqrt();
+            if distance <= tolerance.linear() {
+                return Err(ambiguous("point lies at the sphere centre"));
+            }
+            let ring = (local.x * local.x + local.y * local.y).sqrt();
+            if ring <= tolerance.linear() {
+                return Err(ambiguous("point lies on the sphere's polar axis"));
+            }
+            let sin_v = (local.z / distance).clamp(-1.0, 1.0);
+            (local.y.atan2(local.x), sin_v.asin())
+        }
+        // The nearest point on a cone is along the SLANT, not the radius:
+        // the generator is a line in the (rho, z) half-plane, so project
+        // onto that line rather than onto a circle of constant z.
+        Surface::Cone(c) => {
+            finite(c.radius, "cone radius")?;
+            finite(c.semi_angle, "cone semi-angle")?;
+            let local = to_local(&c.frame, point, tolerance)?;
+            let ring = (local.x * local.x + local.y * local.y).sqrt();
+            if ring <= tolerance.linear() {
+                return Err(ambiguous("point lies on the cone axis"));
+            }
+            let slope = c.semi_angle.tan();
+            if !slope.is_finite() {
+                return Err(GeomError::Degenerate(
+                    "cone semi-angle is a right angle: the surface degenerates to a plane".into(),
+                ));
+            }
+            // Generator through (radius, 0) with direction (slope, 1),
+            // normalised so the dot product is a true arc position.
+            let length = (slope * slope + 1.0).sqrt();
+            let (dr, dz) = (slope / length, 1.0 / length);
+            let step = (ring - c.radius) * dr + local.z * dz;
+            let foot_radius = c.radius + step * dr;
+            // Past the apex the foot crosses onto the mirrored nappe,
+            // which is a different sheet of the surface.
+            if foot_radius < 0.0 {
+                return Err(GeomError::Degenerate(
+                    "closest point on the cone lies beyond the apex, on the opposite nappe".into(),
+                ));
+            }
+            (local.y.atan2(local.x), step * dz)
+        }
+        // Reduce to the tube's cross-section circle: project onto the
+        // major circle first, then onto the tube around it. Both steps are
+        // radial, so the composition is closed form.
+        Surface::Torus(t) => {
+            positive(t.major_radius, "torus major radius")?;
+            positive(t.minor_radius, "torus minor radius")?;
+            let local = to_local(&t.frame, point, tolerance)?;
+            let ring = (local.x * local.x + local.y * local.y).sqrt();
+            if ring <= tolerance.linear() {
+                return Err(ambiguous("point lies on the torus axis"));
+            }
+            let planar = ring - t.major_radius;
+            // On the tube's centre circle every cross-section angle is
+            // equidistant, the same tie the axis case has one dimension up.
+            if planar.abs() <= tolerance.linear() && local.z.abs() <= tolerance.linear() {
+                return Err(ambiguous("point lies on the torus tube centre circle"));
+            }
+            (local.y.atan2(local.x), local.z.atan2(planar))
+        }
+        // A B-spline needs iterative closest-point with its own seeding and
+        // convergence contract, which `axiolid-nurbs` provides as a
+        // certified projection. `Surface` is non-exhaustive, so a future
+        // variant is refused here by name rather than silently taking an
+        // analytic branch that does not describe it.
+        _ => {
+            return Err(GeomError::Unsupported {
+                backend: ScalarSurface::ID,
+                operation: axiolid_contracts::Operation::SurfaceEvaluation,
+            });
+        }
+    };
+    // Projection promises a point ON the surface, so the parameters must
+    // evaluate to one. `invert` is the independent check: it refuses a
+    // point further than tolerance from the surface, so a wrong arm here
+    // is caught rather than inherited by the caller as bad geometry.
+    let landed = evaluate(surface, u, v)?;
+    invert(surface, landed, tolerance).map_err(|_| {
+        GeomError::Degenerate(
+            "projection produced parameters that do not name a point on the surface".into(),
+        )
+    })?;
+    Ok((u, v))
+}
+
 /// Express a world point in a frame's local coordinates.
 ///
 /// `place` maps local to world by scaling the frame axes, so the inverse

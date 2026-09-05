@@ -1,0 +1,31 @@
+[package]
+name = "axiolid-refine"
+description = "Mesh refinement and smoothing with bounded, reported deviation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-mesh.workspace = true
+axiolid-surface.workspace = true
+axiolid-evaluate.workspace = true
+axiolid-contracts.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+axiolid-measure.workspace = true
+axiolid-heal.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "algorithms"
+role = "algorithm.discrete"
+domain = "discrete.refine"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-contracts", "axiolid-core", "axiolid-evaluate", "axiolid-heal", "axiolid-measure", "axiolid-mesh", "axiolid-surface"]

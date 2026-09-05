@@ -47,6 +47,7 @@ graph TD
     axiolid_project["axiolid-project\nalgorithm.planar"]
     axiolid_ray_mesh["axiolid-ray-mesh\nalgorithm.query"]
     axiolid_reference["axiolid-reference\nalgorithm.reference"]
+    axiolid_refine["axiolid-refine\nalgorithm.discrete"]
     axiolid_route["axiolid-route\nalgorithm.planar"]
     axiolid_spatial["axiolid-spatial\nalgorithm.query"]
     axiolid_surface["axiolid-surface\nrepresentation.atomic"]
@@ -262,6 +263,13 @@ graph TD
     axiolid_reference --> axiolid_primitive
     axiolid_reference --> axiolid_spatial
     axiolid_reference --> axiolid_surface
+    axiolid_refine --> axiolid_contracts
+    axiolid_refine --> axiolid_core
+    axiolid_refine --> axiolid_evaluate
+    axiolid_refine --> axiolid_heal
+    axiolid_refine --> axiolid_measure
+    axiolid_refine --> axiolid_mesh
+    axiolid_refine --> axiolid_surface
     axiolid_route --> axiolid_contracts
     axiolid_route --> axiolid_core
     axiolid_route --> axiolid_guarantees

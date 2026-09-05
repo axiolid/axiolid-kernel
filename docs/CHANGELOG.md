@@ -5,6 +5,8 @@ All notable changes to Axiolid are documented in this file.
 ## [Unreleased]
 
 ### Added
+- Added `project` to `axiolid-evaluate`: closed-form nearest-point parameters on `Plane`, `Cylinder`, `Sphere`, `Cone` and `Torus`. This is the counterpart to `invert`, which names a point already ON a surface and refuses one that is not. A configuration whose nearest point is genuinely ambiguous -- a point on a cylinder's axis, or at a sphere's centre -- is refused by name rather than resolved to an arbitrary member of the tie. `Cone` projects along the slant, not radially. B-spline surfaces stay with the iterative certified projection in `axiolid-nurbs`.
+- Added `axiolid-refine`: uniform and edge-length-driven mesh refinement, plus Laplacian smoothing. Surface-aware refinement places introduced vertices ON the analytic surface the mesh was tessellated from, rather than interpolating between existing triangles, so refining a faceted cylinder converges toward the real cylinder. A surface that refuses to place a vertex fails the refinement instead of silently falling back to linear interpolation, which would return more triangles with none of the promised accuracy. `smooth` holds boundary vertices bit-identical by default.
 - Added `AttributeChannel` to `axiolid-mesh`: named per-vertex data (`name`, `values`, `width`, `blend`) carried on `TriMesh::attributes`, with a `Blend` policy (`Linear`, `Nearest`, `None`) that is a property of the DATA rather than of any operation. `validate_structure` refuses a channel that does not cover every vertex, declares a zero tuple width, or repeats a name.
 
 ### Changed

@@ -69,7 +69,7 @@ class PublishWorkspaceTests(unittest.TestCase):
             str(Path(package["manifest_path"]).parent.resolve()): package["name"]
             for package in plan
         }
-        self.assertEqual(len(plan), 43)
+        self.assertEqual(len(plan), 44)
         for package in plan:
             for dependency in package["dependencies"]:
                 dependency_path = dependency.get("path")
