@@ -4,6 +4,8 @@ All notable changes to Axiolid are documented in this file.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-09-05
+
 ### Added
 - Added `invert2`/`invert3` to `axiolid-evaluate` (re-exported as `axiolid_reference::curve`): the exact point-to-parameter map for lines, circles and ellipses. Curves had `evaluate`, `derivative` and `jet` but no inversion, so a trim stated as a POINT could not be turned into a parameter. Families with no closed-form inversion are refused by name rather than iterated: introducing Newton here would put a tolerance and a convergence failure mode into every consumer of a point trim, and the certified iterative path belongs to a caller that can carry its evidence. A point off the curve is refused with its residual rather than projected onto the nearest parameter.
 
