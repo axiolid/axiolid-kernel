@@ -15,7 +15,7 @@
 //! "this mesh is edge-on" and "this mesh is empty".
 //! The count is therefore reported in [`ProjectionEvidence`].
 
-use axiolid_core::{Point2, Point3, Tolerance, Vec3};
+use axiolid_core::{PlaneFrame, Point2, Tolerance};
 use axiolid_mesh::TriangleMeshView;
 use axiolid_overlay::{
     overlay, union_soup, FillRule, OverlayError, OverlayInput, OverlayOperation, Polygon, Ring,
@@ -26,6 +26,10 @@ use axiolid_overlay::{
 #[non_exhaustive]
 pub enum ProjectionError {
     /// The projection plane basis was not orthonormal or not finite.
+    ///
+    /// No longer produced: `Plane` validates on construction, so an invalid
+    /// basis cannot reach a projection. Retained because the enum is public
+    /// and removing a variant is a breaking change.
     InvalidPlane,
     /// A mesh position was not finite.
     NonFinitePosition,
@@ -68,42 +72,12 @@ pub struct Projection {
 }
 
 /// An orthonormal projection plane.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Plane {
-    /// Plane origin in model space.
-    pub origin: Point3,
-    /// In-plane axis mapped to the planar x coordinate.
-    pub x: Vec3,
-    /// In-plane axis mapped to the planar y coordinate.
-    pub y: Vec3,
-}
-
-impl Plane {
-    /// The z = 0 ground plane, the common plan-view case.
-    #[must_use]
-    pub fn ground() -> Self {
-        Self {
-            origin: Point3::new(0.0, 0.0, 0.0),
-            x: Vec3::new(1.0, 0.0, 0.0),
-            y: Vec3::new(0.0, 1.0, 0.0),
-        }
-    }
-
-    fn validate(&self, tolerance: Tolerance) -> Result<(), ProjectionError> {
-        let epsilon = tolerance.linear();
-        let orthonormal = self.origin.is_finite()
-            && self.x.is_finite()
-            && self.y.is_finite()
-            && (self.x.length() - 1.0).abs() <= epsilon
-            && (self.y.length() - 1.0).abs() <= epsilon
-            && self.x.dot(self.y).abs() <= epsilon;
-        if orthonormal {
-            Ok(())
-        } else {
-            Err(ProjectionError::InvalidPlane)
-        }
-    }
-}
+///
+/// Alias for the core [`PlaneFrame`], which validates orthonormality on
+/// construction using the ANGULAR tolerance. Orthonormality is a dimensionless
+/// property; deciding it with the linear tolerance made the same skewed basis
+/// valid in millimetres and invalid in metres.
+pub type Plane = PlaneFrame;
 
 /// Project a triangle mesh onto `plane` and union the projected triangles.
 ///
@@ -118,7 +92,6 @@ pub fn project_mesh<M: TriangleMeshView + ?Sized>(
     plane: Plane,
     tolerance: Tolerance,
 ) -> Result<Projection, ProjectionError> {
-    plane.validate(tolerance)?;
     let triangles = collect_triangles(mesh, plane, tolerance)?;
     let polygons = union_all(triangles.rings, tolerance)?;
     let evidence = ProjectionEvidence {
@@ -156,8 +129,7 @@ fn collect_triangles<M: TriangleMeshView + ?Sized>(
             if !point.is_finite() {
                 return Err(ProjectionError::NonFinitePosition);
             }
-            let offset = point - plane.origin;
-            projected[slot] = Point2::new(offset.dot(plane.x), offset.dot(plane.y));
+            projected[slot] = plane.project(point);
         }
 
         // Twice the signed area. A triangle seen edge-on lands at zero here,

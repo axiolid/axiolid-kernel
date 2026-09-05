@@ -3,7 +3,7 @@
 //! Expected areas are computed from the geometry by hand, never recorded from
 //! a previous run: a test that records its own output cannot detect a change.
 
-use axiolid_core::{Point2, Point3, Tolerance, Vec3};
+use axiolid_core::{PlaneFrameError, Point2, Point3, Tolerance, Vec3};
 use axiolid_mesh::TriMesh;
 use axiolid_overlay::{total_area, Polygon, Ring};
 use axiolid_project::{intersect_prism, project_mesh, Plane, ProjectionError};
@@ -191,16 +191,22 @@ fn a_disjoint_prism_yields_an_empty_footprint() {
     assert!(result.polygons.is_empty());
 }
 
+/// A degenerate basis cannot reach `project_mesh` at all.
+///
+/// `Plane` is now a validated type, so the refusal happens at construction
+/// rather than inside the projection. That is the improvement: an unvalidated
+/// plane is no longer representable, so the failure cannot be forgotten by a
+/// future caller.
 #[test]
-fn an_invalid_plane_is_refused() {
-    let skewed = Plane {
-        origin: Point3::new(0.0, 0.0, 0.0),
-        x: Vec3::new(1.0, 0.0, 0.0),
-        y: Vec3::new(1.0, 0.0, 0.0),
-    };
-    let error = project_mesh(&square_at(0.0), skewed, tol())
-        .expect_err("a degenerate basis is not a plane");
-    assert_eq!(error, ProjectionError::InvalidPlane);
+fn a_degenerate_basis_cannot_construct_a_plane() {
+    let error = Plane::new(
+        Point3::new(0.0, 0.0, 0.0),
+        Vec3::new(1.0, 0.0, 0.0),
+        Vec3::new(1.0, 0.0, 0.0),
+        tol(),
+    )
+    .expect_err("two identical axes span a line, not a plane");
+    assert_eq!(error, PlaneFrameError::Degenerate);
 }
 
 #[test]
