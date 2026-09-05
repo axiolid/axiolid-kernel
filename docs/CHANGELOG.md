@@ -5,6 +5,7 @@ All notable changes to Axiolid are documented in this file.
 ## [Unreleased]
 
 ### Added
+- Added `axiolid-inspect`: `min_gap` for clearance and clash detection, `winding_number` and `contains` promoted from the exact boolean's private implementation, `ray_cast`, and `genus`. Containment is decided by certified predicates and is scale-free; `genus` refuses any mesh that is not a closed two-manifold rather than returning a meaningless integer.
 - Added `decompose` and `compose` to `axiolid-mesh`, splitting a mesh into connected components and recombining them. Two providers previously counted components and discarded the partition; `component_count` is now a caller of the shared implementation and `boolmesh`'s private union-find is removed. Component order follows first appearance in the input, and a single-body mesh is returned unchanged rather than reindexed.
 - Added `offset_solid` and `shell_solid`: constant-distance miter offset and hollowing of planar-faced solids. Offsetting vertices rather than faces handles concave edges, and an offset that closes the gap between opposing walls is refused rather than emitted as a collapsed solid.
 - Added `fillet_extruded_profile`: a constant-radius fillet on one straight prism edge, producing a genuine cylindrical blend face tangent to both neighbours. v0.6 refused this by name rather than approximate it with a segmented chamfer.
