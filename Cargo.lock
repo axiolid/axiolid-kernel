@@ -266,6 +266,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "axiolid-inspect"
+version = "0.4.0"
+dependencies = [
+ "axiolid-core",
+ "axiolid-guarantees",
+ "axiolid-heal",
+ "axiolid-mesh",
+ "axiolid-predicates",
+ "axiolid-spatial",
+ "thiserror",
+]
+
+[[package]]
 name = "axiolid-linear"
 version = "0.4.0"
 dependencies = [

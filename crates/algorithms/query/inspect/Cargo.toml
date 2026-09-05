@@ -1,0 +1,30 @@
+[package]
+name = "axiolid-inspect"
+description = "Mesh queries: clearance, containment, ray casting, and genus"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[dependencies]
+axiolid-core.workspace = true
+axiolid-mesh.workspace = true
+axiolid-predicates.workspace = true
+axiolid-spatial.workspace = true
+axiolid-guarantees.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+axiolid-heal.workspace = true
+
+[package.metadata.axiolid]
+architecture-version = 1
+layer = "algorithms"
+role = "algorithm.query"
+domain = "query.inspect"
+public = true
+format-neutral = true
+allowed-internal-dependencies = ["axiolid-core", "axiolid-guarantees", "axiolid-heal", "axiolid-mesh", "axiolid-predicates", "axiolid-spatial"]

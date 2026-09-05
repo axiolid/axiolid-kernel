@@ -26,6 +26,7 @@ graph TD
     axiolid_fixtures["axiolid-fixtures\nrepresentation.fixtures"]
     axiolid_guarantees["axiolid-guarantees\ncontract.guarantees"]
     axiolid_heal["axiolid-heal\nalgorithm.repair"]
+    axiolid_inspect["axiolid-inspect\nalgorithm.query"]
     axiolid_linear["axiolid-linear\nrepresentation.atomic"]
     axiolid_linear_intersection["axiolid-linear-intersection\nalgorithm.query"]
     axiolid_measure["axiolid-measure\nalgorithm.query"]
@@ -147,6 +148,12 @@ graph TD
     axiolid_heal --> axiolid_mesh
     axiolid_heal --> axiolid_predicates
     axiolid_heal --> axiolid_spatial
+    axiolid_inspect --> axiolid_core
+    axiolid_inspect --> axiolid_guarantees
+    axiolid_inspect --> axiolid_heal
+    axiolid_inspect --> axiolid_mesh
+    axiolid_inspect --> axiolid_predicates
+    axiolid_inspect --> axiolid_spatial
     axiolid_linear --> axiolid_core
     axiolid_linear_intersection --> axiolid_core
     axiolid_linear_intersection --> axiolid_guarantees
