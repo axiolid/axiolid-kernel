@@ -4,7 +4,12 @@ All notable changes to Axiolid are documented in this file.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-05
+
 ### Added
+- Added `axiolid-route`: exact planar shortest path over a visibility graph, with typed unreachable reasons (`StartOutside`, `GoalOutside`, `Disconnected`) rather than an empty path. Barriers are zero-width polylines, so a wall modelled as a line still blocks a route without bounding area. The kernel reports that no route exists under a given envelope; it never reports that a design is non-compliant.
+- Added `axiolid-project`: planar projection of meshes onto a plane, producing a polygon set with holes rather than an outline or hull, plus `intersect_prism` for clipping by a vertical prism. Triangles are unioned pairwise into an accumulator because the planar validator rejects self-intersecting input and a raw triangle soup routinely overlaps itself.
+- Added mesh/mesh distance and proximity components to `axiolid-measure`, reporting witness points rather than a bare scalar so a caller can show where the minimum occurs.
 - Added `axiolid-inspect`: `min_gap` for clearance and clash detection, `winding_number` and `contains` promoted from the exact boolean's private implementation, `ray_cast`, and `genus`. Containment is decided by certified predicates and is scale-free; `genus` refuses any mesh that is not a closed two-manifold rather than returning a meaningless integer.
 - Added `decompose` and `compose` to `axiolid-mesh`, splitting a mesh into connected components and recombining them. Two providers previously counted components and discarded the partition; `component_count` is now a caller of the shared implementation and `boolmesh`'s private union-find is removed. Component order follows first appearance in the input, and a single-body mesh is returned unchanged rather than reindexed.
 - Added `offset_solid` and `shell_solid`: constant-distance miter offset and hollowing of planar-faced solids. Offsetting vertices rather than faces handles concave edges, and an offset that closes the gap between opposing walls is refused rather than emitted as a collapsed solid.
