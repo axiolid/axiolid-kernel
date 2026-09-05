@@ -5,8 +5,8 @@ use std::collections::HashSet;
 use axiolid_curve::{BSplineCurve2, Curve2};
 
 use crate::{
-    CurveRelation, GeometryNode, GraphError, NodeId, SolidOperation, SurfaceRelation, TrimSelector,
-    TrimmingPreference,
+    CurveRelation, GeometryNode, GraphError, MasterRepresentation, NodeId, SolidOperation,
+    SurfaceRelation, TrimSelector, TrimmingPreference,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -16,7 +16,6 @@ enum ExpectedReference {
     BoundedOpenCurve2,
     Curve3,
     Surface,
-    CurveOrSurface,
     Profile,
     Solid,
     HalfSpace,
@@ -334,7 +333,6 @@ impl ExpectedReference {
             Self::BoundedOpenCurve2 => "bounded open curve2",
             Self::Curve3 => "curve3",
             Self::Surface => "surface",
-            Self::CurveOrSurface => "curve or surface",
             Self::Profile => "profile",
             Self::Solid => "solid",
             Self::HalfSpace => "half-space",
@@ -374,11 +372,6 @@ impl ExpectedReference {
         match self {
             Self::Curve | Self::Curve2 | Self::BoundedOpenCurve2 | Self::Curve3 => false,
             Self::Surface => surface,
-            Self::CurveOrSurface => {
-                surface
-                    || curve_has_dimension(reference, nodes, CurveDimension::Two)
-                    || curve_has_dimension(reference, nodes, CurveDimension::Three)
-            }
             Self::Profile => matches!(node, GeometryNode::Profile(_)),
             Self::Solid => matches!(
                 node,
@@ -523,12 +516,27 @@ fn validate_curve_relation(
         }
         CurveRelation::SurfaceCurve {
             curve_3d,
-            associated_geometry,
-            ..
+            sides,
+            master,
         } => {
             expect_reference(nodes, *curve_3d, ExpectedReference::Curve3)?;
-            for reference in associated_geometry {
-                expect_reference(nodes, *reference, ExpectedReference::CurveOrSurface)?;
+            // Each side is a (surface, pcurve) pair, so the two references are
+            // checked against their own kinds rather than a permissive
+            // "curve or surface" that accepted any mix.
+            let (first_surface, first_pcurve) = sides.first();
+            expect_reference(nodes, first_surface, ExpectedReference::Surface)?;
+            expect_reference(nodes, first_pcurve, ExpectedReference::Curve2)?;
+            if let Some((second_surface, second_pcurve)) = sides.second() {
+                expect_reference(nodes, second_surface, ExpectedReference::Surface)?;
+                expect_reference(nodes, second_pcurve, ExpectedReference::Curve2)?;
+            }
+            // A master naming a side the curve does not have is contradictory:
+            // it says "believe the second image" when there is no second image.
+            if *master == MasterRepresentation::ParameterCurveS2 && !sides.is_two_sided() {
+                return Err(GraphError::ContradictoryMaster {
+                    detail: "master names the second parametric side, but the \
+                             surface curve has only one",
+                });
             }
             Ok(())
         }

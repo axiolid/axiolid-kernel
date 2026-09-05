@@ -23,6 +23,11 @@ pub enum GraphError {
     },
     /// A requested root does not exist.
     UnknownRoot { root: NodeId, node_count: usize },
+    /// A master representation names a side the relation does not have.
+    ContradictoryMaster {
+        /// What the contradiction is, in the caller's terms.
+        detail: &'static str,
+    },
 }
 
 impl fmt::Display for GraphError {
@@ -39,6 +44,9 @@ impl fmt::Display for GraphError {
                 expected,
                 actual,
             } => write!(f, "{reference} has node type {actual}; expected {expected}"),
+            Self::ContradictoryMaster { detail } => {
+                write!(f, "contradictory surface-curve master: {detail}")
+            }
             Self::UnknownRoot { root, node_count } => {
                 write!(f, "root {root} exceeds graph size {node_count}")
             }
@@ -338,11 +346,23 @@ mod tests {
                 },
             )))
             .unwrap();
+        let plane = builder
+            .push(GeometryNode::Surface(axiolid_surface::Surface::Plane(
+                axiolid_surface::Plane {
+                    frame: axiolid_core::Frame3 {
+                        origin: Vec3::ZERO,
+                        x: Vec3::X,
+                        y: Vec3::Y,
+                        z: Vec3::Z,
+                    },
+                },
+            )))
+            .unwrap();
         let error = builder
             .push(GeometryNode::CurveRelation(
                 crate::CurveRelation::SurfaceCurve {
                     curve_3d: curve_2d,
-                    associated_geometry: Vec::new(),
+                    sides: crate::SurfaceSides::one(plane, curve_2d),
                     master: crate::MasterRepresentation::Curve3d,
                 },
             ))
@@ -377,7 +397,7 @@ mod tests {
             .push(GeometryNode::CurveRelation(
                 crate::CurveRelation::SurfaceCurve {
                     curve_3d: trimmed_3d,
-                    associated_geometry: Vec::new(),
+                    sides: crate::SurfaceSides::one(plane, curve_2d),
                     master: crate::MasterRepresentation::Curve3d,
                 },
             ))

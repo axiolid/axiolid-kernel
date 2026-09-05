@@ -18,7 +18,8 @@ pub mod value;
 
 pub use axiolid_core::BooleanOperator;
 pub use curve_relation::{
-    CurveRelation, CurveSegment, MasterRepresentation, Transition, TrimSelector, TrimmingPreference,
+    CurveRelation, CurveSegment, MasterRepresentation, SurfaceSides, Transition, TrimSelector,
+    TrimmingPreference,
 };
 pub use graph::{GeometryGraph, GeometryGraphBuilder, GraphError};
 pub use id::NodeId;

@@ -346,10 +346,32 @@ fn surface_curve_master_representation_is_not_silently_ignored() {
                 direction: Vec3::X,
             })))
             .unwrap();
+        // A surface curve now always carries at least one parametric side:
+        // the surface it lies on and this curve's image in that surface.
+        let surface = builder
+            .push(GeometryNode::Surface(axiolid_surface::Surface::Plane(
+                axiolid_surface::Plane {
+                    frame: axiolid_core::Frame3 {
+                        origin: Point3::ZERO,
+                        x: Vec3::X,
+                        y: Vec3::Y,
+                        z: Vec3::Z,
+                    },
+                },
+            )))
+            .unwrap();
+        let pcurve = builder
+            .push(GeometryNode::Curve2(axiolid_curve::Curve2::Line(
+                axiolid_curve::Line2 {
+                    origin: axiolid_core::Vec2::ZERO,
+                    direction: axiolid_core::Vec2::X,
+                },
+            )))
+            .unwrap();
         let directrix = builder
             .push(GeometryNode::CurveRelation(CurveRelation::SurfaceCurve {
                 curve_3d,
-                associated_geometry: Vec::new(),
+                sides: axiolid_model::SurfaceSides::one(surface, pcurve),
                 master,
             }))
             .unwrap();
@@ -368,7 +390,7 @@ fn surface_curve_master_representation_is_not_silently_ignored() {
 
     compile(MasterRepresentation::Curve3d).expect("Curve3d master is supported");
     for master in [
-        MasterRepresentation::ParameterCurve,
+        MasterRepresentation::ParameterCurveS1,
         MasterRepresentation::Both,
         MasterRepresentation::Unspecified,
     ] {
