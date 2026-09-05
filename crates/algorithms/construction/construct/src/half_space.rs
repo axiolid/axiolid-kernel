@@ -12,7 +12,7 @@
 //! produce the same shape.
 
 use axiolid_contracts::{GeomError, GeomResult};
-use axiolid_core::{Plane3, Point2, Scalar, Tolerance, Vec3};
+use axiolid_core::{Plane3, PlaneFrame, Point2, Scalar, Tolerance, Vec3};
 use axiolid_mesh::TriMesh;
 use axiolid_primitive::{ClipMargin, HalfSpace};
 
@@ -31,6 +31,47 @@ use crate::profile::Rings;
 pub fn bounded_half_space(
     boundary: &Rings,
     plane: Plane3,
+    agreement: bool,
+    margin: ClipMargin,
+    tolerance: Tolerance,
+) -> GeomResult<TriMesh> {
+    bounded_half_space_framed(boundary, plane, None, agreement, margin, tolerance)
+}
+
+/// Build a bounded half-space with an explicitly authored in-plane frame.
+///
+/// [`bounded_half_space`] derives the boundary's in-plane axes from the clip
+/// plane normal alone, which fixes only 2 of the 3 orientation degrees of
+/// freedom: the rotation ABOUT the normal is picked by an internal heuristic.
+/// That is fine when the profile carries no authored orientation of its own.
+///
+/// It is not fine when the source format authors one. IFC's
+/// `IfcPolygonalBoundedHalfSpace.Position` is an placement explicitly
+/// independent of `BaseSurface`, and its `PolygonalBoundary` is expressed in
+/// THAT frame. Deriving the axes instead of honouring the authored ones
+/// silently rotates the clipping profile about the plane normal, so the wrong
+/// region of the subject is cut.
+///
+/// The frame's own axes are used as written. Its normal is not required to
+/// match `plane.normal`: only the in-plane axes are taken from it, and the
+/// sweep still runs along the clip plane's normal, so an authored frame that
+/// is tilted relative to the clip plane still contributes only its rotation
+/// about that normal.
+pub fn bounded_half_space_in_frame(
+    boundary: &Rings,
+    plane: Plane3,
+    frame: PlaneFrame,
+    agreement: bool,
+    margin: ClipMargin,
+    tolerance: Tolerance,
+) -> GeomResult<TriMesh> {
+    bounded_half_space_framed(boundary, plane, Some(frame), agreement, margin, tolerance)
+}
+
+fn bounded_half_space_framed(
+    boundary: &Rings,
+    plane: Plane3,
+    authored: Option<PlaneFrame>,
     agreement: bool,
     margin: ClipMargin,
     tolerance: Tolerance,
@@ -63,12 +104,38 @@ pub fn bounded_half_space(
 
     // Frame the profile in the plane. The plane normal is the sweep
     // direction, so the profile's own x and y span the plane.
-    let reference = if normal.x.abs() < 0.9 {
-        Vec3::X
-    } else {
-        Vec3::Y
+    //
+    // An authored frame is used as written: it is the caller's statement of
+    // where the profile's x and y point, and re-deriving them would discard
+    // the one piece of information the caller supplied. Without one, the
+    // rotation about the normal is unconstrained, so a reference axis is
+    // picked -- the least parallel of X and Y, so the cross product stays
+    // well conditioned.
+    let base = match authored {
+        Some(frame) => {
+            // Project the authored axes into the clip plane and re-orthonormalise
+            // against the sweep normal. The authored frame fixes the rotation
+            // about the normal; the sweep direction is still the clip plane's.
+            let projected = frame.x_axis() - normal * frame.x_axis().dot(normal);
+            let reference = projected.normalize_or_zero();
+            if reference == Vec3::ZERO {
+                return Err(GeomError::InvalidInput(
+                    "authored boundary frame x axis is parallel to the clip plane normal, \
+                     so it fixes no in-plane direction"
+                        .to_owned(),
+                ));
+            }
+            Frame::from_reference(plane.origin, normal, reference)?
+        }
+        None => {
+            let reference = if normal.x.abs() < 0.9 {
+                Vec3::X
+            } else {
+                Vec3::Y
+            };
+            Frame::from_reference(plane.origin, normal, reference)?
+        }
     };
-    let base = Frame::from_reference(plane.origin, normal, reference)?;
 
     // Keeping the normal side sweeps from the plane along +normal; the
     // opposite side sweeps the other way.

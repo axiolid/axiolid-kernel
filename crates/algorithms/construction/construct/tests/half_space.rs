@@ -4,9 +4,9 @@
 //! normal by a depth derived from the boundary's own extent. Its volume is
 //! therefore area x depth, a constant this crate does not get to choose.
 
-use axiolid_construct::half_space::bounded_half_space;
+use axiolid_construct::half_space::{bounded_half_space, bounded_half_space_in_frame};
 use axiolid_construct::profile::Rings;
-use axiolid_core::{Plane3, Point2, Point3, Scalar, Tolerance, Vec3};
+use axiolid_core::{Plane3, PlaneFrame, Point2, Point3, Scalar, Tolerance, Vec3};
 use axiolid_measure::volume_properties;
 use axiolid_mesh::TriMesh;
 use axiolid_primitive::ClipMargin;
@@ -207,4 +207,74 @@ fn both_agreement_values_stay_outward_wound() {
             "agreement={agreement} produced an inside-out solid"
         );
     }
+}
+
+/// An authored in-plane frame must orient the boundary footprint.
+///
+/// The clip plane here is the z = 0 ground plane, so the internal heuristic
+/// picks Vec3::X as its reference and lands the boundary axis-aligned. A
+/// consumer whose source format authors its own in-plane rotation (IFC
+/// IfcPolygonalBoundedHalfSpace.Position) must be able to override that.
+///
+/// Volume cannot detect this: rotating a profile about the sweep axis
+/// preserves area and depth. The footprint geometry is what changes, so the
+/// test pins a vertex position rather than a scalar measure.
+#[test]
+fn an_authored_in_plane_frame_orients_the_boundary() {
+    let ground = PlaneFrame::new(Point3::ZERO, Vec3::X, Vec3::Y, tol())
+        .expect("the ground plane is a valid frame");
+    let angle = std::f64::consts::FRAC_PI_4;
+    let rotated = PlaneFrame::new(
+        Point3::ZERO,
+        Vec3::new(angle.cos(), angle.sin(), 0.0),
+        Vec3::new(-angle.sin(), angle.cos(), 0.0),
+        tol(),
+    )
+    .expect("a rotation about the plane normal is a valid frame");
+
+    let plane = Plane3 {
+        origin: Point3::ZERO,
+        normal: Vec3::Z,
+    };
+    let boundary = square(1.0);
+    let axis_aligned = bounded_half_space_in_frame(
+        &boundary,
+        plane,
+        ground,
+        true,
+        ClipMargin::new(1.0).unwrap(),
+        tol(),
+    )
+    .expect("an axis-aligned boundary is valid");
+    let turned = bounded_half_space_in_frame(
+        &boundary,
+        plane,
+        rotated,
+        true,
+        ClipMargin::new(1.0).unwrap(),
+        tol(),
+    )
+    .expect("a rotated boundary is valid");
+
+    // The same profile in a frame turned 45 degrees must not produce the same
+    // footprint. If the frame were ignored, these meshes would be identical.
+    let differs = axis_aligned
+        .positions
+        .iter()
+        .zip(turned.positions.iter())
+        .any(|(a, b)| (*a - *b).length() > 1e-9);
+    assert!(
+        differs,
+        "the authored in-plane frame was ignored: both footprints are identical"
+    );
+
+    // Stronger than "differs": the footprint must land exactly where the
+    // authored frame puts it. Corner (1,1) of the profile maps to
+    // origin + x*1 + y*1, which for a 45-degree frame is (0, sqrt(2)).
+    let want = rotated.lift(Point2::new(1.0, 1.0));
+    let found = turned.positions.iter().any(|p| (*p - want).length() < 1e-9);
+    assert!(
+        found,
+        "no vertex at the authored corner {want:?}; frame was not applied as written"
+    );
 }
