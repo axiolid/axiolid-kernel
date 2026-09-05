@@ -177,3 +177,56 @@ fn a_negative_threshold_is_refused() {
         .expect_err("a negative threshold is a caller error");
     assert_eq!(error, MeshProximityError::InvalidThreshold);
 }
+
+/// Two closed boxes where one passes entirely through the other.
+///
+/// Reduced from a real beam/duct fixture. The beam spans x 0..8000, y -500..500,
+/// z 0..1000. The duct spans x 3900..4100, y -1000..1000, z 400..600 — it is
+/// narrower in x and z but WIDER in y, so it enters one side of the beam and
+/// exits the other. Their surfaces genuinely cross.
+///
+/// Every duct vertex lies outside the beam and every beam vertex lies outside
+/// the duct, and the crossing is edge-through-face, so a scan over
+/// vertex/triangle and edge/edge pairs alone never samples the intersection.
+#[test]
+fn a_box_pierced_by_a_wider_box_reports_zero_separation() {
+    let beam = TriMesh::new(
+        vec![
+            Point3::new(0.0, 500.0, 0.0),
+            Point3::new(0.0, -500.0, 0.0),
+            Point3::new(0.0, -500.0, 1000.0),
+            Point3::new(0.0, 500.0, 1000.0),
+            Point3::new(8000.0, -500.0, 0.0),
+            Point3::new(8000.0, 500.0, 0.0),
+            Point3::new(8000.0, 500.0, 1000.0),
+            Point3::new(8000.0, -500.0, 1000.0),
+        ],
+        vec![
+            0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4, 5, 0, 3, 3, 6, 5, 6, 3, 2, 2, 7, 6, 7, 2, 1, 1, 4,
+            7, 4, 1, 0, 0, 5, 4,
+        ],
+    );
+    let duct = TriMesh::new(
+        vec![
+            Point3::new(3900.0, -1000.0, 600.0),
+            Point3::new(3900.0, -1000.0, 400.0),
+            Point3::new(4100.0, -1000.0, 400.0),
+            Point3::new(4100.0, -1000.0, 600.0),
+            Point3::new(3900.0, 1000.0, 400.0),
+            Point3::new(3900.0, 1000.0, 600.0),
+            Point3::new(4100.0, 1000.0, 600.0),
+            Point3::new(4100.0, 1000.0, 400.0),
+        ],
+        vec![
+            0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4, 5, 0, 3, 3, 6, 5, 6, 3, 2, 2, 7, 6, 7, 2, 1, 1, 4,
+            7, 4, 1, 0, 0, 5, 4,
+        ],
+    );
+
+    let crossing = mesh_distance(&beam, &duct).expect("two valid meshes");
+    assert!(
+        crossing.surfaces_cross,
+        "a pierced box must report zero separation, got distance_squared {}",
+        crossing.distance_squared
+    );
+}

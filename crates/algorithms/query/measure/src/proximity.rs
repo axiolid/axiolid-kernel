@@ -162,7 +162,76 @@ pub fn closest_points_on_triangles(
             );
         }
     }
+    // Transverse crossings are realised where an EDGE passes THROUGH a FACE:
+    // no vertex is involved and no two edges approach, so the families above
+    // all miss it and the pair would report its nearest non-intersecting
+    // feature instead of zero. Checked last so it cannot disturb the tie order
+    // of the metric candidates; it only ever lowers the result to exactly zero.
+    if let Some(point) = crossing_point(first, second) {
+        update_best(
+            &mut best,
+            ClosestPoints3 {
+                point_a: point,
+                point_b: point,
+                distance_squared: 0.0,
+            },
+        );
+    }
     Ok(best)
+}
+
+/// Where an edge of either triangle pierces the other's face, if anywhere.
+///
+/// Reports the intersection as a single coincident witness pair: the surfaces
+/// meet there, so both witnesses are the same point and the separation is
+/// exactly zero rather than a rounded near-zero.
+fn crossing_point(first: [Point3; 3], second: [Point3; 3]) -> Option<Point3> {
+    for edge in triangle_edges(first) {
+        if let Some(point) = segment_triangle_crossing(edge, second) {
+            return Some(point);
+        }
+    }
+    for edge in triangle_edges(second) {
+        if let Some(point) = segment_triangle_crossing(edge, first) {
+            return Some(point);
+        }
+    }
+    None
+}
+
+/// Möller–Trumbore segment/triangle intersection.
+///
+/// The determinant threshold is scaled by the operands' own magnitudes so the
+/// parallel test means the same thing for a millimetre model and a metre one;
+/// a fixed epsilon would be wrong in one of them.
+fn segment_triangle_crossing(segment: [Point3; 2], triangle: [Point3; 3]) -> Option<Point3> {
+    let [start, end] = segment;
+    let direction = end - start;
+    let edge1 = triangle[1] - triangle[0];
+    let edge2 = triangle[2] - triangle[0];
+    let cross = direction.cross(edge2);
+    let determinant = edge1.dot(cross);
+
+    let scale = direction.length() * edge1.length() * edge2.length();
+    if determinant.abs() <= scale * f64::EPSILON {
+        // Parallel: any contact is coplanar, which the edge/edge family
+        // already reports.
+        return None;
+    }
+
+    let inverse = 1.0 / determinant;
+    let to_start = start - triangle[0];
+    let u = to_start.dot(cross) * inverse;
+    if !(0.0..=1.0).contains(&u) {
+        return None;
+    }
+    let q = to_start.cross(edge1);
+    let v = direction.dot(q) * inverse;
+    if v < 0.0 || u + v > 1.0 {
+        return None;
+    }
+    let t = edge2.dot(q) * inverse;
+    (0.0..=1.0).contains(&t).then(|| start + direction * t)
 }
 
 fn validate_triangle(triangle: [Point3; 3]) -> Result<(), ProximityError> {
