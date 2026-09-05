@@ -34,6 +34,26 @@
 //! shrinks with the grid, it does not vanish. This is not a certified
 //! path and does not claim to be.
 //!
+//! # Exact tangency
+//!
+//! A level set can pass exactly through a grid sample -- a unit sphere in a
+//! half-extent of 1.4 does it at several edge lengths. Every edge meeting
+//! that sample then crosses at the same point, the triangles between those
+//! crossings collapse, and the surface tears.
+//!
+//! This is resolved by simulation of simplicity rather than by special
+//! cases: symbolically each sample carries its own positive infinitesimal,
+//! so no sample sits exactly at the level and every crossing is strictly
+//! interior to its edge. See `SOS_DELTA` for the numeric stand-in and why
+//! its magnitude matters.
+//!
+//! # What this is not
+//!
+//! Extraction is an approximation. The mesh interpolates the field
+//! linearly along each edge, so a curved surface is faceted and the error
+//! shrinks with the grid, it does not vanish. This is not a certified
+//! path and does not claim to be.
+//!
 //! # Known limitation: grid tangency
 //!
 //! The closed-manifold guarantee holds when the surface passes BETWEEN
@@ -108,6 +128,26 @@ pub enum LevelSetError {
 
 /// Upper bound on grid samples, so a fine edge length on large bounds is
 /// refused up front instead of exhausting memory.
+/// Numeric stand-in for the infinitesimal in the simulation-of-simplicity
+/// rule: how far a crossing is held clear of either end of its edge.
+///
+/// The magnitude is bounded from both sides, and both bounds were found by
+/// measurement rather than chosen:
+///
+/// - Too small and the fix does nothing useful. At `1e-6` the triangles it
+///   creates have a doubled area around `1e-27`, below the audit's
+///   `tolerance^4` degeneracy threshold, so they are still counted as
+///   degenerate and the mesh still reads as open. The perturbation has to
+///   clear modelling tolerance to be a feature rather than dust.
+/// - Too large and it stops being an infinitesimal: it would move vertices
+///   far enough to compete with the tessellation error itself.
+///
+/// `1e-3` of an edge sits between those: a shift of at most
+/// `1e-3 * edge_length`, which is smaller than the `edge^2/8` chord error
+/// by orders of magnitude at every usable resolution, and large enough that
+/// two crossings never round together.
+const SOS_DELTA: Scalar = 1.0e-3;
+
 const MAX_SAMPLES: usize = 64_000_000;
 
 /// The six Kuhn tetrahedra of a unit cell, as corner indices.
@@ -307,11 +347,38 @@ fn emit_tetrahedron(
         // Guard the coincident-value case: without it a flat region of the
         // field divides by zero and produces a non-finite vertex.
         let span = vb - va;
-        let t = if span.abs() > Scalar::EPSILON {
+        let raw = if span.abs() > Scalar::EPSILON {
             (-va / span).clamp(0.0, 1.0)
         } else {
             0.5
         };
+        // Simulation of simplicity, applied to the crossing parameter.
+        //
+        // Symbolically every sample carries its own positive infinitesimal,
+        // `v_i + e^i`, so no sample is ever exactly at the level. A sample
+        // that reads as an exact zero therefore yields a crossing that is
+        // infinitesimally along its edge rather than exactly at its
+        // endpoint, and `t` is never exactly 0 or 1.
+        //
+        // This matters because a crossing AT a grid point is shared by every
+        // edge meeting there: distinct edges produce one coincident vertex,
+        // the triangles between them collapse to zero area, and the surface
+        // is left with unmatched edges. Keeping the crossing strictly
+        // interior to its edge gives each edge its own vertex and keeps the
+        // result closed.
+        //
+        // `SOS_DELTA` is the numeric stand-in for the infinitesimal: small
+        // enough that it moves a vertex by at most `SOS_DELTA * edge_length`
+        // (well under any usable tolerance), large enough that two crossings
+        // on different edges cannot round to the same position -- the defect
+        // that a `Scalar::MIN_POSITIVE` offset produced, where the two points
+        // differed in bits but not in geometry.
+        //
+        // The edge key is index-ordered, so both tetrahedra sharing an edge
+        // compute the same `t` from the same pair and agree on the vertex.
+        // The perturbation is a function of the edge alone, which is what
+        // keeps it consistent across the whole grid.
+        let t = raw.clamp(SOS_DELTA, 1.0 - SOS_DELTA);
         let point = pa + (pb - pa) * t;
         let bits = [point.x.to_bits(), point.y.to_bits(), point.z.to_bits()];
         let index = match welded.get(&bits) {

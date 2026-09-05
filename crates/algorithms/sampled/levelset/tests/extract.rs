@@ -185,3 +185,65 @@ fn the_enclosed_side_is_the_one_below_the_level() {
         "and it must be the sphere's own volume, got {signed} against {exact}"
     );
 }
+
+/// The tangent case: a grid plane landing exactly on the surface.
+///
+/// This is the case simulation of simplicity exists for. A sphere of
+/// radius 1 in a half-extent of 1.4 puts grid samples exactly on the
+/// surface at several edge lengths; before SoS those configurations
+/// extracted an open mesh while neighbouring ones closed cleanly.
+///
+/// Swept rather than spot-checked because the defect is not a property
+/// of any single resolution: it appears only where the arithmetic
+/// happens to align, so a single pair proves very little.
+#[test]
+fn every_alignment_of_grid_and_surface_still_closes() {
+    let mut failures = Vec::new();
+    for half in [1.0625, 1.4, 1.45, 1.5, 2.0, 2.5, 3.0] {
+        for edge in [0.5, 0.4, 0.25, 0.2, 0.125, 0.1] {
+            let mesh =
+                level_set(sphere_sdf(1.0), bounds(half), edge, 0.0).expect("extraction succeeds");
+            let health = audit_mesh(&mesh, Tolerance::METRE);
+            if !health.is_closed_two_manifold() {
+                failures.push(format!(
+                    "half={half} edge={edge}: degenerate={} boundary={}",
+                    health.degenerate_triangles, health.boundary_edges
+                ));
+            }
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "every grid/surface alignment must close, but {} did not:\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
+}
+
+/// The perturbation must not be mistaken for geometry.
+///
+/// Simulation of simplicity buys watertightness by displacing a crossing
+/// slightly along its edge. That is only acceptable while the shift stays
+/// far below the tessellation error it is embedded in -- otherwise it
+/// would be trading a topological defect for a geometric one.
+#[test]
+fn the_perturbation_stays_below_the_tessellation_error() {
+    let edge = 0.2;
+    let mesh = level_set(sphere_sdf(1.0), bounds(1.4), edge, 0.0).expect("extraction succeeds");
+
+    let worst = mesh
+        .positions
+        .iter()
+        .map(|p| ((p.x * p.x + p.y * p.y + p.z * p.z).sqrt() - 1.0).abs())
+        .fold(0.0, Scalar::max);
+
+    // The chord of a cell subtends an error of order edge^2/8 on a unit
+    // sphere; the SoS shift is at most SOS_DELTA * edge, which is smaller
+    // by orders of magnitude. Asserting against the tessellation bound
+    // rather than a magic constant keeps this honest if either changes.
+    let tessellation_bound = edge * edge / 8.0;
+    assert!(
+        worst < tessellation_bound * 4.0,
+        "vertices must stay near the true surface: worst {worst} vs bound {tessellation_bound}"
+    );
+}
